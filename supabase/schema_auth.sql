@@ -18,39 +18,26 @@ CREATE POLICY "users_read_own_profile" ON profiles FOR SELECT USING (auth.uid() 
 CREATE POLICY "admin_all_profiles"     ON profiles FOR ALL   USING (true) WITH CHECK (true);
 
 -- ─────────────────────────────────────────
--- Auto-create a profile row when a user signs up
+-- NOTE: Do NOT add triggers on auth.users —
+-- they interfere with GoTrue's internal queries.
+-- Profile rows are created by the seed script (npm run seed:admin)
+-- or manually via the SQL Editor after creating a user in the
+-- Supabase Dashboard → Authentication → Users.
 -- ─────────────────────────────────────────
-CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO profiles (id, district_id, role)
-  VALUES (NEW.id, NULL, 'district')
-  ON CONFLICT (id) DO NOTHING;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
-
--- ─────────────────────────────────────────
--- HOW TO SET UP USERS (run in SQL Editor)
+-- HOW TO SET UP USERS
 --
 -- 1. Create a user in Supabase Dashboard → Authentication → Users
---    (or via Auth API / sign-up page)
+--    → "Add user" → "Create new user" (tick Auto Confirm)
 --
--- 2. Assign them a district and role:
+-- 2. Copy the UUID shown next to the new user, then run:
 --
---    UPDATE profiles
---    SET district_id = '<district-uuid>',
---        role        = 'district'
---    WHERE id = '<auth-user-uuid>';
+--    INSERT INTO profiles (id, district_id, role)
+--    VALUES ('<uuid>', '<district-uuid-or-NULL>', 'district')
+--    ON CONFLICT (id) DO UPDATE SET role = 'district', district_id = '<district-uuid>';
 --
 -- 3. To make someone admin (sees all districts):
 --
---    UPDATE profiles
---    SET role = 'admin', district_id = NULL
---    WHERE id = '<auth-user-uuid>';
+--    INSERT INTO profiles (id, district_id, role)
+--    VALUES ('<uuid>', NULL, 'admin')
+--    ON CONFLICT (id) DO UPDATE SET role = 'admin', district_id = NULL;
 -- ─────────────────────────────────────────
