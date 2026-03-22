@@ -11,7 +11,6 @@ import { PersonForm, PersonFormValues } from '@/components/people/PersonForm'
 import { Button } from '@/components/ui/Button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import { Person } from '@/types'
 
 const empty: PersonFormValues = { name: '', phone: '', gender: '', region_id: '', department_id: '' }
 
@@ -47,7 +46,6 @@ export default function NewPersonPage() {
         gender: (form.gender as Person['gender']) || null,
         region_id: form.region_id || null,
         department_id: form.department_id || null,
-        contribution: 0,
       })
       toast.success('Person added')
       router.push('/dashboard/people')

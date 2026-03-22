@@ -40,7 +40,7 @@ export interface Person {
   gender: 'male' | 'female' | 'other' | null
   region_id: string | null
   department_id: string | null
-  contribution: number
+  contribution?: number
   created_at: string
   updated_at: string
   // joined

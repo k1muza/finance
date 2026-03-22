@@ -47,20 +47,31 @@ export function usePeople(filter: PeopleFilter = {}, districtId?: string | null)
     if (filter.department_id) query = query.eq('department_id', filter.department_id)
 
     const { data: rows, error: err } = await query
-    if (err) setError(err.message)
-    else setData(rows ?? [])
+    if (err) { setError(err.message); setLoading(false); return }
+
+    // Aggregate contribution totals from the contributions table
+    const { data: contribRows } = await supabase
+      .from('contributions')
+      .select('person_id, amount')
+
+    const totals = (contribRows ?? []).reduce((map, c) => {
+      map[c.person_id] = (map[c.person_id] ?? 0) + (c.amount ?? 0)
+      return map
+    }, {} as Record<string, number>)
+
+    setData((rows ?? []).map((p) => ({ ...p, contribution: totals[p.id] ?? 0 })))
     setLoading(false)
   }, [filter.search, filter.gender, filter.region_id, filter.department_id, districtId]) // eslint-disable-line
 
   useEffect(() => { fetch() }, [fetch])
 
-  const create = async (values: Omit<Person, 'id' | 'created_at' | 'updated_at' | 'region' | 'department'>) => {
+  const create = async (values: Omit<Person, 'id' | 'created_at' | 'updated_at' | 'region' | 'department' | 'contribution'>) => {
     const { error: err } = await supabase.from('people').insert(values)
     if (err) throw new Error(err.message)
     await fetch()
   }
 
-  const update = async (id: string, values: Partial<Omit<Person, 'id' | 'created_at' | 'updated_at' | 'region' | 'department'>>) => {
+  const update = async (id: string, values: Partial<Omit<Person, 'id' | 'created_at' | 'updated_at' | 'region' | 'department' | 'contribution'>>) => {
     const { error: err } = await supabase.from('people').update(values).eq('id', id)
     if (err) throw new Error(err.message)
     await fetch()

@@ -24,7 +24,7 @@ export function useOverview(districtId?: string | null) {
       }
 
       let peopleCountQuery = supabase.from('people').select('*', { count: 'exact', head: true })
-      let fundsQuery = supabase.from('people').select('contribution')
+      let fundsQuery = supabase.from('contributions').select('amount')
       let expensesQuery = supabase.from('expenses').select('amount')
       let topQuery = supabase.from('leaderboard').select('*').order('rank').limit(5)
 
@@ -36,7 +36,14 @@ export function useOverview(districtId?: string | null) {
           return
         }
         peopleCountQuery = peopleCountQuery.in('region_id', regionIds)
-        fundsQuery = fundsQuery.in('region_id', regionIds)
+        // Fetch people IDs in these regions to filter contributions
+        const { data: peopleInRegions } = await supabase.from('people').select('id').in('region_id', regionIds)
+        const personIds = peopleInRegions?.map((p) => p.id) ?? []
+        if (personIds.length > 0) {
+          fundsQuery = fundsQuery.in('person_id', personIds)
+        } else {
+          fundsQuery = fundsQuery.eq('person_id', null) // No people = no contributions
+        }
       }
       if (districtId) {
         expensesQuery = expensesQuery.eq('district_id', districtId)
@@ -59,7 +66,7 @@ export function useOverview(districtId?: string | null) {
         topQuery,
       ])
 
-      const totalFunds = (fundsData ?? []).reduce((sum, r) => sum + (r.contribution ?? 0), 0)
+      const totalFunds = (fundsData ?? []).reduce((sum, r) => sum + (r.amount ?? 0), 0)
       const totalExpenses = (expensesData ?? []).reduce((sum, r) => sum + (r.amount ?? 0), 0)
 
       setData({
