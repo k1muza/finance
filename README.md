@@ -95,6 +95,128 @@ The dashboard exposes read-only JSON endpoints for the companion mobile app unde
 
 Push notification device tokens can be registered at `POST /api/notifications/register`.
 
+## Database Schema (ERD)
+
+```mermaid
+erDiagram
+    districts {
+        uuid id PK
+        text name
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    regions {
+        uuid id PK
+        uuid district_id FK
+        text name
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    departments {
+        uuid id PK
+        text name
+        text hod
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    people {
+        uuid id PK
+        text name
+        text phone
+        text gender
+        uuid region_id FK
+        uuid department_id FK
+        numeric contribution
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    contributions {
+        uuid id PK
+        uuid person_id FK
+        numeric amount
+        text note
+        date date
+        timestamptz created_at
+    }
+
+    person_roles {
+        uuid id PK
+        uuid person_id FK
+        text entity_type
+        uuid entity_id
+        text role
+        timestamptz created_at
+    }
+
+    days {
+        uuid id PK
+        uuid district_id FK
+        date date
+        text label
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    sessions {
+        uuid id PK
+        uuid day_id FK
+        text name
+        time start_time
+        integer allocated_duration
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    events {
+        uuid id PK
+        uuid session_id FK
+        text title
+        uuid allocated_person FK
+        time start_time
+        integer duration
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    meals {
+        uuid id PK
+        uuid day_id FK
+        text name
+        time scheduled_time
+        integer duration
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    expenses {
+        uuid id PK
+        uuid district_id FK
+        text description
+        numeric amount
+        date date
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    districts ||--o{ regions : "has"
+    districts ||--o{ days : "has"
+    districts ||--o{ expenses : "has"
+    regions ||--o{ people : "belongs to"
+    departments ||--o{ people : "belongs to"
+    people ||--o{ contributions : "makes"
+    people ||--o{ person_roles : "holds"
+    people ||--o{ events : "allocated to"
+    days ||--o{ sessions : "contains"
+    days ||--o{ meals : "contains"
+    sessions ||--o{ events : "contains"
+```
+
+> `person_roles.entity_type` is either `'district'` or `'region'`; `entity_id` points to the corresponding table. A DB trigger enforces that the person must be a member of the entity before a role can be assigned.
+
 ## Project Structure
 
 ```
