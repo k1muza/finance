@@ -71,14 +71,14 @@ export default function NotificationsPage() {
     new Date(iso).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Bell className="h-7 w-7 text-cyan-400" />
           <div>
             <h1 className="text-2xl font-bold text-slate-100">Notifications</h1>
-            <p className="text-sm text-slate-400 mt-1">Send push notifications to all Flutter devices</p>
+            <p className="text-sm text-slate-400 mt-1">Send push notifications to registered devices</p>
           </div>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg">
@@ -187,43 +187,6 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Flutter setup guide */}
-      <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-5 space-y-3">
-        <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-          <Smartphone className="h-4 w-4 text-slate-400" />
-          Flutter Integration
-        </h2>
-        <p className="text-xs text-slate-400">Add this to your Flutter app to register for notifications. Call it once after Firebase initialises.</p>
-        <pre className="text-xs text-slate-300 bg-slate-900 rounded-lg p-4 overflow-x-auto leading-relaxed">{`// pubspec.yaml
-// firebase_messaging: ^15.0.0
-// http: ^1.0.0
-
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:http/http.dart' as http;
-import 'dart:io';
-
-Future<void> registerDevice() async {
-  final messaging = FirebaseMessaging.instance;
-  await messaging.requestPermission();
-  final token = await messaging.getToken();
-  if (token == null) return;
-
-  await http.post(
-    Uri.parse('https://YOUR_DASHBOARD_URL/api/notifications/register'),
-    headers: {'Content-Type': 'application/json'},
-    body: '{"token":"${'$'}token","platform":"${'$'}{Platform.isIOS ? 'ios' : 'android'}"}',
-  );
-
-  // Refresh token when it rotates
-  messaging.onTokenRefresh.listen((newToken) async {
-    await http.post(
-      Uri.parse('https://YOUR_DASHBOARD_URL/api/notifications/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: '{"token":"${'$'}newToken","platform":"${'$'}{Platform.isIOS ? 'ios' : 'android'}"}',
-    );
-  });
-}`}</pre>
-      </div>
     </div>
   )
 }
