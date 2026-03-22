@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Church } from 'lucide-react'
+
+const registrationEnabled = process.env.NEXT_PUBLIC_REGISTRATION_ENABLED === 'true'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -113,9 +116,18 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-xs text-slate-600">
-          Contact your administrator if you need access.
-        </p>
+        {registrationEnabled ? (
+          <p className="text-center text-sm text-slate-500">
+            Don&apos;t have an account?{' '}
+            <Link href="/register" className="text-cyan-400 hover:text-cyan-300 transition">
+              Create one
+            </Link>
+          </p>
+        ) : (
+          <p className="text-center text-xs text-slate-600">
+            Contact your administrator if you need access.
+          </p>
+        )}
       </div>
     </div>
   )
