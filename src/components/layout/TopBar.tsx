@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { ShieldCheck, MapPin, ChevronDown, Check, Globe } from 'lucide-react'
+import { useDistricts } from '@/hooks/useDistricts'
+import { useToast } from '@/components/ui/Toast'
+import { Modal } from '@/components/ui/Modal'
+import { Input } from '@/components/ui/Input'
+import { LeadershipForm } from '@/components/regions/LeadershipForm'
+import { Button } from '@/components/ui/Button'
+import { ShieldCheck, MapPin, ChevronDown, Check, Globe, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 interface DistrictStat {
@@ -46,15 +52,45 @@ function useDistrictStats() {
   return districts
 }
 
+const emptyDistrictForm = { name: '', chairperson: '', vice_chairperson: '', secretary: '', vice_secretary: '' }
+
 function AdminDistrictDropdown() {
   const { activeDistrictId, setActiveDistrictId } = useAuth()
   const districts = useDistrictStats()
+  const { create: createDistrict } = useDistricts()
+  const toast = useToast()
   const [open, setOpen] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const [form, setForm] = useState(emptyDistrictForm)
+  const [saving, setSaving] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   const selected = districts.find((d) => d.id === activeDistrictId) ?? null
 
-  // Close on outside click
+  const setField = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }))
+
+  const handleCreate = async () => {
+    if (!form.name.trim() || !form.chairperson.trim()) return
+    setSaving(true)
+    try {
+      await createDistrict({
+        name: form.name.trim(),
+        chairperson: form.chairperson.trim(),
+        vice_chairperson: form.vice_chairperson || null,
+        secretary: form.secretary || null,
+        vice_secretary: form.vice_secretary || null,
+      })
+      toast.success('District created')
+      setForm(emptyDistrictForm)
+      setAddOpen(false)
+    } catch (e) {
+      toast.error(String(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Close dropdown on outside click
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
@@ -141,8 +177,42 @@ function AdminDistrictDropdown() {
               )
             })}
           </div>
+
+          {/* New District */}
+          <div className="border-t border-slate-800 p-1.5">
+            <button
+              type="button"
+              onClick={() => { setOpen(false); setAddOpen(true) }}
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New District
+            </button>
+          </div>
         </div>
       )}
+
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="New District" size="md">
+        <div className="space-y-4">
+          <Input
+            label="District Name *"
+            value={form.name}
+            onChange={(e) => setField('name', e.target.value)}
+            placeholder="e.g. Northern District"
+          />
+          <LeadershipForm
+            chairperson={form.chairperson}
+            vice_chairperson={form.vice_chairperson}
+            secretary={form.secretary}
+            vice_secretary={form.vice_secretary}
+            onChange={setField}
+          />
+          <div className="flex gap-3 pt-2">
+            <Button variant="ghost" onClick={() => setAddOpen(false)} className="flex-1">Cancel</Button>
+            <Button onClick={handleCreate} loading={saving} className="flex-1">Create District</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
