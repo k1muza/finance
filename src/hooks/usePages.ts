@@ -4,21 +4,19 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Page } from '@/types'
 
-export function usePages() {
+export function usePages(districtId?: string | null) {
   const [data, setData] = useState<Page[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   const fetch = useCallback(async () => {
     setLoading(true)
-    const { data: rows } = await supabase
-      .from('pages')
-      .select('*')
-      .order('sort_order')
-      .order('created_at')
+    let query = supabase.from('pages').select('*').order('sort_order').order('created_at')
+    if (districtId) query = query.eq('district_id', districtId)
+    const { data: rows } = await query
     setData(rows ?? [])
     setLoading(false)
-  }, []) // eslint-disable-line
+  }, [districtId]) // eslint-disable-line
 
   useEffect(() => { fetch() }, [fetch])
 

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Day } from '@/types'
 
-export function useDays() {
+export function useDays(districtId?: string | null) {
   const [data, setData] = useState<Day[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -12,14 +12,13 @@ export function useDays() {
 
   const fetch = useCallback(async () => {
     setLoading(true)
-    const { data: rows, error: err } = await supabase
-      .from('days')
-      .select('*')
-      .order('date')
+    let query = supabase.from('days').select('*').order('date')
+    if (districtId) query = query.eq('district_id', districtId)
+    const { data: rows, error: err } = await query
     if (err) setError(err.message)
     else setData(rows ?? [])
     setLoading(false)
-  }, []) // eslint-disable-line
+  }, [districtId]) // eslint-disable-line
 
   useEffect(() => { fetch() }, [fetch])
 

@@ -1,15 +1,14 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useDistricts } from '@/hooks/useDistricts'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
-import { LeadershipForm } from '@/components/regions/LeadershipForm'
 import { Button } from '@/components/ui/Button'
-import { ShieldCheck, MapPin, ChevronDown, Check, Globe, Plus } from 'lucide-react'
+import { ShieldCheck, MapPin, ChevronDown, Check, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 interface DistrictStat {
@@ -22,66 +21,63 @@ function useDistrictStats() {
   const [districts, setDistricts] = useState<DistrictStat[]>([])
   const supabase = createClient()
 
-  useEffect(() => {
-    async function load() {
-      const [{ data: regions }, { data: allDistricts }] = await Promise.all([
-        supabase.from('regions').select('district_id, people(count)'),
-        supabase.from('districts').select('id, name').order('name'),
-      ])
+  const load = useCallback(async () => {
+    const [{ data: regions }, { data: allDistricts }] = await Promise.all([
+      supabase.from('regions').select('district_id, people(count)'),
+      supabase.from('districts').select('id, name').order('name'),
+    ])
 
-      if (!allDistricts || !regions) return
+    if (!allDistricts || !regions) return
 
-      const countMap: Record<string, number> = {}
-      for (const r of regions) {
-        if (!r.district_id) continue
-        const count = (r.people as unknown as { count: number }[])?.[0]?.count ?? 0
-        countMap[r.district_id] = (countMap[r.district_id] ?? 0) + count
-      }
-
-      setDistricts(
-        allDistricts.map((d) => ({
-          id: d.id,
-          name: d.name,
-          people_count: countMap[d.id] ?? 0,
-        }))
-      )
+    const countMap: Record<string, number> = {}
+    for (const r of regions) {
+      if (!r.district_id) continue
+      const count = (r.people as unknown as { count: number }[])?.[0]?.count ?? 0
+      countMap[r.district_id] = (countMap[r.district_id] ?? 0) + count
     }
-    load()
+
+    setDistricts(
+      allDistricts.map((d) => ({
+        id: d.id,
+        name: d.name,
+        people_count: countMap[d.id] ?? 0,
+      }))
+    )
   }, []) // eslint-disable-line
 
-  return districts
-}
+  useEffect(() => { load() }, [load])
 
-const emptyDistrictForm = { name: '', chairperson: '', vice_chairperson: '', secretary: '', vice_secretary: '' }
+  return { districts, reload: load }
+}
 
 function AdminDistrictDropdown() {
   const { activeDistrictId, setActiveDistrictId } = useAuth()
-  const districts = useDistrictStats()
+  const { districts, reload } = useDistrictStats()
   const { create: createDistrict } = useDistricts()
   const toast = useToast()
   const [open, setOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
-  const [form, setForm] = useState(emptyDistrictForm)
+  const [newName, setNewName] = useState('')
   const [saving, setSaving] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
+  // Auto-select first district when none is selected
+  useEffect(() => {
+    if (!activeDistrictId && districts.length > 0) {
+      setActiveDistrictId(districts[0].id)
+    }
+  }, [districts, activeDistrictId, setActiveDistrictId])
+
   const selected = districts.find((d) => d.id === activeDistrictId) ?? null
 
-  const setField = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }))
-
   const handleCreate = async () => {
-    if (!form.name.trim() || !form.chairperson.trim()) return
+    if (!newName.trim()) return
     setSaving(true)
     try {
-      await createDistrict({
-        name: form.name.trim(),
-        chairperson: form.chairperson.trim(),
-        vice_chairperson: form.vice_chairperson || null,
-        secretary: form.secretary || null,
-        vice_secretary: form.vice_secretary || null,
-      })
+      await createDistrict({ name: newName.trim() })
+      await reload()
       toast.success('District created')
-      setForm(emptyDistrictForm)
+      setNewName('')
       setAddOpen(false)
     } catch (e) {
       toast.error(String(e))
@@ -104,20 +100,11 @@ function AdminDistrictDropdown() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={cn(
-          'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border transition-colors',
-          selected
-            ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/15'
-            : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-slate-100'
-        )}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border transition-colors bg-cyan-500/10 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/15"
       >
-        {selected ? (
-          <MapPin className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-        ) : (
-          <Globe className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-        )}
+        <MapPin className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
         <span className="font-medium max-w-[160px] truncate">
-          {selected ? selected.name : 'All Districts'}
+          {selected ? selected.name : '…'}
         </span>
         {selected && (
           <span className="text-xs text-cyan-500/70 font-normal">{selected.people_count}</span>
@@ -127,26 +114,6 @@ function AdminDistrictDropdown() {
 
       {open && (
         <div className="absolute right-0 top-full mt-1.5 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden">
-          {/* All Districts option */}
-          <button
-            type="button"
-            onClick={() => { setActiveDistrictId(null); setOpen(false) }}
-            className={cn(
-              'flex items-center justify-between w-full px-3 py-2.5 text-sm transition-colors',
-              !activeDistrictId
-                ? 'bg-cyan-500/10 text-cyan-300'
-                : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
-            )}
-          >
-            <span className="flex items-center gap-2">
-              <Globe className="h-3.5 w-3.5 shrink-0" />
-              All Districts
-            </span>
-            {!activeDistrictId && <Check className="h-3.5 w-3.5 text-cyan-400" />}
-          </button>
-
-          <div className="border-t border-slate-800 my-0.5" />
-
           {/* District list */}
           <div className="max-h-64 overflow-y-auto">
             {districts.map((d) => {
@@ -192,21 +159,15 @@ function AdminDistrictDropdown() {
         </div>
       )}
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="New District" size="md">
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="New District" size="sm">
         <div className="space-y-4">
           <Input
             label="District Name *"
-            value={form.name}
-            onChange={(e) => setField('name', e.target.value)}
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
             placeholder="e.g. Northern District"
           />
-          <LeadershipForm
-            chairperson={form.chairperson}
-            vice_chairperson={form.vice_chairperson}
-            secretary={form.secretary}
-            vice_secretary={form.vice_secretary}
-            onChange={setField}
-          />
+          <p className="text-xs text-slate-500">Leadership roles can be assigned from the Regions page after creation.</p>
           <div className="flex gap-3 pt-2">
             <Button variant="ghost" onClick={() => setAddOpen(false)} className="flex-1">Cancel</Button>
             <Button onClick={handleCreate} loading={saving} className="flex-1">Create District</Button>
@@ -219,7 +180,7 @@ function AdminDistrictDropdown() {
 
 export function TopBar() {
   const { isAdmin, district } = useAuth()
-  const allDistricts = useDistrictStats()
+  const { districts: allDistricts } = useDistrictStats()
 
   if (isAdmin) {
     return (

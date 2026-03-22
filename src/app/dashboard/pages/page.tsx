@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { FileText, Plus } from 'lucide-react'
 import { usePages } from '@/hooks/usePages'
+import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import { PageCard } from '@/components/pages/PageCard'
 import { PageModal } from '@/components/pages/PageModal'
@@ -12,7 +13,8 @@ import { PageSpinner } from '@/components/ui/Spinner'
 import { Page } from '@/types'
 
 export default function PagesPage() {
-  const { data: pages, loading, create, update, remove } = usePages()
+  const { districtId } = useAuth()
+  const { data: pages, loading, create, update, remove } = usePages(districtId)
   const toast = useToast()
   const [modal, setModal] = useState<{ open: boolean; page: Page | null }>({ open: false, page: null })
   const [confirm, setConfirm] = useState<{ open: boolean; page: Page | null }>({ open: false, page: null })
@@ -24,7 +26,7 @@ export default function PagesPage() {
         await update(modal.page.id, values)
         toast.success('Page updated')
       } else {
-        await create(values)
+        await create({ ...values, district_id: districtId! })
         toast.success('Page created')
       }
     } catch (e) {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useDepartments } from '@/hooks/useDepartments'
+import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import { DepartmentCard } from '@/components/departments/DepartmentCard'
 import { DepartmentModal } from '@/components/departments/DepartmentModal'
@@ -13,7 +14,8 @@ import { Department } from '@/types'
 import { Plus } from 'lucide-react'
 
 export default function DepartmentsPage() {
-  const { data: departments, loading, create, update, remove, refresh } = useDepartments()
+  const { isAdmin, districtId } = useAuth()
+  const { data: departments, loading, create, update, remove, refresh } = useDepartments(districtId)
   const [modal, setModal] = useState<{ open: boolean; dept: Department | null }>({ open: false, dept: null })
   const [expand, setExpand] = useState<{ open: boolean; dept: Department | null }>({ open: false, dept: null })
   const [confirm, setConfirm] = useState<{ open: boolean; dept: Department | null }>({ open: false, dept: null })
@@ -56,9 +58,11 @@ export default function DepartmentsPage() {
           <h1 className="text-2xl font-bold text-slate-100">Departments</h1>
           <p className="text-sm text-slate-400 mt-1">{departments.length} department{departments.length !== 1 ? 's' : ''}</p>
         </div>
-        <Button onClick={() => setModal({ open: true, dept: null })}>
-          <Plus className="h-4 w-4" /> New Department
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => setModal({ open: true, dept: null })}>
+            <Plus className="h-4 w-4" /> New Department
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -76,6 +80,7 @@ export default function DepartmentsPage() {
               onManage={() => setExpand({ open: true, dept })}
               onEdit={() => setModal({ open: true, dept })}
               onDelete={() => setConfirm({ open: true, dept })}
+              isAdmin={isAdmin}
             />
           ))}
         </div>
@@ -93,6 +98,7 @@ export default function DepartmentsPage() {
         onClose={() => setExpand({ open: false, dept: null })}
         department={expand.dept}
         onRefresh={refresh}
+        districtId={districtId}
       />
 
       <ConfirmDialog

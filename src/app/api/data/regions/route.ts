@@ -4,17 +4,30 @@ import { createServerClient } from '@/lib/supabase/server'
 export async function GET() {
   try {
     const supabase = createServerClient()
-    const { data: districts, error: dErr } = await supabase.from('districts').select('*').order('name')
-    const { data: regions, error: rErr } = await supabase.from('regions').select('*').order('name')
+    const [{ data: districts, error: dErr }, { data: regions, error: rErr }, { data: roleRows, error: prErr }] =
+      await Promise.all([
+        supabase.from('districts').select('*').order('name'),
+        supabase.from('regions').select('*').order('name'),
+        supabase.from('person_roles').select('entity_type, entity_id, role, person:people(id, name)'),
+      ])
 
-    if (dErr || rErr) {
-      return NextResponse.json({ error: dErr?.message ?? rErr?.message }, { status: 500 })
+    if (dErr || rErr || prErr) {
+      return NextResponse.json({ error: dErr?.message ?? rErr?.message ?? prErr?.message }, { status: 500 })
     }
 
-    // Nest regions under their district for convenience
+    // Helper: build a roles map keyed by entity_id
+    const rolesForEntity = (entityType: string, entityId: string) =>
+      (roleRows ?? [])
+        .filter((r) => r.entity_type === entityType && r.entity_id === entityId)
+        .map((r) => ({ role: r.role, person: r.person }))
+
+    // Nest regions (with their roles) under their district
     const payload = (districts ?? []).map((d) => ({
       ...d,
-      regions: (regions ?? []).filter((r) => r.district_id === d.id),
+      roles: rolesForEntity('district', d.id),
+      regions: (regions ?? [])
+        .filter((r) => r.district_id === d.id)
+        .map((r) => ({ ...r, roles: rolesForEntity('region', r.id) })),
     }))
 
     return NextResponse.json(payload)

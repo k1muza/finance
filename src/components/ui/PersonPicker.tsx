@@ -7,12 +7,14 @@ import { Person } from '@/types'
 interface Props {
   label: string
   value: string
-  onChange: (name: string) => void
+  onChange: (value: string) => void
   people: Person[]
   required?: boolean
+  /** 'name' (default): value is person name string. 'id': value is person UUID. */
+  valueMode?: 'name' | 'id'
 }
 
-export function PersonPicker({ label, value, onChange, people, required }: Props) {
+export function PersonPicker({ label, value, onChange, people, required, valueMode = 'name' }: Props) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
@@ -32,8 +34,16 @@ export function PersonPicker({ label, value, onChange, people, required }: Props
     p.name.toLowerCase().includes(search.toLowerCase())
   )
 
+  const displayValue =
+    valueMode === 'id'
+      ? (people.find((p) => p.id === value)?.name ?? '')
+      : value
+
+  const isActive = (p: Person) =>
+    valueMode === 'id' ? p.id === value : p.name === value
+
   const handleSelect = (person: Person) => {
-    onChange(person.name)
+    onChange(valueMode === 'id' ? person.id : person.name)
     setOpen(false)
     setSearch('')
   }
@@ -54,8 +64,8 @@ export function PersonPicker({ label, value, onChange, people, required }: Props
           onClick={() => setOpen((o) => !o)}
           className="w-full flex items-center justify-between rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm text-left transition focus:outline-none focus:ring-2 focus:ring-cyan-500"
         >
-          <span className={value ? 'text-slate-100' : 'text-slate-500'}>
-            {value || 'Select person…'}
+          <span className={displayValue ? 'text-slate-100' : 'text-slate-500'}>
+            {displayValue || 'Select person…'}
           </span>
           <div className="flex items-center gap-1 shrink-0">
             {value && (
@@ -96,7 +106,7 @@ export function PersonPicker({ label, value, onChange, people, required }: Props
                     type="button"
                     onClick={() => handleSelect(p)}
                     className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-slate-700 ${
-                      value === p.name ? 'text-cyan-400 bg-cyan-500/10' : 'text-slate-200'
+                      isActive(p) ? 'text-cyan-400 bg-cyan-500/10' : 'text-slate-200'
                     }`}
                   >
                     {p.name}

@@ -9,29 +9,21 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- DISTRICTS
 -- ─────────────────────────────────────────
 CREATE TABLE districts (
-  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name              TEXT NOT NULL,
-  chairperson       TEXT NOT NULL,
-  vice_chairperson  TEXT,
-  secretary         TEXT,
-  vice_secretary    TEXT,
-  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name        TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ─────────────────────────────────────────
 -- REGIONS
 -- ─────────────────────────────────────────
 CREATE TABLE regions (
-  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  district_id       UUID NOT NULL REFERENCES districts(id) ON DELETE CASCADE,
-  name              TEXT NOT NULL,
-  chairperson       TEXT NOT NULL,
-  vice_chairperson  TEXT,
-  secretary         TEXT,
-  vice_secretary    TEXT,
-  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  district_id  UUID NOT NULL REFERENCES districts(id) ON DELETE CASCADE,
+  name         TEXT NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_regions_district ON regions(district_id);
@@ -70,12 +62,16 @@ CREATE INDEX idx_people_contribution ON people(contribution DESC);
 -- DAYS
 -- ─────────────────────────────────────────
 CREATE TABLE days (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  date        DATE NOT NULL UNIQUE,
-  label       TEXT,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  district_id  UUID NOT NULL REFERENCES districts(id) ON DELETE CASCADE,
+  date         DATE NOT NULL,
+  label        TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (district_id, date)
 );
+
+CREATE INDEX idx_days_district ON days(district_id);
 
 -- ─────────────────────────────────────────
 -- SESSIONS
@@ -125,6 +121,55 @@ CREATE TABLE meals (
 CREATE INDEX idx_meals_day ON meals(day_id);
 
 -- ─────────────────────────────────────────
+-- PERSON ROLES
+-- Links people to leadership roles in districts or regions.
+-- A person can hold multiple roles across different entities.
+-- ─────────────────────────────────────────
+CREATE TABLE person_roles (
+  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  person_id    UUID NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  entity_type  TEXT NOT NULL CHECK (entity_type IN ('district', 'region')),
+  entity_id    UUID NOT NULL,
+  role         TEXT NOT NULL CHECK (role IN ('chairperson', 'vice_chairperson', 'secretary', 'vice_secretary')),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (entity_type, entity_id, role)
+);
+
+CREATE INDEX idx_person_roles_entity ON person_roles(entity_type, entity_id);
+CREATE INDEX idx_person_roles_person ON person_roles(person_id);
+
+-- Enforce membership: person must belong to the entity they hold a role in
+CREATE OR REPLACE FUNCTION validate_person_role()
+RETURNS TRIGGER AS $$
+DECLARE
+  person_region_id    UUID;
+  region_district_id  UUID;
+BEGIN
+  SELECT region_id INTO person_region_id FROM people WHERE id = NEW.person_id;
+
+  IF NEW.entity_type = 'region' THEN
+    IF person_region_id IS NULL OR person_region_id != NEW.entity_id THEN
+      RAISE EXCEPTION 'Person is not a member of this region';
+    END IF;
+  ELSIF NEW.entity_type = 'district' THEN
+    IF person_region_id IS NULL THEN
+      RAISE EXCEPTION 'Person has no region assignment';
+    END IF;
+    SELECT district_id INTO region_district_id FROM regions WHERE id = person_region_id;
+    IF region_district_id IS NULL OR region_district_id != NEW.entity_id THEN
+      RAISE EXCEPTION 'Person is not associated with this district';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_validate_person_role
+  BEFORE INSERT OR UPDATE ON person_roles
+  FOR EACH ROW EXECUTE FUNCTION validate_person_role();
+
+-- ─────────────────────────────────────────
 -- AUTO-UPDATE updated_at TRIGGER
 -- ─────────────────────────────────────────
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -155,37 +200,28 @@ $$;
 -- ─────────────────────────────────────────
 -- ROW LEVEL SECURITY
 -- ─────────────────────────────────────────
-ALTER TABLE districts   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE regions     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE people      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE days        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sessions    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE events      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE meals       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE districts    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE regions      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE departments  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE people       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE days         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessions     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meals        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE person_roles ENABLE ROW LEVEL SECURITY;
 
 -- Open admin policies — tighten once auth is configured
-CREATE POLICY "admin_all" ON districts   FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "admin_all" ON regions     FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "admin_all" ON departments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "admin_all" ON people      FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "admin_all" ON days        FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "admin_all" ON sessions    FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "admin_all" ON events      FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "admin_all" ON meals       FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "admin_all" ON districts    FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "admin_all" ON regions      FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "admin_all" ON departments  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "admin_all" ON people       FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "admin_all" ON days         FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "admin_all" ON sessions     FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "admin_all" ON events       FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "admin_all" ON meals        FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "admin_all" ON person_roles FOR ALL USING (true) WITH CHECK (true);
 
 -- ─────────────────────────────────────────
 -- LEADERBOARD VIEW
 -- ─────────────────────────────────────────
-CREATE OR REPLACE VIEW leaderboard AS
-SELECT
-  p.id,
-  p.name,
-  p.gender,
-  p.contribution,
-  r.name  AS region_name,
-  d.name  AS department_name,
-  RANK() OVER (ORDER BY p.contribution DESC) AS rank
-FROM people p
-LEFT JOIN regions     r ON r.id = p.region_id
-LEFT JOIN departments d ON d.id = p.department_id;
+-- Leaderboard view is defined in migrate_leaderboard_v3.sql (uses PARTITION BY district)

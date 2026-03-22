@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react'
 import { useDays } from '@/hooks/useDays'
 import { usePeople } from '@/hooks/usePeople'
+import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import { DayTabs } from '@/components/schedule/DayTabs'
 import { Timeline } from '@/components/schedule/Timeline'
 import { PageSpinner } from '@/components/ui/Spinner'
 
 export default function SchedulePage() {
-  const { data: days, loading, create, remove } = useDays()
+  const { districtId } = useAuth()
+  const { data: days, loading, create, remove } = useDays(districtId)
   const { data: people } = usePeople()
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null)
   const toast = useToast()
@@ -23,7 +25,7 @@ export default function SchedulePage() {
 
   const handleCreateDay = async (values: { date: string; label: string | null }) => {
     try {
-      await create(values)
+      await create({ ...values, district_id: districtId! })
       toast.success('Day added')
     } catch (e) {
       toast.error(String(e))

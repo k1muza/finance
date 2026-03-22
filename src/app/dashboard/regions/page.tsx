@@ -1,21 +1,40 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useDistricts } from '@/hooks/useDistricts'
 import { useRegions } from '@/hooks/useRegions'
+import { usePeople } from '@/hooks/usePeople'
+import { usePersonRoles } from '@/hooks/usePersonRoles'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import { DistrictNode } from '@/components/regions/DistrictNode'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { District } from '@/types'
+import { District, PersonRoleType } from '@/types'
 
 export default function RegionsPage() {
   const { districtId, isAdmin } = useAuth()
   const { data: allDistricts, loading: dLoading, create: createDistrict, update: updateDistrict, remove: removeDistrict } = useDistricts()
   const { data: regions, create: createRegion, update: updateRegion, remove: removeRegion } = useRegions()
-
-  // Filter by selected district (works for both district users and admin with a district selected)
-  const districts = districtId ? allDistricts.filter((d) => d.id === districtId) : allDistricts
+  const { data: people } = usePeople()
+  const { data: roles, fetch: fetchRoles, setRole } = usePersonRoles()
   const toast = useToast()
+
+  useEffect(() => { fetchRoles() }, [fetchRoles])
+
+  const districts = districtId ? allDistricts.filter((d) => d.id === districtId) : allDistricts
+
+  const handleSetRole = async (
+    entityType: 'district' | 'region',
+    entityId: string,
+    role: PersonRoleType,
+    personId: string | null
+  ) => {
+    try {
+      await setRole(entityType, entityId, role, personId)
+    } catch (e) {
+      toast.error(String(e))
+    }
+  }
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-5">
@@ -39,6 +58,8 @@ export default function RegionsPage() {
               key={d.id}
               district={d}
               regions={regions.filter((r) => r.district_id === d.id)}
+              roles={roles}
+              people={people}
               onUpdateDistrict={async (id, values) => {
                 try { await updateDistrict(id, values as Partial<District>); toast.success('District updated') }
                 catch (e) { toast.error(String(e)) }
@@ -59,11 +80,11 @@ export default function RegionsPage() {
                 try { await removeRegion(id); toast.success('Region deleted') }
                 catch (e) { toast.error(String(e)) }
               }}
+              onSetRole={handleSetRole}
             />
           ))}
         </div>
       )}
-
     </div>
   )
 }

@@ -1,10 +1,6 @@
 export interface District {
   id: string
   name: string
-  chairperson: string
-  vice_chairperson: string | null
-  secretary: string | null
-  vice_secretary: string | null
   created_at: string
   updated_at: string
 }
@@ -13,14 +9,24 @@ export interface Region {
   id: string
   district_id: string
   name: string
-  chairperson: string
-  vice_chairperson: string | null
-  secretary: string | null
-  vice_secretary: string | null
   created_at: string
   updated_at: string
   // joined
   district?: District
+}
+
+export type PersonRoleType = 'chairperson' | 'vice_chairperson' | 'secretary' | 'vice_secretary'
+export type PersonRoleEntityType = 'district' | 'region'
+
+export interface PersonRole {
+  id: string
+  person_id: string
+  entity_type: PersonRoleEntityType
+  entity_id: string
+  role: PersonRoleType
+  created_at: string
+  // joined
+  person?: Person
 }
 
 export interface Department {
@@ -50,6 +56,7 @@ export interface Person {
 
 export interface Day {
   id: string
+  district_id: string
   date: string
   label: string | null
   created_at: string
@@ -162,6 +169,7 @@ export interface LeaderboardEntry {
 
 export interface Page {
   id: string
+  district_id: string
   title: string
   slug: string
   content: string | null

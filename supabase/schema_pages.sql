@@ -5,17 +5,20 @@
 
 CREATE TABLE pages (
   id                  UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+  district_id         UUID         NOT NULL REFERENCES districts(id) ON DELETE CASCADE,
   title               TEXT         NOT NULL,
-  slug                TEXT         NOT NULL UNIQUE,
+  slug                TEXT         NOT NULL,
   content             TEXT,                        -- HTML produced by the rich-text editor
   featured_image_url  TEXT,
   icon_class          TEXT,                        -- full MDI class string, e.g. "mdi mdi-home"
   sort_order          INTEGER      NOT NULL DEFAULT 0,
   published           BOOLEAN      NOT NULL DEFAULT false,
   created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-  updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+  updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  UNIQUE (district_id, slug)
 );
 
+CREATE INDEX idx_pages_district ON pages(district_id);
 CREATE INDEX idx_pages_slug ON pages(slug);
 
 CREATE TRIGGER trg_pages_updated_at

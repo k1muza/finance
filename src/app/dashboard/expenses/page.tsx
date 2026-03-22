@@ -44,15 +44,6 @@ export default function ExpensesPage() {
   const { data: districts } = useDistricts()
   const toast = useToast()
 
-  // Per-district breakdown (unfiltered total from current fetch)
-  const byDistrict = expenses.reduce<Record<string, { name: string; total: number }>>((acc, e) => {
-    const did = e.district_id
-    const name = (e.district as { name?: string })?.name ?? 'Unknown'
-    if (!acc[did]) acc[did] = { name, total: 0 }
-    acc[did].total += e.amount
-    return acc
-  }, {})
-
   const setField = (field: keyof AddForm, value: string) =>
     setForm((f) => ({ ...f, [field]: value }))
 
@@ -131,13 +122,6 @@ export default function ExpensesPage() {
             <p className="text-xs text-slate-500 mt-1">{expenses.length} transaction{expenses.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
-
-        {Object.entries(byDistrict).map(([, { name, total: dt }]) => (
-          <div key={name} className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-            <p className="text-sm text-slate-400 truncate">{name}</p>
-            <p className="text-xl font-bold text-slate-100 mt-1">{formatCurrency(dt)}</p>
-          </div>
-        ))}
       </div>
 
       {/* Add form */}

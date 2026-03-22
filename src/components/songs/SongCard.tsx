@@ -7,9 +7,10 @@ interface Props {
   onEdit: () => void
   onDelete: () => void
   onView: () => void
+  isAdmin?: boolean
 }
 
-export function SongCard({ song, onEdit, onDelete, onView }: Props) {
+export function SongCard({ song, onEdit, onDelete, onView, isAdmin }: Props) {
   const lineCount = song.lyrics ? song.lyrics.split('\n').filter(Boolean).length : 0
 
   return (
@@ -59,14 +60,16 @@ export function SongCard({ song, onEdit, onDelete, onView }: Props) {
             <span className="text-xs text-slate-600">{lineCount} lines</span>
           )}
         </div>
-        <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={onEdit}>
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onDelete} className="text-red-400 hover:text-red-300">
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        {isAdmin && (
+          <div className="flex gap-1">
+            <Button variant="ghost" size="sm" onClick={onEdit}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onDelete} className="text-red-400 hover:text-red-300">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -14,9 +14,10 @@ interface DepartmentExpandModalProps {
   onClose: () => void
   department: Department | null
   onRefresh: () => void
+  districtId?: string | null
 }
 
-export function DepartmentExpandModal({ open, onClose, department, onRefresh }: DepartmentExpandModalProps) {
+export function DepartmentExpandModal({ open, onClose, department, onRefresh, districtId }: DepartmentExpandModalProps) {
   const [members, setMembers] = useState<Person[]>([])
   const [allPeople, setAllPeople] = useState<Person[]>([])
   const [search, setSearch] = useState('')
@@ -28,21 +29,44 @@ export function DepartmentExpandModal({ open, onClose, department, onRefresh }: 
     if (!open || !department) return
     loadMembers()
     loadAllPeople()
-  }, [open, department]) // eslint-disable-line
+  }, [open, department, districtId]) // eslint-disable-line
 
   const loadMembers = async () => {
     if (!department) return
-    const { data } = await supabase
+    let query = supabase
       .from('people')
-      .select('id, name, phone, gender, contribution, region_id, department_id, created_at, updated_at')
+      .select('id, name, phone, gender, contribution, region_id, department_id, created_at, updated_at, region:regions(district_id)')
       .eq('department_id', department.id)
       .order('name')
-    setMembers(data ?? [])
+
+    const { data } = await query
+
+    // Filter to active district if set
+    const filtered = districtId
+      ? (data ?? []).filter((p) => (p.region as unknown as { district_id: string } | null)?.district_id === districtId)
+      : (data ?? [])
+
+    setMembers(filtered.map(({ region: _r, ...rest }) => rest as Person))
   }
 
   const loadAllPeople = async () => {
-    const { data } = await supabase.from('people').select('id, name, phone, gender, contribution, region_id, department_id, created_at, updated_at').order('name')
-    setAllPeople(data ?? [])
+    let query = supabase
+      .from('people')
+      .select('id, name, phone, gender, contribution, region_id, department_id, created_at, updated_at, region:regions(district_id)')
+      .order('name')
+
+    if (districtId) {
+      query = query.eq('regions.district_id', districtId)
+    }
+
+    const { data } = await query
+
+    // Filter by district via joined region
+    const filtered = districtId
+      ? (data ?? []).filter((p) => (p.region as unknown as { district_id: string } | null)?.district_id === districtId)
+      : (data ?? [])
+
+    setAllPeople(filtered.map(({ region: _r, ...rest }) => rest as Person))
   }
 
   const addMember = async (person: Person) => {

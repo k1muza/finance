@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Music, Plus } from 'lucide-react'
 import { useSongs } from '@/hooks/useSongs'
+import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import { SongCard } from '@/components/songs/SongCard'
 import { SongModal } from '@/components/songs/SongModal'
@@ -13,6 +14,7 @@ import { PageSpinner } from '@/components/ui/Spinner'
 import { Song } from '@/types'
 
 export default function SongsPage() {
+  const { isAdmin } = useAuth()
   const { data: songs, loading, create, update, remove } = useSongs()
   const toast = useToast()
   const [modal, setModal] = useState<{ open: boolean; song: Song | null }>({ open: false, song: null })
@@ -59,9 +61,11 @@ export default function SongsPage() {
             <p className="text-sm text-slate-400 mt-1">{songs.length} song{songs.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
-        <Button onClick={() => setModal({ open: true, song: null })}>
-          <Plus className="h-4 w-4" /> New Song
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => setModal({ open: true, song: null })}>
+            <Plus className="h-4 w-4" /> New Song
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -79,6 +83,7 @@ export default function SongsPage() {
               onView={() => setViewer(song)}
               onEdit={() => setModal({ open: true, song })}
               onDelete={() => setConfirm({ open: true, song })}
+              isAdmin={isAdmin}
             />
           ))}
         </div>
@@ -116,11 +121,13 @@ export default function SongsPage() {
             ) : (
               <p className="text-slate-500 text-sm">No lyrics added yet.</p>
             )}
-            <div className="pt-4 border-t border-slate-700 flex gap-2">
-              <Button variant="secondary" size="sm" onClick={() => { setViewer(null); setModal({ open: true, song: viewer }) }}>
-                Edit Song
-              </Button>
-            </div>
+            {isAdmin && (
+              <div className="pt-4 border-t border-slate-700 flex gap-2">
+                <Button variant="secondary" size="sm" onClick={() => { setViewer(null); setModal({ open: true, song: viewer }) }}>
+                  Edit Song
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </SlideOver>

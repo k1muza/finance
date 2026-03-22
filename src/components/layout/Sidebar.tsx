@@ -12,7 +12,6 @@ import {
   Briefcase,
   Globe,
   Trophy,
-  Code2,
   FileText,
   Music,
   Bell,
@@ -27,7 +26,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
-const nav = [
+const baseNav = [
   { href: '/dashboard/overview', icon: BarChart3, label: 'Overview' },
   { href: '/dashboard/schedule', icon: Calendar, label: 'Schedule' },
   { href: '/dashboard/people', icon: Users, label: 'People' },
@@ -38,8 +37,9 @@ const nav = [
   { href: '/dashboard/songs', icon: Music, label: 'Songs' },
   { href: '/dashboard/expenses', icon: Receipt, label: 'Expenses' },
   { href: '/dashboard/notifications', icon: Bell, label: 'Notifications' },
-  { href: '/dashboard/publish', icon: Code2, label: 'API' },
 ]
+
+const adminNav: typeof baseNav = []
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme()
@@ -82,12 +82,14 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { logout } = useAuth()
+  const { logout, isAdmin } = useAuth()
 
   const handleLogout = async () => {
     await logout()
     router.push('/login')
   }
+
+  const nav = [...baseNav, ...(isAdmin ? adminNav : [])]
 
   const links = (
     <nav className="flex flex-col gap-1 mt-2">

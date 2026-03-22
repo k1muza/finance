@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Department } from '@/types'
 
-export function useDepartments() {
+export function useDepartments(districtId?: string | null) {
   const [data, setData] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -18,20 +18,25 @@ export function useDepartments() {
       .order('name')
     if (err) { setError(err.message); setLoading(false); return }
 
-    // Get member counts
-    const { data: counts } = await supabase
+    // Count members scoped to the active district (via region → district)
+    let countsQuery = supabase
       .from('people')
-      .select('department_id')
+      .select('department_id, region:regions(district_id)')
       .not('department_id', 'is', null)
+
+    const { data: counts } = await countsQuery
 
     const countMap: Record<string, number> = {}
     counts?.forEach((r) => {
-      if (r.department_id) countMap[r.department_id] = (countMap[r.department_id] ?? 0) + 1
+      if (!r.department_id) return
+      const regionDistrictId = (r.region as unknown as { district_id: string } | null)?.district_id
+      if (districtId && regionDistrictId !== districtId) return
+      countMap[r.department_id] = (countMap[r.department_id] ?? 0) + 1
     })
 
     setData((rows ?? []).map((d) => ({ ...d, member_count: countMap[d.id] ?? 0 })))
     setLoading(false)
-  }, []) // eslint-disable-line
+  }, [districtId]) // eslint-disable-line
 
   useEffect(() => { fetch() }, [fetch])
 
