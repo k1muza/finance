@@ -3,7 +3,11 @@
 -- dashboard can filter per-district.
 -- Run this after schema_certificates.sql.
 -- ─────────────────────────────────────────
-CREATE OR REPLACE VIEW leaderboard AS
+
+-- Must drop first because CREATE OR REPLACE cannot add/reorder columns
+DROP VIEW IF EXISTS leaderboard;
+
+CREATE VIEW leaderboard AS
 WITH ranked AS (
   SELECT
     p.id,

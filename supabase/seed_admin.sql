@@ -1,50 +1,31 @@
 -- ─────────────────────────────────────────
 -- SEED: Super Admin User
--- Email:    ado@gmail.com
--- Password: Conference2026!
 --
--- Run this in the Supabase SQL Editor AFTER running schema_auth.sql.
--- You can change the password afterwards via the Supabase Dashboard
--- (Authentication → Users → Edit) or via the app's forgot-password flow.
+-- Supabase does not allow direct INSERT into auth.users from the SQL Editor.
+-- Follow these two steps instead:
+--
+-- STEP 1 — Create the auth user via the Supabase Dashboard:
+--   1. Go to your project → Authentication → Users
+--   2. Click "Add user" → "Create new user"
+--   3. Email:    ado@gmail.com
+--      Password: Conference2026!
+--   4. Check "Auto Confirm User"
+--   5. Click "Create User"
+--   6. Copy the UUID shown next to the new user (you'll need it below)
+--
+-- STEP 2 — Run the SQL below, replacing <paste-user-uuid-here> with the UUID:
 -- ─────────────────────────────────────────
 
-DO $$
-DECLARE
-  admin_id UUID := 'a1a1a1a1-0000-0000-0000-000000000001';
-BEGIN
+UPDATE profiles
+SET role        = 'admin',
+    district_id = NULL
+WHERE id = '<paste-user-uuid-here>';
 
-  -- 1. Create the auth user
-  INSERT INTO auth.users (
-    id,
-    instance_id,
-    email,
-    encrypted_password,
-    email_confirmed_at,
-    raw_app_meta_data,
-    raw_user_meta_data,
-    aud,
-    role,
-    created_at,
-    updated_at
-  ) VALUES (
-    admin_id,
-    '00000000-0000-0000-0000-000000000000',
-    'ado@gmail.com',
-    crypt('Conference2026!', gen_salt('bf')),
-    NOW(),
-    '{"provider":"email","providers":["email"]}',
-    '{}',
-    'authenticated',
-    'authenticated',
-    NOW(),
-    NOW()
-  )
-  ON CONFLICT (id) DO NOTHING;
-
-  -- 2. Upsert the profile as super admin (no district = sees everything)
-  INSERT INTO profiles (id, district_id, role)
-  VALUES (admin_id, NULL, 'admin')
-  ON CONFLICT (id) DO UPDATE SET role = 'admin', district_id = NULL;
-
-END;
-$$;
+-- ─────────────────────────────────────────
+-- If the profile row was not auto-created (trigger may not have fired yet),
+-- use INSERT instead:
+--
+-- INSERT INTO profiles (id, district_id, role)
+-- VALUES ('<paste-user-uuid-here>', NULL, 'admin')
+-- ON CONFLICT (id) DO UPDATE SET role = 'admin', district_id = NULL;
+-- ─────────────────────────────────────────
