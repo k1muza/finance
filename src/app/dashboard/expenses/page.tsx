@@ -27,12 +27,7 @@ const emptyForm: AddForm = { district_id: '', description: '', amount: '', date:
 export default function ExpensesPage() {
   const { districtId, isAdmin } = useAuth()
 
-  // District users are always scoped to their district
-  const [districtFilter, setDistrictFilter] = useState('')
   const [search, setSearch] = useState('')
-
-  // Effective filter: district users can't override their own district
-  const effectiveDistrictId = isAdmin ? (districtFilter || undefined) : (districtId ?? undefined)
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState<AddForm>({ ...emptyForm, district_id: districtId ?? '' })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
@@ -43,7 +38,7 @@ export default function ExpensesPage() {
   const [deleting, setDeleting] = useState(false)
 
   const { data: expenses, loading, total, add, remove } = useExpenses({
-    district_id: effectiveDistrictId,
+    district_id: districtId ?? undefined,
     search: search || undefined,
   })
   const { data: districts } = useDistricts()
@@ -128,8 +123,8 @@ export default function ExpensesPage() {
           </div>
           <div>
             <p className="text-sm text-slate-400">
-              {districtFilter
-                ? `${districts.find((d) => d.id === districtFilter)?.name ?? 'District'} Expenses`
+              {districtId
+                ? `${districts.find((d) => d.id === districtId)?.name ?? 'District'} Expenses`
                 : 'Total Expenses'}
             </p>
             <p className="text-2xl font-bold text-red-400 mt-0.5">{formatCurrency(total)}</p>
@@ -221,15 +216,6 @@ export default function ExpensesPage() {
             className="bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none flex-1"
           />
         </div>
-        {isAdmin && (
-          <Select
-            value={districtFilter}
-            onChange={(e) => setDistrictFilter(e.target.value)}
-            placeholder="All districts"
-            options={districts.map((d) => ({ value: d.id, label: d.name }))}
-            className="w-48"
-          />
-        )}
       </div>
 
       {/* Table */}
@@ -281,7 +267,7 @@ export default function ExpensesPage() {
               <tfoot>
                 <tr className="border-t border-slate-700 bg-slate-900/50">
                   <td colSpan={3} className="px-4 py-3 text-slate-400 text-sm font-medium">
-                    {districtFilter ? `${districts.find((d) => d.id === districtFilter)?.name ?? 'District'} total` : 'Grand total'}
+                    {districtId ? `${districts.find((d) => d.id === districtId)?.name ?? 'District'} total` : 'Grand total'}
                   </td>
                   <td className="px-4 py-3 text-right font-bold text-red-400">
                     {formatCurrency(total)}

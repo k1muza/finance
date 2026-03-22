@@ -18,6 +18,9 @@ interface AuthContextValue {
   isAdmin: boolean
   loading: boolean
   logout: () => Promise<void>
+  // Admin-only: the district currently being viewed (null = all districts)
+  activeDistrictId: string | null
+  setActiveDistrictId: (id: string | null) => void
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -28,6 +31,8 @@ const AuthContext = createContext<AuthContextValue>({
   isAdmin: true,
   loading: true,
   logout: async () => {},
+  activeDistrictId: null,
+  setActiveDistrictId: () => {},
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -35,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [district, setDistrict] = useState<District | null>(null)
   const [loading, setLoading] = useState(true)
+  const [activeDistrictId, setActiveDistrictId] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -79,10 +85,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const isAdmin = profile?.role === 'admin'
-  const districtId = profile?.district_id ?? null
+  // For admins, districtId reflects the actively selected district (null = show all)
+  const districtId = isAdmin ? activeDistrictId : (profile?.district_id ?? null)
 
   return (
-    <AuthContext.Provider value={{ user, profile, district, districtId, isAdmin, loading, logout }}>
+    <AuthContext.Provider value={{
+      user, profile, district, districtId, isAdmin, loading, logout,
+      activeDistrictId, setActiveDistrictId,
+    }}>
       {children}
     </AuthContext.Provider>
   )
