@@ -4,30 +4,32 @@ import { createServerClient } from '@/lib/supabase/server'
 export async function GET() {
   try {
     const supabase = createServerClient()
-    const [{ data: districts, error: dErr }, { data: regions, error: rErr }, { data: roleRows, error: prErr }] =
-      await Promise.all([
-        supabase.from('districts').select('*').order('name'),
-        supabase.from('regions').select('*').order('name'),
-        supabase.from('person_roles').select('entity_type, entity_id, role, person:people(id, name)'),
-      ])
+    const [
+      { data: districts, error: dErr },
+      { data: regions, error: rErr },
+      { data: districtRoleRows, error: drErr },
+      { data: regionRoleRows, error: rrErr },
+    ] = await Promise.all([
+      supabase.from('districts').select('*').order('name'),
+      supabase.from('regions').select('*').order('name'),
+      supabase.from('district_roles').select('district_id, role, person:people(id, name)'),
+      supabase.from('region_roles').select('region_id, role, person:people(id, name)'),
+    ])
 
-    if (dErr || rErr || prErr) {
-      return NextResponse.json({ error: dErr?.message ?? rErr?.message ?? prErr?.message }, { status: 500 })
+    if (dErr || rErr || drErr || rrErr) {
+      return NextResponse.json({ error: dErr?.message ?? rErr?.message ?? drErr?.message ?? rrErr?.message }, { status: 500 })
     }
-
-    // Helper: build a roles map keyed by entity_id
-    const rolesForEntity = (entityType: string, entityId: string) =>
-      (roleRows ?? [])
-        .filter((r) => r.entity_type === entityType && r.entity_id === entityId)
-        .map((r) => ({ role: r.role, person: r.person }))
 
     // Nest regions (with their roles) under their district
     const payload = (districts ?? []).map((d) => ({
       ...d,
-      roles: rolesForEntity('district', d.id),
+      roles: (districtRoleRows ?? []).filter((r) => r.district_id === d.id).map((r) => ({ role: r.role, person: r.person })),
       regions: (regions ?? [])
         .filter((r) => r.district_id === d.id)
-        .map((r) => ({ ...r, roles: rolesForEntity('region', r.id) })),
+        .map((r) => ({
+          ...r,
+          roles: (regionRoleRows ?? []).filter((rr) => rr.region_id === r.id).map((rr) => ({ role: rr.role, person: rr.person })),
+        })),
     }))
 
     return NextResponse.json(payload)

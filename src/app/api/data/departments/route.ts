@@ -19,10 +19,20 @@ export async function GET() {
       }
     })
 
+    const { data: hodRoles } = await supabase
+      .from('department_roles')
+      .select('department_id, person:people(id, name)')
+      .eq('role', 'hod')
+
+    const hodMap: Record<string, { id: string; name: string }> = {}
+    hodRoles?.forEach((r) => {
+      if (r.department_id && r.person) hodMap[r.department_id] = r.person as unknown as { id: string; name: string }
+    })
+
     const payload = (depts ?? []).map((d) => ({
       id: d.id,
       name: d.name,
-      hod: d.hod,
+      hod: hodMap[d.id] ?? null,
       members: memberMap[d.id] ?? [],
     }))
 

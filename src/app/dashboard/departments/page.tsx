@@ -22,7 +22,7 @@ export default function DepartmentsPage() {
   const [deleting, setDeleting] = useState(false)
   const toast = useToast()
 
-  const handleSave = async (values: { name: string; hod: string }) => {
+  const handleSave = async (values: { name: string; hod_person_id: string | null }) => {
     try {
       if (modal.dept) {
         await update(modal.dept.id, values)

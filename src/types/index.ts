@@ -16,12 +16,12 @@ export interface Region {
 }
 
 export type PersonRoleType = 'chairperson' | 'vice_chairperson' | 'secretary' | 'vice_secretary'
-export type PersonRoleEntityType = 'district' | 'region'
 
+/** Normalised view of a district or region role — produced by usePersonRoles for UI consumption. */
 export interface PersonRole {
   id: string
   person_id: string
-  entity_type: PersonRoleEntityType
+  entity_type: 'district' | 'region'
   entity_id: string
   role: PersonRoleType
   created_at: string
@@ -29,14 +29,42 @@ export interface PersonRole {
   person?: Person
 }
 
+export interface DistrictRole {
+  id: string
+  district_id: string
+  person_id: string
+  role: PersonRoleType
+  created_at: string
+  person?: Person
+}
+
+export interface RegionRole {
+  id: string
+  region_id: string
+  person_id: string
+  role: PersonRoleType
+  created_at: string
+  person?: Person
+}
+
+export interface DepartmentRole {
+  id: string
+  department_id: string
+  person_id: string
+  role: 'hod'
+  created_at: string
+  person?: Person
+}
+
 export interface Department {
   id: string
   name: string
-  hod: string
   created_at: string
   updated_at: string
   // computed
   member_count?: number
+  // joined via department_roles
+  hod?: Person | null
 }
 
 export interface Person {
@@ -46,7 +74,6 @@ export interface Person {
   gender: 'male' | 'female' | 'other' | null
   region_id: string | null
   department_id: string | null
-  contribution?: number
   created_at: string
   updated_at: string
   // joined
@@ -110,13 +137,12 @@ export interface Event {
   id: string
   session_id: string
   title: string
-  allocated_person: string | null
   start_time: string
   duration: number
   created_at: string
   updated_at: string
   // joined
-  person?: Person | null
+  people?: Person[]
   videos?: EventVideo[]
   commentaries?: EventCommentary[]
   photos?: EventPhoto[]

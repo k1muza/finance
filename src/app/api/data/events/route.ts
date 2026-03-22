@@ -9,7 +9,7 @@ export async function GET() {
       .select(`
         *,
         session:sessions(id, name, day:days(id, date)),
-        person:people(id, name),
+        event_people(person:people(id, name)),
         videos:event_videos(id, youtube_id, title, created_at),
         commentaries:event_commentaries(id, speaker_name, body, speaker:people(id, name), created_at),
         photos:event_photos(id, url, caption, taken_at, created_at)
@@ -24,9 +24,9 @@ export async function GET() {
       session_id: e.session_id,
       session: Array.isArray(e.session) ? (e.session[0] ?? null) : e.session,
       title: e.title,
-      allocated_person: Array.isArray(e.person) ? (e.person[0] ?? null) : e.person,
       start_time: e.start_time,
       duration: e.duration,
+      people: (e.event_people ?? []).map((ep: any) => (Array.isArray(ep.person) ? ep.person[0] : ep.person)).filter(Boolean),
       videos: e.videos ?? [],
       commentaries: (e.commentaries ?? []).map((c: any) => ({
         ...c,

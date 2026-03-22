@@ -23,7 +23,6 @@ export async function POST(req: NextRequest) {
       const record = {
         ...(row['id'] ? { id: row['id'] } : {}),
         name,
-        hod: row['hod'] || '',
       }
 
       const { error } = await supabase

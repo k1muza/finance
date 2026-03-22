@@ -4,6 +4,16 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Event } from '@/types'
 
+type EventWriteValues = {
+  session_id: string
+  title: string
+  start_time: string
+  duration: number
+  person_ids?: string[]
+}
+
+type EventUpdateValues = Partial<Omit<EventWriteValues, 'session_id'>>
+
 export function useEvents(sessionId: string | null) {
   const [data, setData] = useState<Event[]>([])
   const [loading, setLoading] = useState(false)
@@ -14,24 +24,49 @@ export function useEvents(sessionId: string | null) {
     setLoading(true)
     const { data: rows } = await supabase
       .from('events')
-      .select('*, person:people(id,name)')
+      .select('*, event_people(person:people(id,name))')
       .eq('session_id', sessionId)
       .order('start_time')
-    setData(rows ?? [])
+
+    setData(
+      (rows ?? []).map((r) => ({
+        ...r,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        people: (r.event_people ?? []).map((ep: any) => ep.person).filter(Boolean),
+        event_people: undefined,
+      }))
+    )
     setLoading(false)
   }, [sessionId]) // eslint-disable-line
 
   useEffect(() => { fetch() }, [fetch])
 
-  const create = async (values: Omit<Event, 'id' | 'created_at' | 'updated_at' | 'person'>) => {
-    const { error } = await supabase.from('events').insert(values)
+  const create = async ({ person_ids, ...values }: EventWriteValues) => {
+    const { data: evt, error } = await supabase.from('events').insert(values).select().single()
     if (error) throw new Error(error.message)
+    if (person_ids?.length && evt) {
+      const { error: peErr } = await supabase
+        .from('event_people')
+        .insert(person_ids.map((person_id) => ({ event_id: evt.id, person_id })))
+      if (peErr) throw new Error(peErr.message)
+    }
     await fetch()
   }
 
-  const update = async (id: string, values: Partial<Omit<Event, 'id' | 'created_at' | 'updated_at' | 'person'>>) => {
-    const { error } = await supabase.from('events').update(values).eq('id', id)
-    if (error) throw new Error(error.message)
+  const update = async (id: string, { person_ids, ...values }: EventUpdateValues) => {
+    if (Object.keys(values).length > 0) {
+      const { error } = await supabase.from('events').update(values).eq('id', id)
+      if (error) throw new Error(error.message)
+    }
+    if (person_ids !== undefined) {
+      await supabase.from('event_people').delete().eq('event_id', id)
+      if (person_ids.length > 0) {
+        const { error: peErr } = await supabase
+          .from('event_people')
+          .insert(person_ids.map((person_id) => ({ event_id: id, person_id })))
+        if (peErr) throw new Error(peErr.message)
+      }
+    }
     await fetch()
   }
 

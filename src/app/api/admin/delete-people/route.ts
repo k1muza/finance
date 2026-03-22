@@ -4,7 +4,7 @@ import { createServerClient } from '@/lib/supabase/server'
 export async function DELETE() {
   const supabase = createServerClient()
 
-  // Delete all people — cascades to contributions and person_roles
+  // Delete all people — cascades to contributions, district_roles, region_roles, and department_roles
   const { error } = await supabase.from('people').delete().neq('id', '00000000-0000-0000-0000-000000000000')
 
   if (error) {

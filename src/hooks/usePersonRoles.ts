@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { PersonRole, PersonRoleType, PersonRoleEntityType } from '@/types'
+import { PersonRole, PersonRoleType } from '@/types'
 
 export function usePersonRoles() {
   const [data, setData] = useState<PersonRole[]>([])
@@ -11,37 +11,58 @@ export function usePersonRoles() {
 
   const fetch = useCallback(async () => {
     setLoading(true)
-    const { data: rows } = await supabase
-      .from('person_roles')
-      .select('*, person:people(id, name, region_id)')
-      .order('created_at')
-    setData((rows as PersonRole[]) ?? [])
+    const [{ data: districtRows }, { data: regionRows }] = await Promise.all([
+      supabase.from('district_roles').select('*, person:people(id, name, region_id)').order('created_at'),
+      supabase.from('region_roles').select('*, person:people(id, name, region_id)').order('created_at'),
+    ])
+
+    const districtRoles: PersonRole[] = (districtRows ?? []).map((r) => ({
+      id: r.id,
+      person_id: r.person_id,
+      entity_type: 'district' as const,
+      entity_id: r.district_id,
+      role: r.role as PersonRoleType,
+      created_at: r.created_at,
+      person: r.person as PersonRole['person'],
+    }))
+
+    const regionRoles: PersonRole[] = (regionRows ?? []).map((r) => ({
+      id: r.id,
+      person_id: r.person_id,
+      entity_type: 'region' as const,
+      entity_id: r.region_id,
+      role: r.role as PersonRoleType,
+      created_at: r.created_at,
+      person: r.person as PersonRole['person'],
+    }))
+
+    setData([...districtRoles, ...regionRoles])
     setLoading(false)
   }, []) // eslint-disable-line
 
   const setRole = useCallback(
     async (
-      entityType: PersonRoleEntityType,
+      entityType: 'district' | 'region',
       entityId: string,
       role: PersonRoleType,
       personId: string | null
     ): Promise<void> => {
-      if (personId === null) {
-        // Delete the role slot
-        await supabase
-          .from('person_roles')
-          .delete()
-          .eq('entity_type', entityType)
-          .eq('entity_id', entityId)
-          .eq('role', role)
+      if (entityType === 'district') {
+        if (personId === null) {
+          await supabase.from('district_roles').delete().eq('district_id', entityId).eq('role', role)
+        } else {
+          await supabase
+            .from('district_roles')
+            .upsert({ person_id: personId, district_id: entityId, role }, { onConflict: 'district_id,role' })
+        }
       } else {
-        // Upsert — unique constraint on (entity_type, entity_id, role)
-        await supabase
-          .from('person_roles')
-          .upsert(
-            { person_id: personId, entity_type: entityType, entity_id: entityId, role },
-            { onConflict: 'entity_type,entity_id,role' }
-          )
+        if (personId === null) {
+          await supabase.from('region_roles').delete().eq('region_id', entityId).eq('role', role)
+        } else {
+          await supabase
+            .from('region_roles')
+            .upsert({ person_id: personId, region_id: entityId, role }, { onConflict: 'region_id,role' })
+        }
       }
       await fetch()
     },

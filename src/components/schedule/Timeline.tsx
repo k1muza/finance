@@ -44,10 +44,10 @@ function SessionBlock({
   const [mediaEvent, setMediaEvent] = useState<Event | null>(null)
   const toast = useToast()
 
-  const handleSaveEvent = async (values: Partial<Event>) => {
+  const handleSaveEvent = async (values: Parameters<typeof create>[0]) => {
     try {
       if (editEvent) { await update(editEvent.id, values); toast.success('Event updated') }
-      else { await create(values as Parameters<typeof create>[0]); toast.success('Event added') }
+      else { await create(values); toast.success('Event added') }
     } catch (e) { toast.error(String(e)); throw e }
   }
 
@@ -79,8 +79,8 @@ function SessionBlock({
             <div className="w-16 text-xs text-slate-500 shrink-0">{formatTime(evt.start_time)}</div>
             <div className="flex-1 min-w-0">
               <span className="text-sm text-slate-200">{evt.title}</span>
-              {evt.person && (
-                <span className="ml-2 text-xs text-cyan-500">{(evt.person as { name?: string })?.name}</span>
+              {evt.people && evt.people.length > 0 && (
+                <span className="ml-2 text-xs text-cyan-500">{evt.people.map((p) => p.name).join(', ')}</span>
               )}
             </div>
             <span className="text-xs text-slate-500">{formatDuration(evt.duration)}</span>

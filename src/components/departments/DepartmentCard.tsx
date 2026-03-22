@@ -18,7 +18,7 @@ export function DepartmentCard({ department, onManage, onEdit, onDelete, isAdmin
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="font-semibold text-slate-100 truncate">{department.name}</h3>
-          <p className="text-sm text-slate-400 mt-0.5">HOD: {department.hod}</p>
+          <p className="text-sm text-slate-400 mt-0.5">HOD: {department.hod?.name ?? '—'}</p>
         </div>
         {isAdmin && (
           <div className="flex gap-1 shrink-0">
