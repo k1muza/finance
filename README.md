@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Conference Dashboard
+
+A multi-tenant conference management dashboard built with Next.js for managing the ZAOGA FIF Easter Conference. It powers both the web admin interface and a companion mobile app via REST APIs.
+
+## Features
+
+- **Overview** — Summary stats: attendee count, total funds raised, expenses, net balance, and top contributors
+- **Schedule** — Manage conference days, sessions, events, and meal times with a timeline view
+- **People** — Add/edit/delete attendees; filter by name, gender, region, or department; track individual contributions
+- **Departments** — Create departments, assign heads of department, and manage members
+- **Regions** — Hierarchical view of districts and regions with leadership roles
+- **Leaderboard** — Ranked contributor list with certificate tiers and configurable thresholds
+- **Pages** — Create and publish rich-text content pages (with images and icons) to the mobile app
+- **Songs** — Song library with lyrics, author, and key
+- **Expenses** — Track conference expenses per district
+- **Notifications** — Send FCM push notifications to mobile app users
+- **Publish API** — Interactive API reference for the 9 mobile-facing REST endpoints
+
+## Multi-Tenancy
+
+Two roles control data visibility:
+
+| Role | Access |
+|------|--------|
+| `admin` | All districts |
+| `district` | Own district only |
+
+Authentication is handled via Supabase Auth (email/password). Middleware enforces route protection on all `/dashboard/*` paths.
+
+## Tech Stack
+
+- **Framework** — Next.js 16.2.1 (App Router), React 19
+- **Database** — Supabase (PostgreSQL)
+- **Styling** — Tailwind CSS 4, `next-themes` (dark/light mode)
+- **Rich Text** — TipTap
+- **Push Notifications** — Firebase Admin SDK (FCM)
+- **Icons** — Lucide React, MDI Font
+- **Utilities** — date-fns, clsx, tailwind-merge
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- A [Supabase](https://supabase.com) project
+- A [Firebase](https://firebase.google.com) project (for push notifications)
+
+### Installation
+
+```bash
+npm install
+```
+
+### Environment Variables
+
+Create a `.env.local` file in the project root:
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Firebase (push notifications)
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxx@your-project.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+```
+
+> `SUPABASE_SERVICE_ROLE_KEY` is server-only and has full database access — never expose it to the browser.
+
+### Run the Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Mobile App API
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The dashboard exposes read-only JSON endpoints for the companion mobile app under `/api/data/*`:
 
-## Learn More
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/data/people` | Attendees |
+| `GET /api/data/days` | Conference days |
+| `GET /api/data/sessions` | Sessions per day |
+| `GET /api/data/events` | Events per session |
+| `GET /api/data/meals` | Meal schedule |
+| `GET /api/data/departments` | Departments |
+| `GET /api/data/regions` | Regions |
+| `GET /api/data/songs` | Song library |
+| `GET /api/data/pages` | Published content pages |
 
-To learn more about Next.js, take a look at the following resources:
+Push notification device tokens can be registered at `POST /api/notifications/register`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/
+│   ├── api/          # REST API routes (data + notifications)
+│   ├── dashboard/    # All dashboard pages
+│   └── login/        # Auth page
+├── components/       # Reusable UI and feature components
+├── contexts/         # AuthContext (session + profile)
+├── hooks/            # Data-fetching hooks per entity
+└── lib/
+    └── supabase/     # Browser and server Supabase clients
+```
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev      # Start development server
+npm run build    # Build for production
+npm run start    # Start production server
+npm run lint     # Lint the codebase
+```
