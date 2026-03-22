@@ -101,7 +101,7 @@ Push notification device tokens can be registered at `POST /api/notifications/re
 erDiagram
     districts {
         uuid id PK
-        text name
+        text name UK
         timestamptz created_at
         timestamptz updated_at
     }
@@ -109,15 +109,14 @@ erDiagram
     regions {
         uuid id PK
         uuid district_id FK
-        text name
+        text name UK
         timestamptz created_at
         timestamptz updated_at
     }
 
     departments {
         uuid id PK
-        text name
-        text hod
+        text name UK
         timestamptz created_at
         timestamptz updated_at
     }
@@ -125,11 +124,10 @@ erDiagram
     people {
         uuid id PK
         text name
-        text phone
+        text phone UK
         text gender
         uuid region_id FK
         uuid department_id FK
-        numeric contribution
         timestamptz created_at
         timestamptz updated_at
     }
@@ -143,11 +141,26 @@ erDiagram
         timestamptz created_at
     }
 
-    person_roles {
+    district_roles {
         uuid id PK
+        uuid district_id FK
         uuid person_id FK
-        text entity_type
-        uuid entity_id
+        text role
+        timestamptz created_at
+    }
+
+    region_roles {
+        uuid id PK
+        uuid region_id FK
+        uuid person_id FK
+        text role
+        timestamptz created_at
+    }
+
+    department_roles {
+        uuid id PK
+        uuid department_id FK
+        uuid person_id FK
         text role
         timestamptz created_at
     }
@@ -155,7 +168,7 @@ erDiagram
     days {
         uuid id PK
         uuid district_id FK
-        date date
+        date date UK
         text label
         timestamptz created_at
         timestamptz updated_at
@@ -164,7 +177,7 @@ erDiagram
     sessions {
         uuid id PK
         uuid day_id FK
-        text name
+        text name UK
         time start_time
         integer allocated_duration
         timestamptz created_at
@@ -175,11 +188,15 @@ erDiagram
         uuid id PK
         uuid session_id FK
         text title
-        uuid allocated_person FK
         time start_time
         integer duration
         timestamptz created_at
         timestamptz updated_at
+    }
+
+    event_people {
+        uuid event_id FK
+        uuid person_id FK
     }
 
     meals {
@@ -205,14 +222,20 @@ erDiagram
     districts ||--o{ regions : "has"
     districts ||--o{ days : "has"
     districts ||--o{ expenses : "has"
+    districts ||--o{ district_roles : "has"
     regions ||--o{ people : "belongs to"
+    regions ||--o{ region_roles : "has"
     departments ||--o{ people : "belongs to"
+    departments ||--o{ department_roles : "has"
     people ||--o{ contributions : "makes"
-    people ||--o{ person_roles : "holds"
-    people ||--o{ events : "allocated to"
+    people ||--o{ district_roles : "holds"
+    people ||--o{ region_roles : "holds"
+    people ||--o{ department_roles : "holds"
+    people ||--o{ event_people : "assigned to"
     days ||--o{ sessions : "contains"
     days ||--o{ meals : "contains"
     sessions ||--o{ events : "contains"
+    events ||--o{ event_people : "has"
 ```
 
 > `person_roles.entity_type` is either `'district'` or `'region'`; `entity_id` points to the corresponding table. A DB trigger enforces that the person must be a member of the entity before a role can be assigned.
