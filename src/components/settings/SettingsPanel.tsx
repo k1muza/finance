@@ -32,13 +32,6 @@ const IMPORT_TABS: TabConfig[] = [
     notes: 'id is optional — leave blank to auto-generate. Providing a stable id enables safe re-imports. Leadership roles are assigned via the Regions UI.',
   },
   {
-    key: 'departments',
-    label: 'Departments',
-    endpoint: '/api/import/departments',
-    columns: ['id', 'name', 'hod'],
-    notes: 'Departments are shared across all districts.',
-  },
-  {
     key: 'regions',
     label: 'Regions',
     endpoint: '/api/import/regions',
@@ -118,7 +111,7 @@ function ImportSection({ tab, districtId }: { tab: TabConfig; districtId?: strin
       <div className="flex items-center gap-3 flex-wrap">
         <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-600 bg-slate-700/50 hover:bg-slate-700 cursor-pointer text-sm text-slate-300 transition-colors">
           <FileText className="h-4 w-4 shrink-0 text-slate-400" />
-          <span className="truncate max-w-[200px]">{fileName ?? 'Choose CSV file…'}</span>
+          <span className="truncate max-w-50">{fileName ?? 'Choose CSV file…'}</span>
           <input
             ref={inputRef}
             type="file"
