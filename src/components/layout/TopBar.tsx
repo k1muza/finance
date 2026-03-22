@@ -8,9 +8,10 @@ import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { ShieldCheck, MapPin, ChevronDown, Check, Plus } from 'lucide-react'
+import { ShieldCheck, MapPin, ChevronDown, Check, Plus, User, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { GlobalSearch } from '@/components/layout/GlobalSearch'
+import { useRouter } from 'next/navigation'
 
 interface DistrictStat {
   id: string
@@ -179,6 +180,61 @@ function AdminDistrictDropdown() {
   )
 }
 
+function UserMenu() {
+  const { user, logout } = useAuth()
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const displayName = user?.user_metadata?.full_name
+    ?? user?.email?.split('@')[0]
+    ?? 'Account'
+
+  useEffect(() => {
+    function onMouseDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [])
+
+  const handleLogout = async () => {
+    setOpen(false)
+    await logout()
+    router.push('/login')
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border transition-colors bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-600 hover:text-slate-100"
+      >
+        <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+        <span className="max-w-30 truncate font-medium">{displayName}</span>
+        <ChevronDown className={cn('h-3.5 w-3.5 text-slate-500 shrink-0 transition-transform', open && 'rotate-180')} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 w-44 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden py-1">
+          <div className="px-3 py-2 border-b border-slate-800">
+            <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-300 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+          >
+            <LogOut className="h-3.5 w-3.5 shrink-0" />
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function TopBar() {
   const { isAdmin, district } = useAuth()
   const { districts: allDistricts } = useDistrictStats()
@@ -196,6 +252,8 @@ export function TopBar() {
             </span>
             <div className="w-px h-4 bg-slate-700" />
             <AdminDistrictDropdown />
+            <div className="w-px h-4 bg-slate-700" />
+            <UserMenu />
           </div>
         </div>
       </header>
@@ -209,10 +267,14 @@ export function TopBar() {
         <div className="p-6 max-w-6xl mx-auto flex items-center gap-4">
           <GlobalSearch />
           <div className="flex-1" />
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-sm shrink-0">
-            <MapPin className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-            <span className="text-slate-200 font-medium">{district.name}</span>
-            {stat && <span className="text-xs text-slate-500 ml-0.5">{stat.people_count}</span>}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-sm">
+              <MapPin className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+              <span className="text-slate-200 font-medium">{district.name}</span>
+              {stat && <span className="text-xs text-slate-500 ml-0.5">{stat.people_count}</span>}
+            </div>
+            <div className="w-px h-4 bg-slate-700" />
+            <UserMenu />
           </div>
         </div>
       </header>

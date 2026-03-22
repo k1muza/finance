@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/contexts/AuthContext'
@@ -21,7 +21,6 @@ import {
   Church,
   Sun,
   Moon,
-  LogOut,
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
@@ -86,10 +85,9 @@ function DistrictBadge({ collapsed }: { collapsed: boolean }) {
 
 export function Sidebar() {
   const pathname = usePathname()
-  const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(true)
-  const { logout, isAdmin } = useAuth()
+  const { isAdmin } = useAuth()
 
   // Default: collapsed on < lg, expanded on lg+
   useEffect(() => {
@@ -98,11 +96,6 @@ export function Sidebar() {
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
   }, [])
-
-  const handleLogout = async () => {
-    await logout()
-    router.push('/login')
-  }
 
   const nav = [...baseNav, ...(isAdmin ? adminNav : [])]
 
@@ -185,16 +178,8 @@ export function Sidebar() {
               <DistrictBadge collapsed={false} />
             </div>
             {mobileLinks}
-            <div className="mt-auto pt-4 border-t border-slate-700 space-y-1">
+            <div className="mt-auto pt-4 border-t border-slate-700">
               <ThemeToggle collapsed={false} />
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-              >
-                <LogOut className="h-4 w-4 shrink-0" />
-                <span>Sign out</span>
-              </button>
             </div>
           </div>
         </div>
@@ -229,18 +214,6 @@ export function Sidebar() {
           collapsed ? 'space-y-1' : 'space-y-1'
         )}>
           <ThemeToggle collapsed={collapsed} />
-          <button
-            type="button"
-            onClick={handleLogout}
-            title={collapsed ? 'Sign out' : undefined}
-            className={cn(
-              'flex items-center rounded-lg text-sm text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors w-full',
-              collapsed ? 'justify-center px-0 py-2' : 'gap-2 px-3 py-2'
-            )}
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Sign out</span>}
-          </button>
 
           {/* Collapse toggle */}
           <button
