@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Church } from 'lucide-react'
-import { District } from '@/types'
 
 const registrationEnabled = process.env.NEXT_PUBLIC_REGISTRATION_ENABLED === 'true'
 
@@ -14,8 +13,6 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [districtId, setDistrictId] = useState('')
-  const [districts, setDistricts] = useState<District[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -27,18 +24,6 @@ export default function RegisterPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) router.replace('/dashboard/overview')
     })
-  }, []) // eslint-disable-line
-
-  // Fetch districts for the dropdown
-  useEffect(() => {
-    if (!registrationEnabled) return
-    supabase
-      .from('districts')
-      .select('id, name, chairperson, vice_chairperson, secretary, vice_secretary, created_at, updated_at')
-      .order('name')
-      .then(({ data }) => {
-        if (data) setDistricts(data as District[])
-      })
   }, []) // eslint-disable-line
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -59,7 +44,7 @@ export default function RegisterPage() {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, district_id: districtId }),
+      body: JSON.stringify({ email, password }),
     })
 
     const json = await res.json()
@@ -140,7 +125,7 @@ export default function RegisterPage() {
         <form onSubmit={handleRegister} className="bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-5">
           <div>
             <p className="text-base font-semibold text-slate-100 mb-1">Create account</p>
-            <p className="text-sm text-slate-400">Register your district account</p>
+            <p className="text-sm text-slate-400">Register an admin account</p>
           </div>
 
           {error && (
@@ -164,24 +149,6 @@ export default function RegisterPage() {
                 placeholder="you@example.com"
                 className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
               />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-slate-300" htmlFor="district">
-                District
-              </label>
-              <select
-                id="district"
-                required
-                value={districtId}
-                onChange={(e) => setDistrictId(e.target.value)}
-                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
-              >
-                <option value="" disabled>Select your district</option>
-                {districts.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
             </div>
 
             <div className="flex flex-col gap-1.5">
