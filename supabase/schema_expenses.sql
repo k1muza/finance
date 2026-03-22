@@ -5,7 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS expenses (
   id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  district_id  UUID NOT NULL REFERENCES districts(id) ON DELETE RESTRICT,
+  district_id  UUID NOT NULL REFERENCES districts(id) ON DELETE CASCADE,
   description  TEXT NOT NULL,
   amount       NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
   date         DATE NOT NULL DEFAULT CURRENT_DATE,

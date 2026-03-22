@@ -35,11 +35,9 @@ export default function OverviewPage() {
           <TabButton active={tab === 'report'} onClick={() => setTab('report')}>
             Report
           </TabButton>
-          {isAdmin && (
-            <TabButton active={tab === 'settings'} onClick={() => setTab('settings')}>
-              Project Settings
-            </TabButton>
-          )}
+          <TabButton active={tab === 'settings'} onClick={() => setTab('settings')}>
+            Project Settings
+          </TabButton>
         </div>
       </div>
 
@@ -54,7 +52,7 @@ export default function OverviewPage() {
 
       {tab === 'report' && <ReportPanel districtId={districtId} />}
 
-      {tab === 'settings' && isAdmin && <SettingsPanel />}
+      {tab === 'settings' && <SettingsPanel />}
     </div>
   )
 }

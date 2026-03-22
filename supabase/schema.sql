@@ -47,7 +47,7 @@ CREATE TABLE people (
   name            TEXT NOT NULL,
   phone           TEXT,
   gender          TEXT CHECK (gender IN ('male', 'female', 'other')),
-  region_id       UUID REFERENCES regions(id) ON DELETE SET NULL,
+  region_id       UUID REFERENCES regions(id) ON DELETE CASCADE,
   department_id   UUID REFERENCES departments(id) ON DELETE SET NULL,
   contribution    NUMERIC(12, 2) NOT NULL DEFAULT 0,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),

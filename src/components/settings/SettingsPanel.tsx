@@ -1,9 +1,12 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import { Upload, CheckCircle, AlertCircle, Loader, FileText, Trash2 } from 'lucide-react'
+import { useRef, useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Upload, CheckCircle, AlertCircle, Loader, FileText, Trash2, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/contexts/AuthContext'
+import { useDistricts } from '@/hooks/useDistricts'
 
 interface ImportResult {
   imported: number
@@ -162,23 +165,116 @@ function ImportSection({ tab, districtId }: { tab: TabConfig; districtId?: strin
   )
 }
 
-function DangerZone() {
-  const [confirm, setConfirm] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
+function DistrictSettings({ districtId }: { districtId: string }) {
+  const { data: districts, update } = useDistricts()
+  const district = districts.find((d) => d.id === districtId)
 
-  const handleDelete = async () => {
-    setLoading(true)
-    setResult(null)
+  const [name, setName] = useState(district?.name ?? '')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (district) setName(district.name)
+  }, [district?.name]) // eslint-disable-line
+
+  const handleSave = async () => {
+    if (!name.trim()) return
+    setSaving(true)
+    setError(null)
+    setSaved(false)
+    try {
+      await update(districtId, { name: name.trim() })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
+      <h2 className="font-semibold text-slate-100 flex items-center gap-2">
+        <Building2 className="h-5 w-5 text-cyan-400" />
+        District Settings
+      </h2>
+      <div className="flex items-end gap-3">
+        <div className="flex-1 max-w-sm">
+          <Input
+            label="District name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="District name"
+          />
+        </div>
+        <Button onClick={handleSave} disabled={saving || !name.trim() || name.trim() === district?.name} loading={saving}>
+          Save
+        </Button>
+      </div>
+      {saved && (
+        <div className="flex items-center gap-2 text-sm text-green-400">
+          <CheckCircle className="h-4 w-4 shrink-0" />
+          District name updated
+        </div>
+      )}
+      {error && (
+        <div className="flex items-center gap-2 text-sm text-red-400">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DangerZone({ districtId }: { districtId?: string | null }) {
+  const { data: districts, remove } = useDistricts()
+  const { setActiveDistrictId } = useAuth()
+  const router = useRouter()
+
+  const [confirmPeople, setConfirmPeople] = useState(false)
+  const [loadingPeople, setLoadingPeople] = useState(false)
+  const [resultPeople, setResultPeople] = useState<{ ok: boolean; message: string } | null>(null)
+
+  const [confirmDistrict, setConfirmDistrict] = useState(false)
+  const [loadingDistrict, setLoadingDistrict] = useState(false)
+  const [errorDistrict, setErrorDistrict] = useState<string | null>(null)
+
+  const handleDeletePeople = async () => {
+    setLoadingPeople(true)
+    setResultPeople(null)
     try {
       const res = await fetch('/api/admin/delete-people', { method: 'DELETE' })
       const json = await res.json()
-      setResult({ ok: res.ok, message: json.message ?? (res.ok ? 'Done' : 'Error') })
+      setResultPeople({ ok: res.ok, message: json.message ?? (res.ok ? 'Done' : 'Error') })
     } catch (e) {
-      setResult({ ok: false, message: String(e) })
+      setResultPeople({ ok: false, message: String(e) })
     } finally {
-      setLoading(false)
-      setConfirm(false)
+      setLoadingPeople(false)
+      setConfirmPeople(false)
+    }
+  }
+
+  const handleDeleteDistrict = async () => {
+    if (!districtId) return
+    setLoadingDistrict(true)
+    setErrorDistrict(null)
+    try {
+      await remove(districtId)
+      const remaining = districts.filter((d) => d.id !== districtId)
+      if (remaining.length === 0) {
+        setActiveDistrictId(null)
+        router.push('/dashboard/setup')
+      } else {
+        setActiveDistrictId(remaining[0].id)
+      }
+    } catch (e) {
+      setErrorDistrict(String(e))
+      setConfirmDistrict(false)
+    } finally {
+      setLoadingDistrict(false)
     }
   }
 
@@ -188,64 +284,106 @@ function DangerZone() {
         <Trash2 className="h-5 w-5" />
         Danger Zone
       </h2>
+
+      {/* Delete all people */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <p className="text-sm text-slate-300 font-medium">Delete all people</p>
           <p className="text-xs text-slate-500 mt-0.5">Removes every person, their contributions, and their role assignments. This cannot be undone.</p>
         </div>
-        {!confirm ? (
-          <Button variant="danger" size="sm" onClick={() => setConfirm(true)}>
+        {!confirmPeople ? (
+          <Button variant="danger" size="sm" onClick={() => setConfirmPeople(true)}>
             Delete all people
           </Button>
         ) : (
           <div className="flex items-center gap-2">
             <span className="text-xs text-red-400">Are you sure?</span>
-            <Button variant="danger" size="sm" onClick={handleDelete} disabled={loading}>
-              {loading ? <Loader className="h-4 w-4 animate-spin" /> : null}
+            <Button variant="danger" size="sm" onClick={handleDeletePeople} disabled={loadingPeople}>
+              {loadingPeople ? <Loader className="h-4 w-4 animate-spin" /> : null}
               Yes, delete
             </Button>
-            <Button size="sm" onClick={() => setConfirm(false)} disabled={loading}>
+            <Button size="sm" onClick={() => setConfirmPeople(false)} disabled={loadingPeople}>
               Cancel
             </Button>
           </div>
         )}
       </div>
-      {result && (
-        <div className={`rounded-lg px-4 py-3 text-sm flex items-center gap-2 ${result.ok ? 'bg-slate-700/50 border border-slate-600 text-green-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
-          {result.ok ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
-          {result.message}
+      {resultPeople && (
+        <div className={`rounded-lg px-4 py-3 text-sm flex items-center gap-2 ${resultPeople.ok ? 'bg-slate-700/50 border border-slate-600 text-green-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
+          {resultPeople.ok ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+          {resultPeople.message}
         </div>
+      )}
+
+      {/* Delete district */}
+      {districtId && (
+        <>
+          <div className="border-t border-red-900/50" />
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-sm text-slate-300 font-medium">Delete this district</p>
+              <p className="text-xs text-slate-500 mt-0.5">Permanently removes the district and all associated regions, people, and data.</p>
+            </div>
+            {!confirmDistrict ? (
+              <Button variant="danger" size="sm" onClick={() => setConfirmDistrict(true)}>
+                Delete district
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-red-400">This cannot be undone.</span>
+                <Button variant="danger" size="sm" onClick={handleDeleteDistrict} disabled={loadingDistrict}>
+                  {loadingDistrict ? <Loader className="h-4 w-4 animate-spin" /> : null}
+                  Yes, delete
+                </Button>
+                <Button size="sm" onClick={() => setConfirmDistrict(false)} disabled={loadingDistrict}>
+                  Cancel
+                </Button>
+              </div>
+            )}
+          </div>
+          {errorDistrict && (
+            <div className="flex items-center gap-2 text-sm text-red-400">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {errorDistrict}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
 }
 
 export function SettingsPanel() {
-  const { districtId } = useAuth()
+  const { districtId, isAdmin } = useAuth()
   return (
     <div className="space-y-6">
-      {/* CSV import info */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-2">
-        <h2 className="font-semibold text-slate-100 flex items-center gap-2">
-          <Upload className="h-5 w-5 text-cyan-400" />
-          CSV Import
-        </h2>
-        <p className="text-sm text-slate-400">
-          Import data from CSV files. Each file must have the column headers shown below in the first row.
-          Rows with a provided <code className="text-cyan-400 bg-slate-700 px-1 rounded text-xs">id</code> are upserted (safe to re-run); rows without an id are always inserted as new records.
-        </p>
-      </div>
+      {/* District settings — visible to all */}
+      {districtId && <DistrictSettings districtId={districtId} />}
 
-      {/* Import sections — run in order */}
-      <div className="space-y-4">
-        <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Run imports in order ↓</p>
-        {IMPORT_TABS.map((tab) => (
-          <ImportSection key={tab.key} tab={tab} districtId={districtId} />
-        ))}
-      </div>
+      {/* CSV import + Danger Zone — admin only */}
+      {isAdmin && (
+        <>
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-2">
+            <h2 className="font-semibold text-slate-100 flex items-center gap-2">
+              <Upload className="h-5 w-5 text-cyan-400" />
+              CSV Import
+            </h2>
+            <p className="text-sm text-slate-400">
+              Import data from CSV files. Each file must have the column headers shown below in the first row.
+              Rows with a provided <code className="text-cyan-400 bg-slate-700 px-1 rounded text-xs">id</code> are upserted (safe to re-run); rows without an id are always inserted as new records.
+            </p>
+          </div>
 
-      {/* Danger zone */}
-      <DangerZone />
+          <div className="space-y-4">
+            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Run imports in order ↓</p>
+            {IMPORT_TABS.map((tab) => (
+              <ImportSection key={tab.key} tab={tab} districtId={districtId} />
+            ))}
+          </div>
+
+          <DangerZone districtId={districtId} />
+        </>
+      )}
     </div>
   )
 }

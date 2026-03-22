@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { ShieldCheck, MapPin, ChevronDown, Check, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { GlobalSearch } from '@/components/layout/GlobalSearch'
 
 interface DistrictStat {
   id: string
@@ -184,13 +185,19 @@ export function TopBar() {
 
   if (isAdmin) {
     return (
-      <header className="flex items-center justify-end gap-3 px-6 py-2.5 border-b border-slate-800 bg-slate-950 min-h-[49px]">
-        <span className="flex items-center gap-1.5 text-xs text-slate-500">
-          <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
-          <span className="text-cyan-400 font-medium">Admin</span>
-        </span>
-        <div className="w-px h-4 bg-slate-700" />
-        <AdminDistrictDropdown />
+      <header className="border-b border-slate-800 bg-slate-950">
+        <div className="p-6 max-w-6xl mx-auto flex items-center gap-4">
+          <GlobalSearch />
+          <div className="flex-1" />
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="flex items-center gap-1.5 text-xs text-slate-500">
+              <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
+              <span className="text-cyan-400 font-medium">Admin</span>
+            </span>
+            <div className="w-px h-4 bg-slate-700" />
+            <AdminDistrictDropdown />
+          </div>
+        </div>
       </header>
     )
   }
@@ -198,12 +205,15 @@ export function TopBar() {
   if (district) {
     const stat = allDistricts.find((d) => d.id === district.id)
     return (
-      <header className="flex items-center justify-end gap-3 px-6 py-2.5 border-b border-slate-800 bg-slate-950 min-h-[49px]">
-        <span className="text-xs text-slate-500">Active district</span>
-        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-sm">
-          <MapPin className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-          <span className="text-slate-200 font-medium">{district.name}</span>
-          {stat && <span className="text-xs text-slate-500 ml-0.5">{stat.people_count}</span>}
+      <header className="border-b border-slate-800 bg-slate-950">
+        <div className="p-6 max-w-6xl mx-auto flex items-center gap-4">
+          <GlobalSearch />
+          <div className="flex-1" />
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-sm shrink-0">
+            <MapPin className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+            <span className="text-slate-200 font-medium">{district.name}</span>
+            {stat && <span className="text-xs text-slate-500 ml-0.5">{stat.people_count}</span>}
+          </div>
         </div>
       </header>
     )
