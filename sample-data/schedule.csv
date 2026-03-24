@@ -1,0 +1,26 @@
+date,label,session_name,session_start,session_duration,event_title,event_start,event_duration
+2026-04-10,Day 1,Morning Session,08:00,120,Opening Prayer,08:00,15
+2026-04-10,Day 1,Morning Session,08:00,120,Welcome Address,08:15,20
+2026-04-10,Day 1,Morning Session,08:00,120,Keynote Address,08:35,45
+2026-04-10,Day 1,Morning Session,08:00,120,Announcements,09:20,10
+2026-04-10,Day 1,Afternoon Session,14:00,90,Bible Study,14:00,45
+2026-04-10,Day 1,Afternoon Session,14:00,90,Group Discussion,14:45,30
+2026-04-10,Day 1,Afternoon Session,14:00,90,Closing Prayer,15:15,15
+2026-04-10,Day 1,Evening Service,18:30,90,Praise & Worship,18:30,30
+2026-04-10,Day 1,Evening Service,18:30,90,Sermon,19:00,45
+2026-04-10,Day 1,Evening Service,18:30,90,Altar Call,19:45,15
+2026-04-11,Day 2,Morning Session,08:00,120,Devotion,08:00,20
+2026-04-11,Day 2,Morning Session,08:00,120,Special Address,08:20,40
+2026-04-11,Day 2,Morning Session,08:00,120,Department Reports,09:00,45
+2026-04-11,Day 2,Morning Session,08:00,120,Closing Remarks,09:45,15
+2026-04-11,Day 2,Afternoon Session,14:00,90,Workshop A,14:00,60
+2026-04-11,Day 2,Afternoon Session,14:00,90,Workshop B,14:00,60
+2026-04-11,Day 2,Evening Service,18:30,90,Praise & Worship,18:30,30
+2026-04-11,Day 2,Evening Service,18:30,90,Guest Speaker,19:00,50
+2026-04-11,Day 2,Evening Service,18:30,90,Benediction,19:50,10
+2026-04-12,Day 3,Morning Session,08:00,120,Devotion,08:00,20
+2026-04-12,Day 3,Morning Session,08:00,120,Thanksgiving Service,08:20,60
+2026-04-12,Day 3,Morning Session,08:00,120,Awards & Recognition,09:20,30
+2026-04-12,Day 3,Closing Ceremony,11:00,60,Final Remarks,11:00,20
+2026-04-12,Day 3,Closing Ceremony,11:00,60,Vote of Thanks,11:20,15
+2026-04-12,Day 3,Closing Ceremony,11:00,60,Closing Prayer,11:35,10

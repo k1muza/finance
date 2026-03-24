@@ -17,8 +17,6 @@ export default function OverviewPage() {
   const { data, loading } = useOverview(districtId)
   const [tab, setTab] = useState<Tab>('overview')
 
-  if (loading) return <PageSpinner />
-
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       {/* Header + tabs */}
@@ -41,13 +39,15 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {tab === 'overview' && data && (
-        <>
-          <StatsRow stats={data} />
-          <div className="max-w-xl">
-            <LeaderboardPreview entries={data.topContributors} />
-          </div>
-        </>
+      {tab === 'overview' && (
+        loading ? <PageSpinner /> : data ? (
+          <>
+            <StatsRow stats={data} />
+            <div className="max-w-xl">
+              <LeaderboardPreview entries={data.topContributors} />
+            </div>
+          </>
+        ) : null
       )}
 
       {tab === 'report' && <ReportPanel districtId={districtId} />}

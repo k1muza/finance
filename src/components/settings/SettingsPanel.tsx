@@ -45,6 +45,13 @@ const IMPORT_TABS: TabConfig[] = [
     columns: ['id', 'name', 'phone', 'gender', 'region_id', 'department', 'total_contribution'],
     notes: 'region_id must match a region in the active district. department is matched by name (case-insensitive). gender: male | female | other. total_contribution creates/updates a single "sheet_import" contribution entry per person.',
   },
+  {
+    key: 'schedule',
+    label: 'Schedule',
+    endpoint: '/api/import/schedule',
+    columns: ['date', 'label', 'session_name', 'session_start', 'session_duration', 'event_title', 'event_start', 'event_duration'],
+    notes: 'date: YYYY-MM-DD. session_start / event_start: HH:MM (24-hour). session_duration / event_duration: minutes. label is optional. event_title, event_start, event_duration are optional — rows without event_title only create the day/session. Re-importing skips events that already exist by title within the same session.',
+  },
 ]
 
 function ImportSection({ tab, districtId }: { tab: TabConfig; districtId?: string | null }) {
@@ -117,7 +124,7 @@ function ImportSection({ tab, districtId }: { tab: TabConfig; districtId?: strin
             type="file"
             accept=".csv,text/csv"
             onChange={handleFileChange}
-            className="sr-only"
+            className="hidden"
           />
         </label>
         <Button onClick={handleImport} disabled={loading || !fileName} size="sm">
