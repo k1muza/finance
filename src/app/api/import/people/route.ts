@@ -14,6 +14,17 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient()
 
+    const districtId = (formData.get('district_id') as string | null)?.trim()
+
+    // Build region name → id lookup (scoped to active district, case-insensitive)
+    let regionQuery = supabase.from('regions').select('id, name')
+    if (districtId) regionQuery = regionQuery.eq('district_id', districtId)
+    const { data: regions } = await regionQuery
+    const regionByName: Record<string, string> = {}
+    for (const r of regions ?? []) {
+      regionByName[r.name.toLowerCase()] = r.id
+    }
+
     // Build department name → id lookup (case-insensitive)
     const { data: departments } = await supabase.from('departments').select('id, name')
     const deptByName: Record<string, string> = {}
@@ -30,6 +41,16 @@ export async function POST(req: NextRequest) {
 
       const isUpdate = !!row['id']
 
+      // Resolve region by name
+      let region_id: string | null = null
+      const regionName = row['region']?.trim()
+      if (regionName) {
+        region_id = regionByName[regionName.toLowerCase()] ?? null
+        if (!region_id) {
+          errors.push(`${name}: region "${regionName}" not found — skipping region assignment`)
+        }
+      }
+
       // Resolve department by name
       let department_id: string | null = null
       const deptName = row['department']?.trim()
@@ -43,9 +64,9 @@ export async function POST(req: NextRequest) {
       const personRecord = {
         ...(isUpdate ? { id: row['id'] } : {}),
         name,
-        phone:         row['phone']         || null,
+        phone:         row['phone']  || null,
         gender:        (['male', 'female', 'other'].includes(row['gender']) ? row['gender'] : null) as 'male' | 'female' | 'other' | null,
-        region_id:     row['region_id']     || null,
+        region_id,
         department_id,
       }
 

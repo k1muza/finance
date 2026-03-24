@@ -42,8 +42,8 @@ const IMPORT_TABS: TabConfig[] = [
     key: 'people',
     label: 'People',
     endpoint: '/api/import/people',
-    columns: ['id', 'name', 'phone', 'gender', 'region_id', 'department', 'total_contribution'],
-    notes: 'region_id must match a region in the active district. department is matched by name (case-insensitive). gender: male | female | other. total_contribution creates/updates a single "sheet_import" contribution entry per person.',
+    columns: ['id', 'name', 'phone', 'gender', 'region', 'department', 'total_contribution'],
+    notes: 'region is matched by name (case-insensitive) within the active district. department is matched by name (case-insensitive). gender: male | female | other. total_contribution creates/updates a single "sheet_import" contribution entry per person.',
   },
   {
     key: 'schedule',
