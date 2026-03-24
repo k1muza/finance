@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
-import { PlusCircle, Trash2, TrendingDown, Search } from 'lucide-react'
+import { PlusCircle, Trash2, TrendingDown, Search, Upload, X, FileText } from 'lucide-react'
 
 const today = () => new Date().toISOString().split('T')[0]
 
@@ -37,7 +37,12 @@ export default function ExpensesPage() {
   })
   const [deleting, setDeleting] = useState(false)
 
-  const { data: expenses, loading, total, add, remove } = useExpenses({
+  const [importing, setImporting] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importResult, setImportResult] = useState<{ imported: number; errors: string[] } | null>(null)
+
+  const { data: expenses, loading, total, add, remove, refresh } = useExpenses({
     district_id: districtId ?? undefined,
     search: search || undefined,
   })
@@ -78,6 +83,29 @@ export default function ExpensesPage() {
     }
   }
 
+  const handleImport = async () => {
+    if (!importFile) return
+    setImportLoading(true)
+    setImportResult(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', importFile)
+      if (districtId) fd.append('district_id', districtId)
+      const res = await fetch('/api/import/expenses', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Import failed')
+      setImportResult({ imported: json.imported, errors: json.errors ?? [] })
+      if (json.imported > 0) {
+        await refresh()
+        toast.success(`${json.imported} expense${json.imported !== 1 ? 's' : ''} imported`)
+      }
+    } catch (e) {
+      toast.error(String(e))
+    } finally {
+      setImportLoading(false)
+    }
+  }
+
   const handleDelete = async () => {
     setDeleting(true)
     try {
@@ -99,11 +127,18 @@ export default function ExpensesPage() {
           <h1 className="text-2xl font-bold text-slate-100">Expenses</h1>
           <p className="text-sm text-slate-400 mt-1">Track conference expenses by district</p>
         </div>
-        {!adding && (
-          <Button onClick={() => setAdding(true)}>
-            <PlusCircle className="h-4 w-4" /> Add Expense
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {!importing && (
+            <Button variant="ghost" onClick={() => { setImporting(true); setImportResult(null); setImportFile(null) }}>
+              <Upload className="h-4 w-4" /> Import CSV
+            </Button>
+          )}
+          {!adding && (
+            <Button onClick={() => setAdding(true)}>
+              <PlusCircle className="h-4 w-4" /> Add Expense
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -185,6 +220,65 @@ export default function ExpensesPage() {
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Import panel */}
+      {importing && (
+        <div className="bg-slate-800 border border-cyan-500/30 rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-300">Import Expenses from CSV</h2>
+            <button
+              type="button"
+              onClick={() => { setImporting(false); setImportFile(null); setImportResult(null) }}
+              className="text-slate-500 hover:text-slate-300 transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <p className="text-xs text-slate-400">
+            CSV columns: <span className="text-slate-300 font-mono">district, description, amount, date</span>
+            {districtId && <span> — district column is optional when a district is already selected.</span>}
+          </p>
+
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 cursor-pointer bg-slate-900 border border-slate-700 hover:border-cyan-500/50 transition rounded-lg px-4 py-2 text-sm text-slate-300">
+              <FileText className="h-4 w-4 text-slate-400" />
+              {importFile ? importFile.name : 'Choose CSV file…'}
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => { setImportFile(e.target.files?.[0] ?? null); setImportResult(null) }}
+              />
+            </label>
+            {importFile && (
+              <Button onClick={handleImport} loading={importLoading} disabled={importLoading}>
+                Import
+              </Button>
+            )}
+          </div>
+
+          {importResult && (
+            <div className="space-y-2">
+              {importResult.imported > 0 && (
+                <p className="text-xs text-emerald-400">
+                  {importResult.imported} expense{importResult.imported !== 1 ? 's' : ''} imported successfully.
+                </p>
+              )}
+              {importResult.errors.length > 0 && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 space-y-1">
+                  <p className="text-xs font-medium text-red-400">{importResult.errors.length} row{importResult.errors.length !== 1 ? 's' : ''} skipped:</p>
+                  <ul className="space-y-0.5">
+                    {importResult.errors.map((err, i) => (
+                      <li key={i} className="text-xs text-red-300">{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
