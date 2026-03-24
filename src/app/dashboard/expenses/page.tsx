@@ -11,7 +11,8 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
-import { PlusCircle, Trash2, TrendingDown, Search, Upload, X, FileText } from 'lucide-react'
+import { Modal } from '@/components/ui/Modal'
+import { PlusCircle, Trash2, TrendingDown, Search, Upload, FileText } from 'lucide-react'
 
 const today = () => new Date().toISOString().split('T')[0]
 
@@ -128,11 +129,9 @@ export default function ExpensesPage() {
           <p className="text-sm text-slate-400 mt-1">Track conference expenses by district</p>
         </div>
         <div className="flex items-center gap-2">
-          {!importing && (
-            <Button variant="ghost" onClick={() => { setImporting(true); setImportResult(null); setImportFile(null) }}>
-              <Upload className="h-4 w-4" /> Import CSV
-            </Button>
-          )}
+          <Button variant="ghost" onClick={() => { setImporting(true); setImportResult(null); setImportFile(null) }}>
+            <Upload className="h-4 w-4" /> Import CSV
+          </Button>
           {!adding && (
             <Button onClick={() => setAdding(true)}>
               <PlusCircle className="h-4 w-4" /> Add Expense
@@ -223,29 +222,23 @@ export default function ExpensesPage() {
         </div>
       )}
 
-      {/* Import panel */}
-      {importing && (
-        <div className="bg-slate-800 border border-cyan-500/30 rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-300">Import Expenses from CSV</h2>
-            <button
-              type="button"
-              onClick={() => { setImporting(false); setImportFile(null); setImportResult(null) }}
-              className="text-slate-500 hover:text-slate-300 transition"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
+      {/* Import modal */}
+      <Modal
+        open={importing}
+        onClose={() => { setImporting(false); setImportFile(null); setImportResult(null) }}
+        title="Import Expenses from CSV"
+        size="sm"
+      >
+        <div className="space-y-4">
           <p className="text-xs text-slate-400">
             CSV columns: <span className="text-slate-300 font-mono">district, description, amount, date</span>
             {districtId && <span> — district column is optional when a district is already selected.</span>}
           </p>
 
           <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 cursor-pointer bg-slate-900 border border-slate-700 hover:border-cyan-500/50 transition rounded-lg px-4 py-2 text-sm text-slate-300">
-              <FileText className="h-4 w-4 text-slate-400" />
-              {importFile ? importFile.name : 'Choose CSV file…'}
+            <label className="flex items-center gap-2 cursor-pointer bg-slate-800 border border-slate-700 hover:border-cyan-500/50 transition rounded-lg px-4 py-2 text-sm text-slate-300 flex-1 min-w-0">
+              <FileText className="h-4 w-4 text-slate-400 shrink-0" />
+              <span className="truncate">{importFile ? importFile.name : 'Choose CSV file…'}</span>
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -253,11 +246,6 @@ export default function ExpensesPage() {
                 onChange={(e) => { setImportFile(e.target.files?.[0] ?? null); setImportResult(null) }}
               />
             </label>
-            {importFile && (
-              <Button onClick={handleImport} loading={importLoading} disabled={importLoading}>
-                Import
-              </Button>
-            )}
           </div>
 
           {importResult && (
@@ -279,8 +267,17 @@ export default function ExpensesPage() {
               )}
             </div>
           )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => { setImporting(false); setImportFile(null); setImportResult(null) }} disabled={importLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleImport} loading={importLoading} disabled={!importFile || importLoading}>
+              Import
+            </Button>
+          </div>
         </div>
-      )}
+      </Modal>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
