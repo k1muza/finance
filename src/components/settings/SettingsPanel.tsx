@@ -107,6 +107,8 @@ function ImportSection({ tab, districtId }: { tab: TabConfig; districtId: string
                 </th>
               ))}
             </tr>
+          </thead>
+          <tbody>
             <tr>
               {tab.columns.map((col) => (
                 <td key={col} className="px-2 py-1 text-slate-600 italic border border-slate-700/50">
@@ -114,7 +116,7 @@ function ImportSection({ tab, districtId }: { tab: TabConfig; districtId: string
                 </td>
               ))}
             </tr>
-          </thead>
+          </tbody>
         </table>
       </div>
 
@@ -366,7 +368,7 @@ export function SettingsPanel() {
   return (
     <div className="space-y-6">
       {/* District settings — visible to all */}
-      {districtId && <DistrictSettings districtId={districtId} />}
+      {districtId && <DistrictSettings key={districtId} districtId={districtId} />}
 
       {/* CSV import + Danger Zone — admin only */}
       {isAdmin && (
