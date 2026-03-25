@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast'
 import { DepartmentCard } from '@/components/departments/DepartmentCard'
 import { DepartmentModal } from '@/components/departments/DepartmentModal'
 import { DepartmentExpandModal } from '@/components/departments/DepartmentExpandModal'
+import { DepartmentPhotosModal } from '@/components/departments/DepartmentPhotosModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
@@ -18,6 +19,7 @@ export default function DepartmentsPage() {
   const { data: departments, loading, create, update, remove, refresh } = useDepartments(districtId)
   const [modal, setModal] = useState<{ open: boolean; dept: Department | null }>({ open: false, dept: null })
   const [expand, setExpand] = useState<{ open: boolean; dept: Department | null }>({ open: false, dept: null })
+  const [photos, setPhotos] = useState<{ open: boolean; dept: Department | null }>({ open: false, dept: null })
   const [confirm, setConfirm] = useState<{ open: boolean; dept: Department | null }>({ open: false, dept: null })
   const [deleting, setDeleting] = useState(false)
   const toast = useToast()
@@ -78,6 +80,7 @@ export default function DepartmentsPage() {
               key={dept.id}
               department={dept}
               onManage={() => setExpand({ open: true, dept })}
+              onPhotos={() => setPhotos({ open: true, dept })}
               onEdit={() => setModal({ open: true, dept })}
               onDelete={() => setConfirm({ open: true, dept })}
               isAdmin={isAdmin}
@@ -98,6 +101,13 @@ export default function DepartmentsPage() {
         onClose={() => setExpand({ open: false, dept: null })}
         department={expand.dept}
         onRefresh={refresh}
+        districtId={districtId}
+      />
+
+      <DepartmentPhotosModal
+        open={photos.open}
+        onClose={() => setPhotos({ open: false, dept: null })}
+        department={photos.dept}
         districtId={districtId}
       />
 

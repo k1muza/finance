@@ -2,17 +2,18 @@
 
 import { Department } from '@/types'
 import { Button } from '@/components/ui/Button'
-import { Pencil, Trash2, Users, Settings } from 'lucide-react'
+import { Pencil, Trash2, Users, Settings, Images } from 'lucide-react'
 
 interface DepartmentCardProps {
   department: Department
   onManage: () => void
+  onPhotos: () => void
   onEdit: () => void
   onDelete: () => void
   isAdmin?: boolean
 }
 
-export function DepartmentCard({ department, onManage, onEdit, onDelete, isAdmin }: DepartmentCardProps) {
+export function DepartmentCard({ department, onManage, onPhotos, onEdit, onDelete, isAdmin }: DepartmentCardProps) {
   return (
     <div className="bg-slate-800 rounded-xl border border-slate-700 p-5 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
@@ -37,9 +38,14 @@ export function DepartmentCard({ department, onManage, onEdit, onDelete, isAdmin
         <span>{department.member_count ?? 0} member{department.member_count !== 1 ? 's' : ''}</span>
       </div>
 
-      <Button variant="secondary" size="sm" onClick={onManage} className="w-full mt-1">
-        <Settings className="h-4 w-4" /> Manage Members
-      </Button>
+      <div className="flex gap-2 mt-1">
+        <Button variant="secondary" size="sm" onClick={onManage} className="flex-1">
+          <Settings className="h-4 w-4" /> Members
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onPhotos} className="flex-1">
+          <Images className="h-4 w-4" /> Photos
+        </Button>
+      </div>
     </div>
   )
 }

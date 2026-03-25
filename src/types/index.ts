@@ -56,6 +56,18 @@ export interface DepartmentRole {
   person?: Person
 }
 
+export interface DepartmentPhoto {
+  id: string
+  department_id: string
+  district_id: string
+  url: string
+  caption: string | null
+  taken_at: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
 export interface Department {
   id: string
   name: string

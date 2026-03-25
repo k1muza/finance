@@ -256,6 +256,25 @@ CREATE INDEX idx_department_roles_department ON department_roles(department_id);
 CREATE INDEX idx_department_roles_person     ON department_roles(person_id);
 
 -- ─────────────────────────────────────────
+-- DEPARTMENT PHOTOS
+-- Photos for a department, scoped per district.
+-- ─────────────────────────────────────────
+CREATE TABLE department_photos (
+  id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  department_id  UUID NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
+  district_id    UUID NOT NULL REFERENCES districts(id)  ON DELETE CASCADE,
+  url            TEXT NOT NULL,
+  caption        TEXT,
+  taken_at       TIMESTAMPTZ,
+  sort_order     INTEGER NOT NULL DEFAULT 0,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_department_photos_dept     ON department_photos(department_id);
+CREATE INDEX idx_department_photos_district ON department_photos(district_id);
+
+-- ─────────────────────────────────────────
 -- AUTO-UPDATE updated_at TRIGGER
 -- ─────────────────────────────────────────
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -271,7 +290,7 @@ DECLARE tbl TEXT;
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
     'districts','regions','departments','people',
-    'days','sessions','events','meals'
+    'days','sessions','events','meals','department_photos'
   ] LOOP
     EXECUTE format(
       'CREATE TRIGGER trg_%I_updated_at
@@ -295,9 +314,10 @@ ALTER TABLE sessions     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE event_people ENABLE ROW LEVEL SECURITY;
 ALTER TABLE meals        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE district_roles   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE region_roles     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE department_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE district_roles      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE region_roles        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE department_roles    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE department_photos   ENABLE ROW LEVEL SECURITY;
 
 -- Open admin policies — tighten once auth is configured
 CREATE POLICY "admin_all" ON districts       FOR ALL USING (true) WITH CHECK (true);
@@ -311,7 +331,8 @@ CREATE POLICY "admin_all" ON event_people    FOR ALL USING (true) WITH CHECK (tr
 CREATE POLICY "admin_all" ON meals           FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "admin_all" ON district_roles  FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "admin_all" ON region_roles    FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "admin_all" ON department_roles FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "admin_all" ON department_roles   FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "admin_all" ON department_photos  FOR ALL USING (true) WITH CHECK (true);
 
 -- ─────────────────────────────────────────
 -- LEADERBOARD VIEW
