@@ -7,17 +7,20 @@ const endpoints = [
   // Auth
   { method: 'POST', path: '/api/auth/register' },
 
-  // Data
+  // Data — district-scoped (accept ?district_id=)
+  { method: 'GET', path: '/api/data/days', params: { district_id: 'uuid (required)' } },
+  { method: 'GET', path: '/api/data/events', params: { district_id: 'uuid (required)' } },
+  { method: 'GET', path: '/api/data/meals', params: { district_id: 'uuid (required)' } },
+  { method: 'GET', path: '/api/data/pages', params: { district_id: 'uuid (required)' } },
+  { method: 'GET', path: '/api/data/people', params: { district_id: 'uuid (required)' } },
+  { method: 'GET', path: '/api/data/regions', params: { district_id: 'uuid (required)' } },
+  { method: 'GET', path: '/api/data/sessions', params: { district_id: 'uuid (required)' } },
+
+  // Data — not district-scoped
+  { method: 'GET', path: '/api/data/districts' },
   { method: 'GET', path: '/api/data/certificates' },
   { method: 'PATCH', path: '/api/data/certificates/[id]' },
-  { method: 'GET', path: '/api/data/days' },
   { method: 'GET', path: '/api/data/departments' },
-  { method: 'GET', path: '/api/data/events' },
-  { method: 'GET', path: '/api/data/meals' },
-  { method: 'GET', path: '/api/data/pages' },
-  { method: 'GET', path: '/api/data/people' },
-  { method: 'GET', path: '/api/data/regions' },
-  { method: 'GET', path: '/api/data/sessions' },
   { method: 'GET', path: '/api/data/songs' },
 
   // Import

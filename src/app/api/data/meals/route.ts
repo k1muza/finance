@@ -1,14 +1,19 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = createServerClient()
-    const { data, error } = await supabase
+    const districtId = request.nextUrl.searchParams.get('district_id')
+
+    let query = supabase
       .from('meals')
-      .select('*, day:days(id, date, label), menu_items:meal_menu_items(id, name, notes, sort_order)')
+      .select('*, day:days!inner(id, date, label), menu_items:meal_menu_items(id, name, notes, sort_order)')
       .order('scheduled_time')
 
+    if (districtId) query = query.eq('days.district_id', districtId)
+
+    const { data, error } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

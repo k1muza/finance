@@ -1,14 +1,16 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = createServerClient()
-    const { data, error } = await supabase
+    const districtId = request.nextUrl.searchParams.get('district_id')
+
+    let query = supabase
       .from('events')
       .select(`
         *,
-        session:sessions(id, name, day:days(id, date)),
+        session:sessions!inner(id, name, day:days!inner(id, date)),
         event_people(person:people(id, name)),
         videos:event_videos(id, youtube_id, title, created_at),
         commentaries:event_commentaries(id, speaker_name, body, speaker:people(id, name), created_at),
@@ -16,6 +18,9 @@ export async function GET() {
       `)
       .order('start_time')
 
+    if (districtId) query = query.eq('sessions.days.district_id', districtId)
+
+    const { data, error } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
