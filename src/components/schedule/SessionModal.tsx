@@ -13,7 +13,7 @@ type SaveValues = {
   start_time: string
   allocated_duration: number
   mc_ids: string[]
-  session_manager_ids: string[]
+  manager_ids: string[]
 }
 
 interface SessionModalProps {
@@ -99,7 +99,7 @@ export function SessionModal({ open, onClose, onSave, initial, dayId, people }: 
       allocated_duration: String(initial?.allocated_duration ?? 60),
     })
     setMcIds(initial?.mcs?.map((p) => p.id) ?? [])
-    setManagerIds(initial?.session_managers?.map((p) => p.id) ?? [])
+    setManagerIds(initial?.managers?.map((p) => p.id) ?? [])
   }, [initial, open])
 
   const handleSubmit = async () => {
@@ -112,7 +112,7 @@ export function SessionModal({ open, onClose, onSave, initial, dayId, people }: 
         start_time: form.start_time,
         allocated_duration: parseInt(form.allocated_duration) || 60,
         mc_ids: mcIds,
-        session_manager_ids: managerIds,
+        manager_ids: managerIds,
       })
       onClose()
     } finally {
@@ -137,7 +137,7 @@ export function SessionModal({ open, onClose, onSave, initial, dayId, people }: 
           onChange={setMcIds}
         />
         <PeoplePicker
-          label="Session Managers"
+          label="Managers"
           selected={selectedManagers}
           all={people}
           onChange={setManagerIds}

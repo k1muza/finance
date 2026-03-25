@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         start_time: s.start_time,
         allocated_duration: s.allocated_duration,
         mcs: sp.filter((x) => x.role === 'mc').map((x) => x.person).filter(Boolean),
-        session_managers: sp.filter((x) => x.role === 'session_manager').map((x) => x.person).filter(Boolean),
+        managers: sp.filter((x) => x.role === 'manager').map((x) => x.person).filter(Boolean),
       }
     })
 

@@ -4,7 +4,7 @@
 CREATE TABLE session_people (
   session_id  UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   person_id   UUID NOT NULL REFERENCES people(id)   ON DELETE CASCADE,
-  role        TEXT NOT NULL CHECK (role IN ('mc', 'session_manager')),
+  role        TEXT NOT NULL CHECK (role IN ('mc', 'manager')),
   PRIMARY KEY (session_id, person_id, role)
 );
 

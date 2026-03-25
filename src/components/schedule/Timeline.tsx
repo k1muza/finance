@@ -73,9 +73,9 @@ function SessionBlock({
               MC: <span className="text-cyan-400">{session.mcs.map((p) => p.name).join(', ')}</span>
             </span>
           )}
-          {(session.session_managers && session.session_managers.length > 0) && (
+          {(session.managers && session.managers.length > 0) && (
             <span className="ml-3 text-xs text-slate-400">
-              Manager: <span className="text-amber-400">{session.session_managers.map((p) => p.name).join(', ')}</span>
+              Manager: <span className="text-amber-400">{session.managers.map((p) => p.name).join(', ')}</span>
             </span>
           )}
         </div>

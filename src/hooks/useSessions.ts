@@ -10,7 +10,7 @@ type SessionWriteValues = {
   start_time: string
   allocated_duration: number
   mc_ids?: string[]
-  session_manager_ids?: string[]
+  manager_ids?: string[]
 }
 
 type SessionUpdateValues = Partial<Omit<SessionWriteValues, 'day_id'>>
@@ -36,7 +36,7 @@ export function useSessions(dayId: string | null) {
         return {
           ...s,
           mcs: sp.filter((x) => x.role === 'mc').map((x) => x.person).filter(Boolean),
-          session_managers: sp.filter((x) => x.role === 'session_manager').map((x) => x.person).filter(Boolean),
+          managers: sp.filter((x) => x.role === 'manager').map((x) => x.person).filter(Boolean),
           session_people: undefined,
         }
       })
@@ -46,11 +46,11 @@ export function useSessions(dayId: string | null) {
 
   useEffect(() => { fetch() }, [fetch])
 
-  const syncPeople = async (sessionId: string, mc_ids: string[], session_manager_ids: string[]) => {
+  const syncPeople = async (sessionId: string, mc_ids: string[], manager_ids: string[]) => {
     await supabase.from('session_people').delete().eq('session_id', sessionId)
     const rows = [
       ...mc_ids.map((person_id) => ({ session_id: sessionId, person_id, role: 'mc' })),
-      ...session_manager_ids.map((person_id) => ({ session_id: sessionId, person_id, role: 'session_manager' })),
+      ...manager_ids.map((person_id) => ({ session_id: sessionId, person_id, role: 'manager' })),
     ]
     if (rows.length > 0) {
       const { error } = await supabase.from('session_people').insert(rows)
@@ -58,26 +58,26 @@ export function useSessions(dayId: string | null) {
     }
   }
 
-  const create = async ({ mc_ids = [], session_manager_ids = [], ...values }: SessionWriteValues) => {
+  const create = async ({ mc_ids = [], manager_ids = [], ...values }: SessionWriteValues) => {
     const { data: session, error } = await supabase.from('sessions').insert(values).select().single()
     if (error) throw new Error(error.message)
-    if (mc_ids.length > 0 || session_manager_ids.length > 0) {
-      await syncPeople(session.id, mc_ids, session_manager_ids)
+    if (mc_ids.length > 0 || manager_ids.length > 0) {
+      await syncPeople(session.id, mc_ids, manager_ids)
     }
     await fetch()
   }
 
-  const update = async (id: string, { mc_ids, session_manager_ids, ...values }: SessionUpdateValues) => {
+  const update = async (id: string, { mc_ids, manager_ids, ...values }: SessionUpdateValues) => {
     if (Object.keys(values).length > 0) {
       const { error } = await supabase.from('sessions').update(values).eq('id', id)
       if (error) throw new Error(error.message)
     }
-    if (mc_ids !== undefined || session_manager_ids !== undefined) {
+    if (mc_ids !== undefined || manager_ids !== undefined) {
       const session = data.find((s) => s.id === id)
       await syncPeople(
         id,
         mc_ids ?? session?.mcs?.map((p) => p.id) ?? [],
-        session_manager_ids ?? session?.session_managers?.map((p) => p.id) ?? [],
+        manager_ids ?? session?.managers?.map((p) => p.id) ?? [],
       )
     }
     await fetch()

@@ -104,7 +104,7 @@ export interface Session {
   // joined
   events?: Event[]
   mcs?: Person[]
-  session_managers?: Person[]
+  managers?: Person[]
 }
 
 export interface EventVideo {
