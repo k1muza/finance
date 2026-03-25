@@ -37,7 +37,7 @@ export function useDepartments(districtId?: string | null) {
     // Fetch HOD assignments from department_roles
     const { data: hodRoles } = await supabase
       .from('department_roles')
-      .select('department_id, person:people(id, name, phone, gender, region_id, department_id, created_at, updated_at)')
+      .select('department_id, person:people(id, name, phone, gender, district_id, region_id, department_id, created_at, updated_at)')
       .eq('role', 'hod')
 
     const hodMap: Record<string, Person> = {}

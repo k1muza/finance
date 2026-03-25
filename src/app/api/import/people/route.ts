@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
         name,
         phone:         row['phone']  || null,
         gender:        (['male', 'female', 'other'].includes(row['gender']) ? row['gender'] : null) as 'male' | 'female' | 'other' | null,
+        district_id:   districtId || null,
         region_id,
         department_id,
       }

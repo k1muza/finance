@@ -72,6 +72,7 @@ export interface Person {
   name: string
   phone: string | null
   gender: 'male' | 'female' | 'other' | null
+  district_id: string | null
   region_id: string | null
   department_id: string | null
   created_at: string
@@ -102,6 +103,8 @@ export interface Session {
   updated_at: string
   // joined
   events?: Event[]
+  mcs?: Person[]
+  managers?: Person[]
 }
 
 export interface EventVideo {
@@ -141,6 +144,7 @@ export interface Event {
   title: string
   start_time: string
   duration: number
+  is_main_event: boolean
   created_at: string
   updated_at: string
   // joined

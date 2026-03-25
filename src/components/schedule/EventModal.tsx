@@ -10,7 +10,7 @@ import { X } from 'lucide-react'
 interface EventModalProps {
   open: boolean
   onClose: () => void
-  onSave: (values: { session_id: string; title: string; start_time: string; duration: number; person_ids: string[] }) => Promise<void>
+  onSave: (values: { session_id: string; title: string; start_time: string; duration: number; is_main_event: boolean; person_ids: string[] }) => Promise<void>
   initial?: Event | null
   sessionId: string
   people: Person[]
@@ -20,6 +20,7 @@ export function EventModal({ open, onClose, onSave, initial, sessionId, people }
   const [title, setTitle] = useState('')
   const [startTime, setStartTime] = useState('09:00')
   const [duration, setDuration] = useState('30')
+  const [isMainEvent, setIsMainEvent] = useState(false)
   const [personIds, setPersonIds] = useState<string[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,6 +29,7 @@ export function EventModal({ open, onClose, onSave, initial, sessionId, people }
     setTitle(initial?.title ?? '')
     setStartTime(initial?.start_time?.slice(0, 5) ?? '09:00')
     setDuration(String(initial?.duration ?? 30))
+    setIsMainEvent(initial?.is_main_event ?? false)
     setPersonIds(initial?.people?.map((p) => p.id) ?? [])
     setSearch('')
   }, [initial, open])
@@ -49,6 +51,7 @@ export function EventModal({ open, onClose, onSave, initial, sessionId, people }
         title: title.trim(),
         start_time: startTime,
         duration: parseInt(duration) || 30,
+        is_main_event: isMainEvent,
         person_ids: personIds,
       })
       onClose()
@@ -117,6 +120,17 @@ export function EventModal({ open, onClose, onSave, initial, sessionId, people }
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
         />
+
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={isMainEvent}
+            onChange={(e) => setIsMainEvent(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
+          />
+          <span className="text-sm text-slate-300">Main event of this session</span>
+        </label>
+
         <div className="flex gap-3 pt-2">
           <Button variant="ghost" onClick={onClose} className="flex-1" disabled={loading}>Cancel</Button>
           <Button onClick={handleSubmit} loading={loading} className="flex-1">

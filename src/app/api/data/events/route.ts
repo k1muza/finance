@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       title: e.title,
       start_time: e.start_time,
       duration: e.duration,
+      is_main_event: e.is_main_event,
       people: (e.event_people ?? []).map((ep: any) => (Array.isArray(ep.person) ? ep.person[0] : ep.person)).filter(Boolean),
       videos: e.videos ?? [],
       commentaries: (e.commentaries ?? []).map((c: any) => ({
