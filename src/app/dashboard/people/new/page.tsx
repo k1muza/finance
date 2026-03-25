@@ -45,6 +45,7 @@ export default function NewPersonPage() {
         name: form.name.trim(),
         phone: form.phone || null,
         gender: (form.gender as Person['gender']) || null,
+        district_id: districtId || null,
         region_id: form.region_id || null,
         department_id: form.department_id || null,
       })

@@ -47,12 +47,14 @@ CREATE TABLE people (
   name            TEXT NOT NULL,
   phone           TEXT UNIQUE,
   gender          TEXT CHECK (gender IN ('male', 'female', 'other')),
-  region_id       UUID REFERENCES regions(id) ON DELETE CASCADE,
+  district_id     UUID REFERENCES districts(id) ON DELETE SET NULL,
+  region_id       UUID REFERENCES regions(id) ON DELETE SET NULL,
   department_id   UUID REFERENCES departments(id) ON DELETE SET NULL,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX idx_people_district     ON people(district_id);
 CREATE INDEX idx_people_region       ON people(region_id);
 CREATE INDEX idx_people_department   ON people(department_id);
 
@@ -88,19 +90,55 @@ CREATE TABLE sessions (
 CREATE INDEX idx_sessions_day ON sessions(day_id);
 
 -- ─────────────────────────────────────────
+-- SESSION PEOPLE
+-- MCs and session managers assigned to a session.
+-- ─────────────────────────────────────────
+CREATE TABLE session_people (
+  session_id  UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  person_id   UUID NOT NULL REFERENCES people(id)   ON DELETE CASCADE,
+  role        TEXT NOT NULL CHECK (role IN ('mc', 'session_manager')),
+  PRIMARY KEY (session_id, person_id, role)
+);
+
+CREATE INDEX idx_session_people_session ON session_people(session_id);
+CREATE INDEX idx_session_people_person  ON session_people(person_id);
+
+-- ─────────────────────────────────────────
 -- EVENTS
 -- ─────────────────────────────────────────
 CREATE TABLE events (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  session_id  UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-  title       TEXT NOT NULL,
-  start_time  TIME NOT NULL,
-  duration    INTEGER NOT NULL,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  session_id     UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  title          TEXT NOT NULL,
+  start_time     TIME NOT NULL,
+  duration       INTEGER NOT NULL,
+  is_main_event  BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_events_session ON events(session_id);
+
+-- At most one main event per session
+CREATE UNIQUE INDEX idx_events_session_main ON events(session_id) WHERE is_main_event = TRUE;
+
+CREATE OR REPLACE FUNCTION enforce_single_main_event()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.is_main_event = TRUE THEN
+    UPDATE events
+      SET is_main_event = FALSE
+      WHERE session_id = NEW.session_id
+        AND id != NEW.id
+        AND is_main_event = TRUE;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_single_main_event
+  BEFORE INSERT OR UPDATE ON events
+  FOR EACH ROW EXECUTE FUNCTION enforce_single_main_event();
 
 -- ─────────────────────────────────────────
 -- EVENT PEOPLE

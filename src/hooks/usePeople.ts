@@ -20,27 +20,12 @@ export function usePeople(filter: PeopleFilter = {}, districtId?: string | null)
   const fetch = useCallback(async () => {
     setLoading(true)
 
-    // When scoped to a district, resolve region IDs first
-    let allowedRegionIds: string[] | null = null
-    if (districtId) {
-      const { data: distRegions } = await supabase
-        .from('regions')
-        .select('id')
-        .eq('district_id', districtId)
-      allowedRegionIds = distRegions?.map((r) => r.id) ?? []
-      if (allowedRegionIds.length === 0) {
-        setData([])
-        setLoading(false)
-        return
-      }
-    }
-
     let query = supabase
       .from('people')
       .select('*, region:regions(id,name), department:departments(id,name)')
       .order('name')
 
-    if (allowedRegionIds) query = query.in('region_id', allowedRegionIds)
+    if (districtId) query = query.eq('district_id', districtId)
     if (filter.search) query = query.ilike('name', `%${filter.search}%`)
     if (filter.gender) query = query.eq('gender', filter.gender)
     if (filter.region_id) query = query.eq('region_id', filter.region_id)

@@ -15,7 +15,7 @@ import { Upload, FileText } from 'lucide-react'
 export default function SchedulePage() {
   const { districtId } = useAuth()
   const { data: days, loading, create, remove, refresh } = useDays(districtId)
-  const { data: people } = usePeople()
+  const { data: people } = usePeople({}, districtId)
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null)
   const toast = useToast()
 

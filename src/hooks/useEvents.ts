@@ -9,6 +9,7 @@ type EventWriteValues = {
   title: string
   start_time: string
   duration: number
+  is_main_event?: boolean
   person_ids?: string[]
 }
 
@@ -41,8 +42,12 @@ export function useEvents(sessionId: string | null) {
 
   useEffect(() => { fetch() }, [fetch])
 
-  const create = async ({ person_ids, ...values }: EventWriteValues) => {
-    const { data: evt, error } = await supabase.from('events').insert(values).select().single()
+  const create = async ({ person_ids, is_main_event, ...values }: EventWriteValues) => {
+    const { data: evt, error } = await supabase
+      .from('events')
+      .insert({ ...values, is_main_event: is_main_event ?? false })
+      .select()
+      .single()
     if (error) throw new Error(error.message)
     if (person_ids?.length && evt) {
       const { error: peErr } = await supabase
@@ -53,9 +58,12 @@ export function useEvents(sessionId: string | null) {
     await fetch()
   }
 
-  const update = async (id: string, { person_ids, ...values }: EventUpdateValues) => {
-    if (Object.keys(values).length > 0) {
-      const { error } = await supabase.from('events').update(values).eq('id', id)
+  const update = async (id: string, { person_ids, is_main_event, ...values }: EventUpdateValues) => {
+    const updatePayload = Object.keys(values).length > 0 || is_main_event !== undefined
+      ? { ...values, ...(is_main_event !== undefined ? { is_main_event } : {}) }
+      : null
+    if (updatePayload) {
+      const { error } = await supabase.from('events').update(updatePayload).eq('id', id)
       if (error) throw new Error(error.message)
     }
     if (person_ids !== undefined) {
@@ -76,5 +84,12 @@ export function useEvents(sessionId: string | null) {
     await fetch()
   }
 
-  return { data, loading, create, update, remove, refresh: fetch }
+  /** Toggle main event status. The DB trigger handles unsetting the previous main event. */
+  const setMainEvent = async (id: string, value: boolean) => {
+    const { error } = await supabase.from('events').update({ is_main_event: value }).eq('id', id)
+    if (error) throw new Error(error.message)
+    await fetch()
+  }
+
+  return { data, loading, create, update, remove, setMainEvent, refresh: fetch }
 }

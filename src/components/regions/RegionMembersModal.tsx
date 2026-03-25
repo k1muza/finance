@@ -50,7 +50,7 @@ export function RegionMembersModal({ open, onClose, region }: Props) {
   const addMember = async (person: Person) => {
     setLoading(true)
     try {
-      await supabase.from('people').update({ region_id: region!.id }).eq('id', person.id)
+      await supabase.from('people').update({ region_id: region!.id, district_id: region!.district_id }).eq('id', person.id)
       await loadMembers()
       await loadAllPeople()
       toast.success(`${person.name} added to ${region!.name}`)
@@ -64,7 +64,7 @@ export function RegionMembersModal({ open, onClose, region }: Props) {
   const removeMember = async (person: Person) => {
     setLoading(true)
     try {
-      await supabase.from('people').update({ region_id: null }).eq('id', person.id)
+      await supabase.from('people').update({ region_id: null, district_id: null }).eq('id', person.id)
       await loadMembers()
       await loadAllPeople()
       toast.success(`${person.name} removed from ${region!.name}`)
