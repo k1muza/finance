@@ -1,26 +1,63 @@
-date,label,session_name,session_start,session_duration,event_title,event_start,event_duration
-2026-04-10,Day 1,Morning Session,08:00,120,Opening Prayer,08:00,15
-2026-04-10,Day 1,Morning Session,08:00,120,Welcome Address,08:15,20
-2026-04-10,Day 1,Morning Session,08:00,120,Keynote Address,08:35,45
-2026-04-10,Day 1,Morning Session,08:00,120,Announcements,09:20,10
-2026-04-10,Day 1,Afternoon Session,14:00,90,Bible Study,14:00,45
-2026-04-10,Day 1,Afternoon Session,14:00,90,Group Discussion,14:45,30
-2026-04-10,Day 1,Afternoon Session,14:00,90,Closing Prayer,15:15,15
-2026-04-10,Day 1,Evening Service,18:30,90,Praise & Worship,18:30,30
-2026-04-10,Day 1,Evening Service,18:30,90,Sermon,19:00,45
-2026-04-10,Day 1,Evening Service,18:30,90,Altar Call,19:45,15
-2026-04-11,Day 2,Morning Session,08:00,120,Devotion,08:00,20
-2026-04-11,Day 2,Morning Session,08:00,120,Special Address,08:20,40
-2026-04-11,Day 2,Morning Session,08:00,120,Department Reports,09:00,45
-2026-04-11,Day 2,Morning Session,08:00,120,Closing Remarks,09:45,15
-2026-04-11,Day 2,Afternoon Session,14:00,90,Workshop A,14:00,60
-2026-04-11,Day 2,Afternoon Session,14:00,90,Workshop B,14:00,60
-2026-04-11,Day 2,Evening Service,18:30,90,Praise & Worship,18:30,30
-2026-04-11,Day 2,Evening Service,18:30,90,Guest Speaker,19:00,50
-2026-04-11,Day 2,Evening Service,18:30,90,Benediction,19:50,10
-2026-04-12,Day 3,Morning Session,08:00,120,Devotion,08:00,20
-2026-04-12,Day 3,Morning Session,08:00,120,Thanksgiving Service,08:20,60
-2026-04-12,Day 3,Morning Session,08:00,120,Awards & Recognition,09:20,30
-2026-04-12,Day 3,Closing Ceremony,11:00,60,Final Remarks,11:00,20
-2026-04-12,Day 3,Closing Ceremony,11:00,60,Vote of Thanks,11:20,15
-2026-04-12,Day 3,Closing Ceremony,11:00,60,Closing Prayer,11:35,10
+date,label,session_name,session_start,session_duration,event_title,event_start,event_duration,session_type
+2026-04-02,Thursday,Supper,17:00,60,,,,meal
+2026-04-02,Thursday,Evening Service,18:00,160,Devotion,18:00,30,
+2026-04-02,Thursday,Evening Service,18:00,160,P & W: Praise,18:30,30,
+2026-04-02,Thursday,Evening Service,18:00,160,Secretaries,19:00,10,
+2026-04-02,Thursday,Evening Service,18:00,160,Forerunners,19:10,15,
+2026-04-02,Thursday,Evening Service,18:00,160,P & W: Worship,19:25,15,
+2026-04-02,Thursday,Evening Service,18:00,160,Speaker,19:40,60,
+2026-04-02,Thursday,Evening Service,18:00,160,Dismissal,20:40,5,
+2026-04-03,Friday,Breakfast,08:00,60,,,,meal
+2026-04-03,Friday,Morning Service,09:00,240,Devotion,09:00,30,
+2026-04-03,Friday,Morning Service,09:00,240,P & W: Praise,09:30,30,
+2026-04-03,Friday,Morning Service,09:00,240,Secretaries,10:00,10,
+2026-04-03,Friday,Morning Service,09:00,240,Forerunners,10:10,15,
+2026-04-03,Friday,Morning Service,09:00,240,P & W: Worship,10:25,15,
+2026-04-03,Friday,Morning Service,09:00,240,Speaker,10:40,80,
+2026-04-03,Friday,Morning Service,09:00,240,Break,12:00,60,
+2026-04-03,Friday,Lunch,13:00,60,,,,meal
+2026-04-03,Friday,Afternoon Session,14:00,180,P & W,14:00,60,
+2026-04-03,Friday,Afternoon Session,14:00,180,Speaker,15:00,60,
+2026-04-03,Friday,Afternoon Session,14:00,180,Break,16:00,60,
+2026-04-03,Friday,Supper,17:00,60,,,,meal
+2026-04-03,Friday,Evening Service,18:00,180,Devotion,18:00,30,
+2026-04-03,Friday,Evening Service,18:00,180,P & W: Praise,18:30,15,
+2026-04-03,Friday,Evening Service,18:00,180,Secretaries,18:45,10,
+2026-04-03,Friday,Evening Service,18:00,180,Official Opening,18:55,45,
+2026-04-03,Friday,Evening Service,18:00,180,P & W: Worship,19:40,15,
+2026-04-03,Friday,Evening Service,18:00,180,Speaker,19:55,65,
+2026-04-03,Friday,Evening Service,18:00,180,Dismissal,21:00,5,
+2026-04-04,Saturday,Breakfast,08:00,60,,,,meal
+2026-04-04,Saturday,Morning Service,09:00,240,Devotion,09:00,30,
+2026-04-04,Saturday,Morning Service,09:00,240,P & W: Praise,09:30,30,
+2026-04-04,Saturday,Morning Service,09:00,240,Secretaries,10:00,10,
+2026-04-04,Saturday,Morning Service,09:00,240,Forerunners,10:10,15,
+2026-04-04,Saturday,Morning Service,09:00,240,P & W: Worship,10:25,15,
+2026-04-04,Saturday,Morning Service,09:00,240,Speaker,10:40,80,
+2026-04-04,Saturday,Morning Service,09:00,240,Break,12:00,60,
+2026-04-04,Saturday,Lunch,13:00,30,,,,meal
+2026-04-04,Saturday,Afternoon Session,13:30,210,Boys & Girls Workshops,13:30,30,
+2026-04-04,Saturday,Afternoon Session,13:30,210,Combined Workshop,14:00,60,
+2026-04-04,Saturday,Afternoon Session,13:30,210,Elections,15:00,60,
+2026-04-04,Saturday,Afternoon Session,13:30,210,Break,16:00,60,
+2026-04-04,Saturday,Supper,17:00,60,,,,meal
+2026-04-04,Saturday,Evening Service,18:00,180,Devotion,18:00,30,
+2026-04-04,Saturday,Evening Service,18:00,180,P & W: Praise,18:30,30,
+2026-04-04,Saturday,Evening Service,18:00,180,Secretaries,19:00,10,
+2026-04-04,Saturday,Evening Service,18:00,180,LO Team,19:10,20,
+2026-04-04,Saturday,Evening Service,18:00,180,Forerunners,19:30,15,
+2026-04-04,Saturday,Evening Service,18:00,180,P & W: Worship,19:45,15,
+2026-04-04,Saturday,Evening Service,18:00,180,Speaker,20:00,60,
+2026-04-04,Saturday,Evening Service,18:00,180,Dismissal,21:00,5,
+2026-04-05,Sunday,Breakfast,08:00,30,,,,meal
+2026-04-05,Sunday,Morning Service,08:30,240,Devotion,09:00,15,
+2026-04-05,Sunday,Morning Service,08:30,240,P & W: Praise,09:15,15,
+2026-04-05,Sunday,Morning Service,08:30,240,Speaker 1,09:30,30,
+2026-04-05,Sunday,Morning Service,08:30,240,Secretaries,10:00,10,
+2026-04-05,Sunday,Morning Service,08:30,240,Appraisals & Introduction of New Board,10:10,30,
+2026-04-05,Sunday,Morning Service,08:30,240,LO Team,10:40,10,
+2026-04-05,Sunday,Morning Service,08:30,240,P & W: Worship,10:50,15,
+2026-04-05,Sunday,Morning Service,08:30,240,Speaker 2,11:05,60,
+2026-04-05,Sunday,Morning Service,08:30,240,Holy Communion,12:05,25,
+2026-04-05,Sunday,Morning Service,08:30,240,Vote of Thanks,12:30,15,
+2026-04-05,Sunday,Lunch,12:30,60,,,,meal

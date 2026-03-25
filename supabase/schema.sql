@@ -125,7 +125,8 @@ CREATE TABLE meals (
   scheduled_time  TIME NOT NULL,
   duration        INTEGER NOT NULL,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (day_id, name)
 );
 
 CREATE INDEX idx_meals_day ON meals(day_id);

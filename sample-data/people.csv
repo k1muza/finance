@@ -1,21 +1,110 @@
 name,phone,gender,region,department,total_contribution
-Kwame Mensah,244000001,male,Adenta,Finance,500
-Ama Owusu,244000002,female,Adenta,Welfare,350
-Kofi Asante,244000003,male,Adenta,Media,200
-Abena Boateng,244000004,female,Madina,Ushering,150
-Yaw Darko,244000005,male,Madina,Logistics,400
-Akosua Frimpong,244000006,female,Madina,Protocol,250
-Kwabena Adjei,244000007,male,Tema,Music,300
-Esi Annan,244000008,female,Tema,Prayer,100
-Nana Appiah,244000009,male,Tema,Finance,450
-Adwoa Osei,244000010,female,Ashaiman,Welfare,275
-Kojo Amoah,244000011,male,Ashaiman,Media,180
-Akua Bonsu,244000012,female,Ashaiman,Ushering,220
-Fiifi Ansah,244000013,male,Dome,Logistics,330
-Efua Quaye,244000014,female,Dome,Protocol,190
-Kwesi Tetteh,244000015,male,Dome,Music,410
-Araba Asare,244000016,female,Achimota,Prayer,130
-Kofi Baah,244000017,male,Achimota,Finance,560
-Ama Sarpong,244000018,female,Lapaz,Welfare,310
-Kwame Acheampong,244000019,male,Lapaz,Media,240
-Akosua Dankwa,244000020,female,Dansoman,Ushering,170
+Panashe Manyatera,0718785728,male,Region 3,,380
+Josephine Karambira,0788612751,female,Region 3,,145
+Lianah Hwariva,0789192536,female,Region 3,,75
+Nyasha Mutangirwa,0781124092,female,Region 3,,220
+Alisha Mukuruva,0718406290,female,Region 3,,35
+Ashley Chizanga,0771519320,female,Region 3,,115
+Rumbidzai Chinakidzwa,0785016461,female,Region 3,,60
+Audry Matenga,0780005146,female,Region 3,,190
+Ropafadzo Chinhongo,0771787344,female,Region 3,,45
+Kelvin Churu,0716402706,male,Region 3,,85
+Tiara Muvhimwa,0787781380,female,Region 3,,25
+Malvin Ngiza,0784181484,male,Region 3,,130
+Beaulla Chiketa,0775023062,female,Region 3,,55
+Nyasha Zhemu,0772841231,female,Region 3,,260
+Nicole Matsara,0787817409,female,Region 3,,40
+Nenyasha Chisvo,0771297189,female,Region 3,,170
+Wilton Chomunondirwa,0782434600,male,Region 3,,70
+Tadiwanashe Gutuza,0713651793,female,Region 3,,30
+Edmore Chemwi,0776899727,male,Region 3,,95
+Isaac J Charewa,0787463918,male,Region 3,,155
+Ruvimbo Bobo,0778686838,female,Region 3,,20
+Simbarashe Bobo,077574198,male,Region 3,,80
+Trinder Chitehwe,0774847013,female,Region 3,,48
+Rermose Tagwireyi,0777104951,male,Region 3,,125
+Samantha Muzuwa,0788954806,female,Region 3,,65
+Sashana Fani,0773099223,female,Region 3,,15
+Rutendo Zharire,0710965582,female,Region 3,,90
+Panashe Bowa,0789489685,female,Region 3,,35
+Takudzwa Charehwa,0718829783,male,Region 3,,210
+Ropafadzo Machingura,0787803772,female,Region 3,,50
+Rumbidzai Mutonhori,0782311691,female,Region 3,,140
+Tadiwanashe Maregedze,0781808515,female,Region 3,,28
+Panashe Ndikudze,0773025631,female,Region 3,,75
+Dylan Chizanga,0713726836,male,Region 3,,160
+Emmaculate Mudyariwa,0780208671,male,Region 3,,42
+Melinda Moyo,0777302229,female,Region 3,,110
+Hazel Mutema,0713918810,female,Region 3,,58
+Tariro Gotosa,0773624073,female,Region 2,,340
+Blessed Mupanguri,0782785689,male,Region 2,,175
+Carol Maguta,0781839121,female,Region 2,,62
+Kudakwashe Chapinduka,0718090163,male,Region 2,,230
+Munashe Gwase,0714651299,male,Region 2,,88
+Moreblessing,0784217822,male,Region 2,,32
+Pearson Mhare,0781145995,male,Region 2,,135
+Tanyaradzwa Ndaruza,0787789524,male,Region 2,,68
+Takudzwa Mudete,0789890559,male,Region 2,,195
+Aleck Luke,0785629653,male,Region 2,,22
+Audrey Tanga,0779219072,female,Region 2,,150
+Alpha Musoro,0719843308,male,Region 2,,78
+Keith Mabhugu,0785609429,male,Region 2,,18
+Ropafadzo Musoro,0776337684,female,Region 2,,245
+Paida Tanga,0789489745,female,Region 2,,92
+Tafadzwa Manembe,0787906592,male,Region 2,,120
+Ryan,0780491431,male,Region 2,,44
+Saratiel Taziveyi,0783862589,female,Region 1,,165
+Nigel Chabata,0780747394,male,Region 1,,55
+Batsirai Chiwoto,0782549777,female,Region 1,,280
+Kenwedge Matara,0788899958,male,Region 1,,82
+Bridget Chakwenya,0783673296,female,Region 1,,38
+Lenon Kaziboni,0715483269,male,Region 1,,185
+Adonis Mushonga,0775450425,male,Region 1,,72
+Kelly Mutero,0714072806,female,Region 1,,28
+Tinotenda Guta,0782794333,female,Region 1,,145
+Tino Mudzora,0781206961,female,Region 1,,66
+Barnabas Chakwenya,0787052404,male,Region 1,,96
+Ranga Mushonga,,male,Region 1,,14
+Warick Makamo,0782561154,male,Region 1,,235
+Nkem Mutero,,female,Region 1,,52
+Tinotenda Chikari,0782083354,male,Region 1,,175
+Janet Chivasa,0789882482,female,Region 1,,44
+Praise Tana,0713721462,female,Region 1,,115
+Otillia Gonese,0774798147,female,Region 1,,78
+Vimbainashe Guta,0783826594,female,Region 1,,22
+Catherine Tsuro,0771027210,female,Region 1,,160
+Blessed Nyandebvu,0771274121,female,Region 1,,84
+Panashe Madzikatire,0712821951,female,Region 1,,36
+Tawananyasha Chabata,0779348848,male,Region 1,,135
+Priscilla Nyakasonzoro,0777694739,female,Region 1,,58
+Tadiwa Chitemerere,0780675709,female,Region 1,,190
+Ropafadzo Kamhapa,0719839078,female,Region 1,,72
+Lisa Madzikatire,0712821955,female,Region 1,,46
+Lovejoy Chigonera,0782727908,female,Region 1,,125
+Chenai Sithole,,female,Region 1,,18
+Polite Pasipose,0788419227,female,Region 1,,88
+Makanaka Mutezo,0787157201,female,Region 1,,155
+Dakarai Chinyama,,male,Region 1,,34
+Shekinah Moyo,0780888184,male,Region 1,,68
+Ruvimbo Pedzai,0786812919,female,Region 1,,110
+Tawanda Chinyuku,,male,Region 1,,42
+Tsitsi Manembe,0777014158,female,Region 1,,180
+Funny Marenga,0712380303,male,Region 1,,56
+Fidel Dambe,0785155406,male,Region 1,,95
+Sophia,0784251291,female,Region 1,,26
+Rutendo Dzimba,0786140434,female,Region 1,,140
+Shelter Ndlovu,0787845944,female,Region 1,,62
+Diana Mutisi,0785759753,female,Region 1,,32
+Wayne Chitenga,0774878043,male,Region 1,,170
+Taurai Gomo,0736259774,male,Region 1,,76
+Tanaka Gomo,0785918329,male,Region 1,,16
+Morgan Hapanamambo,,male,Region 1,,48
+Tinotendaishe Muronza,0778104356,female,Region 1,,130
+Blessed Mutero,0719612713,male,Region 1,,86
+Worship Gatsi,0781071026,male,Region 1,,24
+Munashe Sigauke,,male,Region 1,,54
+Deliwe Siku,0776757617,female,Region 1,,10
+Vimbai Njerere,0714123309,male,Region 1,,92
+Shantel Changa,0776142350,female,Region 1,,38
+Tatenda Makombe,0784797974,male,Region 1,,150
+Tinotenda Hlomayi,0779443166,female,Region 1,,64

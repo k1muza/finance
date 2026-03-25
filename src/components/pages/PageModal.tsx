@@ -13,7 +13,7 @@ import { Page } from '@/types'
 interface Props {
   open: boolean
   onClose: () => void
-  onSave: (values: Omit<Page, 'id' | 'created_at' | 'updated_at'>) => Promise<void>
+  onSave: (values: Omit<Page, 'id' | 'created_at' | 'updated_at' | 'district_id'>) => Promise<void>
   initial: Page | null
 }
 

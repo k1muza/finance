@@ -20,8 +20,9 @@ export async function POST(req: NextRequest) {
     const errors: string[] = []
 
     // Cache day and session lookups to avoid redundant DB calls within the same import
-    const dayCache: Record<string, string> = {}   // date → day_id
+    const dayCache: Record<string, string> = {}    // date → day_id
     const sessionCache: Record<string, string> = {} // `${day_id}::${name}` → session_id
+    const mealCache: Record<string, string> = {}    // `${day_id}::meal::${name}` → meal_id
 
     for (const row of rows) {
       const date = row['date']?.trim()
@@ -33,6 +34,8 @@ export async function POST(req: NextRequest) {
       const sessionStart = row['session_start']?.trim()
       const sessionDuration = parseInt(row['session_duration'] ?? '60')
       if (!sessionStart) { errors.push(`${date} / ${sessionName}: missing session_start`); continue }
+
+      const sessionType = row['session_type']?.trim() || 'service'
 
       // ── 1. Upsert day ──────────────────────────────────────────
       let dayId = dayCache[date]
@@ -51,7 +54,27 @@ export async function POST(req: NextRequest) {
         dayCache[date] = dayId
       }
 
-      // ── 2. Upsert session ──────────────────────────────────────
+      // ── 2a. Meal row — upsert into meals table and skip event logic ──
+      if (sessionType === 'meal') {
+        const mealKey = `${dayId}::meal::${sessionName}`
+        if (!mealCache[mealKey]) {
+          const { data: meal, error: mealErr } = await supabase
+            .from('meals')
+            .upsert(
+              { day_id: dayId, name: sessionName, scheduled_time: sessionStart, duration: sessionDuration },
+              { onConflict: 'day_id,name' }
+            )
+            .select('id')
+            .single()
+
+          if (mealErr || !meal) { errors.push(`${date} / ${sessionName}: ${mealErr?.message ?? 'failed to upsert meal'}`); continue }
+          mealCache[mealKey] = meal.id
+          updated++
+        }
+        continue
+      }
+
+      // ── 2b. Upsert session ─────────────────────────────────────
       const sessionKey = `${dayId}::${sessionName}`
       let sessionId = sessionCache[sessionKey]
       if (!sessionId) {

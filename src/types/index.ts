@@ -79,6 +79,8 @@ export interface Person {
   // joined
   region?: Region | null
   department?: Department | null
+  // computed
+  contribution?: number
 }
 
 export interface Day {
