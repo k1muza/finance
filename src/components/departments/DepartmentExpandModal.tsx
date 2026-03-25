@@ -35,7 +35,7 @@ export function DepartmentExpandModal({ open, onClose, department, onRefresh, di
     if (!department) return
     let query = supabase
       .from('people')
-      .select('id, name, phone, gender, region_id, department_id, created_at, updated_at, region:regions(district_id)')
+      .select('id, name, phone, gender, district_id, region_id, department_id, created_at, updated_at, region:regions(district_id)')
       .eq('department_id', department.id)
       .order('name')
 
@@ -52,7 +52,7 @@ export function DepartmentExpandModal({ open, onClose, department, onRefresh, di
   const loadAllPeople = async () => {
     let query = supabase
       .from('people')
-      .select('id, name, phone, gender, region_id, department_id, created_at, updated_at, region:regions(district_id)')
+      .select('id, name, phone, gender, district_id, region_id, department_id, created_at, updated_at, region:regions(district_id)')
       .order('name')
 
     if (districtId) {

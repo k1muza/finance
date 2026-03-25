@@ -26,7 +26,7 @@ export function DepartmentModal({ open, onClose, onSave, initial }: DepartmentMo
   useEffect(() => {
     supabase
       .from('people')
-      .select('id, name, phone, gender, region_id, department_id, created_at, updated_at')
+      .select('id, name, phone, gender, district_id, region_id, department_id, created_at, updated_at')
       .order('name')
       .then(({ data }) => setPeople(data ?? []))
   }, []) // eslint-disable-line
