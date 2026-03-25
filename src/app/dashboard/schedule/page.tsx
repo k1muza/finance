@@ -14,7 +14,7 @@ import { Upload, FileText } from 'lucide-react'
 
 export default function SchedulePage() {
   const { districtId } = useAuth()
-  const { data: days, loading, create, remove, refresh } = useDays(districtId)
+  const { data: days, loading, create, update, remove, refresh } = useDays(districtId)
   const { data: people } = usePeople()
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null)
   const toast = useToast()
@@ -58,6 +58,16 @@ export default function SchedulePage() {
     try {
       await create({ ...values, district_id: districtId! })
       toast.success('Day added')
+    } catch (e) {
+      toast.error(String(e))
+      throw e
+    }
+  }
+
+  const handleUpdateDay = async (id: string, values: { label: string | null }) => {
+    try {
+      await update(id, values)
+      toast.success('Day updated')
     } catch (e) {
       toast.error(String(e))
       throw e
@@ -149,6 +159,7 @@ export default function SchedulePage() {
             selectedId={selectedDayId}
             onSelect={setSelectedDayId}
             onCreate={handleCreateDay}
+            onUpdate={handleUpdateDay}
             onDelete={handleDeleteDay}
           />
 

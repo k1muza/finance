@@ -8,18 +8,20 @@ import { Input } from '@/components/ui/Input'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { cn } from '@/lib/utils/cn'
 import { format, parseISO } from 'date-fns'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Pencil } from 'lucide-react'
 
 interface DayTabsProps {
   days: Day[]
   selectedId: string | null
   onSelect: (id: string) => void
   onCreate: (values: { date: string; label: string | null }) => Promise<void>
+  onUpdate: (id: string, values: { label: string | null }) => Promise<void>
   onDelete: (id: string) => Promise<void>
 }
 
-export function DayTabs({ days, selectedId, onSelect, onCreate, onDelete }: DayTabsProps) {
+export function DayTabs({ days, selectedId, onSelect, onCreate, onUpdate, onDelete }: DayTabsProps) {
   const [addOpen, setAddOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<Day | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Day | null>(null)
   const [date, setDate] = useState('')
   const [label, setLabel] = useState('')
@@ -38,6 +40,24 @@ export function DayTabs({ days, selectedId, onSelect, onCreate, onDelete }: DayT
     }
   }
 
+  const handleUpdate = async () => {
+    if (!editTarget) return
+    setSaving(true)
+    try {
+      await onUpdate(editTarget.id, { label: label.trim() || null })
+      setEditTarget(null)
+      setLabel('')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const openEdit = (e: React.MouseEvent, day: Day) => {
+    e.stopPropagation()
+    setEditTarget(day)
+    setLabel(day.label ?? '')
+  }
+
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {days.map((day) => (
@@ -53,14 +73,20 @@ export function DayTabs({ days, selectedId, onSelect, onCreate, onDelete }: DayT
           >
             {day.label ?? format(parseISO(day.date), 'MMM d')}
           </button>
-          {selectedId !== day.id && (
+          <div className="absolute -top-1 -right-1 hidden group-hover:flex items-center gap-0.5">
+            <button
+              onClick={(e) => openEdit(e, day)}
+              className="bg-slate-600 text-white rounded-full w-4 h-4 flex items-center justify-center"
+            >
+              <Pencil className="w-2.5 h-2.5" />
+            </button>
             <button
               onClick={(e) => { e.stopPropagation(); setDeleteTarget(day) }}
-              className="absolute -top-1 -right-1 hidden group-hover:flex bg-red-600 text-white rounded-full w-4 h-4 items-center justify-center text-xs"
+              className="bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs"
             >
               ×
             </button>
-          )}
+          </div>
         </div>
       ))}
 
@@ -71,10 +97,21 @@ export function DayTabs({ days, selectedId, onSelect, onCreate, onDelete }: DayT
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Conference Day" size="sm">
         <div className="space-y-4">
           <Input label="Date *" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          <Input label="Label (optional)" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Day 1 — Opening" />
+          <Input label="Label (optional)" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Thursday" />
           <div className="flex gap-3 pt-2">
             <Button variant="ghost" onClick={() => setAddOpen(false)} className="flex-1">Cancel</Button>
             <Button onClick={handleCreate} loading={saving} className="flex-1">Add Day</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={!!editTarget} onClose={() => { setEditTarget(null); setLabel('') }} title="Edit Day Label" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-400">{editTarget?.date}</p>
+          <Input label="Label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Thursday" autoFocus />
+          <div className="flex gap-3 pt-2">
+            <Button variant="ghost" onClick={() => { setEditTarget(null); setLabel('') }} className="flex-1">Cancel</Button>
+            <Button onClick={handleUpdate} loading={saving} className="flex-1">Save</Button>
           </div>
         </div>
       </Modal>
