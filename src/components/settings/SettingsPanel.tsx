@@ -21,6 +21,7 @@ interface TabConfig {
   endpoint: string
   columns: string[]
   notes?: string
+  requiresDistrict?: boolean
 }
 
 const IMPORT_TABS: TabConfig[] = [
@@ -37,6 +38,7 @@ const IMPORT_TABS: TabConfig[] = [
     endpoint: '/api/import/regions',
     columns: ['id', 'name'],
     notes: 'Regions are imported into the active district. Leadership roles are assigned via the Regions UI.',
+    requiresDistrict: true,
   },
   {
     key: 'people',
@@ -44,6 +46,7 @@ const IMPORT_TABS: TabConfig[] = [
     endpoint: '/api/import/people',
     columns: ['id', 'name', 'phone', 'gender', 'region', 'department', 'total_contribution'],
     notes: 'region is matched by name (case-insensitive) within the active district. department is matched by name (case-insensitive). gender: male | female | other. total_contribution creates/updates a single "sheet_import" contribution entry per person.',
+    requiresDistrict: true,
   },
   {
     key: 'schedule',
@@ -51,10 +54,11 @@ const IMPORT_TABS: TabConfig[] = [
     endpoint: '/api/import/schedule',
     columns: ['date', 'label', 'session_name', 'session_start', 'session_duration', 'event_title', 'event_start', 'event_duration'],
     notes: 'date: YYYY-MM-DD. session_start / event_start: HH:MM (24-hour). session_duration / event_duration: minutes. label is optional. event_title, event_start, event_duration are optional — rows without event_title only create the day/session. Re-importing skips events that already exist by title within the same session.',
+    requiresDistrict: true,
   },
 ]
 
-function ImportSection({ tab, districtId }: { tab: TabConfig; districtId?: string | null }) {
+function ImportSection({ tab, districtId }: { tab: TabConfig; districtId: string | null }) {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
@@ -115,23 +119,27 @@ function ImportSection({ tab, districtId }: { tab: TabConfig; districtId?: strin
       </div>
 
       {/* File picker + import button */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-600 bg-slate-700/50 hover:bg-slate-700 cursor-pointer text-sm text-slate-300 transition-colors">
-          <FileText className="h-4 w-4 shrink-0 text-slate-400" />
-          <span className="truncate max-w-50">{fileName ?? 'Choose CSV file…'}</span>
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".csv,text/csv"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-        </label>
-        <Button onClick={handleImport} disabled={loading || !fileName} size="sm">
-          {loading ? <Loader className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-          {loading ? 'Importing…' : 'Import'}
-        </Button>
-      </div>
+      {tab.requiresDistrict && !districtId ? (
+        <p className="text-xs text-amber-400">Select an active district before importing {tab.label.toLowerCase()}.</p>
+      ) : (
+        <div className="flex items-center gap-3 flex-wrap">
+          <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-600 bg-slate-700/50 hover:bg-slate-700 cursor-pointer text-sm text-slate-300 transition-colors">
+            <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+            <span className="truncate max-w-50">{fileName ?? 'Choose CSV file…'}</span>
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </label>
+          <Button onClick={handleImport} disabled={loading || !fileName} size="sm">
+            {loading ? <Loader className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {loading ? 'Importing…' : 'Import'}
+          </Button>
+        </div>
+      )}
 
       {/* Result */}
       {result && (
