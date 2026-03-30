@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { useDistricts } from '@/hooks/useDistricts'
 import { LeaderboardEntry } from '@/types'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
 import { ContributionBar } from '@/components/leaderboard/ContributionBar'
@@ -11,31 +12,61 @@ import { CertificatesPanel } from '@/components/leaderboard/CertificatesPanel'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { Trophy, Award } from 'lucide-react'
+import { Trophy, Award, Download } from 'lucide-react'
 
 export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [certOpen, setCertOpen] = useState(false)
-  const { districtId, district, isAdmin } = useAuth()
+  const [printing, setPrinting] = useState(false)
+  const { districtId, district, activeDistrictId } = useAuth()
+  const { data: districts } = useDistricts()
 
   useEffect(() => {
+    if (!districtId) { setEntries([]); setLoading(false); return }
     const supabase = createClient()
-    let query = supabase.from('leaderboard').select('*').order('rank')
-    if (districtId) query = query.eq('district_id', districtId)
-    query.then(({ data }) => {
-      setEntries(data ?? [])
-      setLoading(false)
-    })
+    supabase.from('leaderboard').select('*').eq('district_id', districtId).order('rank')
+      .then(({ data }) => {
+        setEntries(data ?? [])
+        setLoading(false)
+      })
   }, [districtId])
 
   const maxContribution = entries[0]?.contribution ?? 1
+  const activeDistrictName = districts.find((item) => item.id === activeDistrictId)?.name ?? null
+  const scopeLabel = district?.name ?? activeDistrictName ?? 'Selected district'
 
   const rankBadge = (rank: number) => {
-    if (rank === 1) return <span className="text-yellow-400 font-bold text-lg">🥇</span>
-    if (rank === 2) return <span className="text-slate-300 font-bold text-lg">🥈</span>
-    if (rank === 3) return <span className="text-amber-600 font-bold text-lg">🥉</span>
+    if (rank === 1) return <span className="text-yellow-400 font-bold text-lg">#1</span>
+    if (rank === 2) return <span className="text-slate-300 font-bold text-lg">#2</span>
+    if (rank === 3) return <span className="text-amber-600 font-bold text-lg">#3</span>
     return <span className="text-slate-500 text-sm font-semibold">#{rank}</span>
+  }
+
+  const handleDownloadPdf = () => {
+    const printWindow = window.open('', '_blank', 'width=1100,height=900')
+    if (!printWindow) return
+
+    setPrinting(true)
+
+    printWindow.document.open()
+    printWindow.document.write(
+      buildLeaderboardPdfHtml({
+        entries,
+        scopeLabel,
+        generatedAt: new Date(),
+      })
+    )
+    printWindow.document.close()
+    printWindow.focus()
+
+    const finish = () => setPrinting(false)
+    printWindow.onafterprint = finish
+    printWindow.onbeforeunload = finish
+
+    window.setTimeout(() => {
+      printWindow.print()
+    }, 250)
   }
 
   if (loading) return <PageSpinner />
@@ -48,14 +79,20 @@ export default function LeaderboardPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-100">Leaderboard</h1>
             <p className="text-sm text-slate-400 mt-1">
-              {isAdmin ? 'All districts · Ranked by contribution' : `${district?.name ?? 'District'} · Ranked by contribution`}
+              {scopeLabel} - Ranked by contribution
             </p>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => setCertOpen(true)}>
-          <Award className="h-4 w-4" />
-          Certificates
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={handleDownloadPdf} disabled={entries.length === 0 || printing}>
+            <Download className="h-4 w-4" />
+            {printing ? 'Preparing PDF...' : 'Download PDF'}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setCertOpen(true)}>
+            <Award className="h-4 w-4" />
+            Certificates
+          </Button>
+        </div>
       </div>
 
       {entries.length === 0 ? (
@@ -91,17 +128,17 @@ export default function LeaderboardPage() {
                         <Badge variant={entry.gender === 'male' ? 'teal' : entry.gender === 'female' ? 'purple' : 'default'}>
                           {entry.gender}
                         </Badge>
-                      ) : <span className="text-slate-500">—</span>}
+                      ) : <span className="text-slate-500">-</span>}
                     </td>
-                    <td className="px-4 py-3 text-slate-400">{entry.region_name ?? '—'}</td>
-                    <td className="px-4 py-3 text-slate-400">{entry.department_name ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-400">{entry.region_name ?? '-'}</td>
+                    <td className="px-4 py-3 text-slate-400">{entry.department_name ?? '-'}</td>
                     <td className="px-4 py-3 text-right font-semibold text-cyan-400">
                       {formatCurrency(entry.contribution)}
                     </td>
                     <td className="px-4 py-3">
                       {entry.certificate_name
                         ? <CertificateBadge name={entry.certificate_name} />
-                        : <span className="text-slate-600 text-xs">—</span>}
+                        : <span className="text-slate-600 text-xs">-</span>}
                     </td>
                     <td className="px-4 py-3">
                       <ContributionBar value={entry.contribution} max={maxContribution} />
@@ -117,4 +154,224 @@ export default function LeaderboardPage() {
       <CertificatesPanel open={certOpen} onClose={() => setCertOpen(false)} />
     </div>
   )
+}
+
+function buildLeaderboardPdfHtml({
+  entries,
+  scopeLabel,
+  generatedAt,
+}: {
+  entries: LeaderboardEntry[]
+  scopeLabel: string
+  generatedAt: Date
+}) {
+  const totalContribution = entries.reduce((sum, entry) => sum + entry.contribution, 0)
+  const topEntry = entries[0] ?? null
+  const rows = entries.map((entry) => `
+    <tr>
+      <td class="rank">${entry.rank}</td>
+      <td>
+        <div class="name">${escapeHtml(entry.name)}</div>
+      </td>
+      <td>${escapeHtml(entry.region_name ?? '-')}</td>
+      <td class="amount">${escapeHtml(formatCurrency(entry.contribution))}</td>
+      <td>${escapeHtml(entry.certificate_name ?? '-')}</td>
+    </tr>
+  `).join('')
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Leaderboard PDF</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #0f172a;
+        --muted: #475569;
+        --line: #cbd5e1;
+        --panel: #f8fafc;
+        --accent: #0f766e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      @page {
+        size: A4 portrait;
+        margin: 16mm;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        color: var(--ink);
+        background: white;
+      }
+
+      .hero {
+        border: 1px solid var(--line);
+        background:
+          radial-gradient(circle at top right, rgba(13, 148, 136, 0.16), transparent 32%),
+          linear-gradient(135deg, #f8fafc, #ecfeff);
+        border-radius: 20px;
+        padding: 24px;
+        margin-bottom: 18px;
+      }
+
+      .eyebrow {
+        display: inline-block;
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.1;
+      }
+
+      .subhead {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .meta {
+        margin-top: 14px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin: 18px 0 20px;
+      }
+
+      .stat {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px 16px;
+        background: var(--panel);
+      }
+
+      .stat-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .stat-value {
+        font-size: 22px;
+        font-weight: 700;
+      }
+
+      .table-wrap {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      thead th {
+        background: #e2e8f0;
+        color: #334155;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 12px 14px;
+        text-align: left;
+      }
+
+      tbody td {
+        padding: 12px 14px;
+        border-top: 1px solid #e2e8f0;
+        vertical-align: top;
+        font-size: 13px;
+      }
+
+      tbody tr:nth-child(even) {
+        background: #f8fafc;
+      }
+
+      .rank {
+        width: 52px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .name {
+        font-weight: 700;
+      }
+
+      .muted {
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 2px;
+      }
+
+      .amount {
+        font-weight: 700;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .footer {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 11px;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="eyebrow">Conference Dashboard</div>
+        <h1>Leaderboard Report</h1>
+        <p class="subhead">${escapeHtml(scopeLabel)} - ranked by contribution</p>
+        <div class="meta">Generated ${escapeHtml(generatedAt.toLocaleString())}</div>
+      </section>
+
+      <section class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Name</th>
+              <th>Region</th>
+              <th style="text-align: right;">Contribution</th>
+              <th>Certificate</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </section>
+
+      <div class="footer">Prepared from the live leaderboard view</div>
+    </main>
+  </body>
+</html>`
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
 }

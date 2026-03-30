@@ -14,7 +14,8 @@ import { Button } from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { Person } from '@/types'
 import { Modal } from '@/components/ui/Modal'
-import { UserPlus, Upload, FileText } from 'lucide-react'
+import { UserPlus, Upload, FileText, Download } from 'lucide-react'
+import { exportToCsv } from '@/lib/csv'
 
 export default function PeoplePage() {
   const router = useRouter()
@@ -36,6 +37,26 @@ export default function PeoplePage() {
   const { data: regions } = useRegions(isAdmin ? undefined : districtId ?? undefined)
   const { data: departments } = useDepartments()
   const toast = useToast()
+
+  const handleExport = () => {
+    const rows = [...people]
+      .sort((a, b) => {
+        const regionComparison = (a.region?.name ?? '').localeCompare(b.region?.name ?? '', undefined, {
+          sensitivity: 'base',
+        })
+        if (regionComparison !== 0) return regionComparison
+
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      })
+      .map((p) => ({
+        Name: p.name,
+        Phone: p.phone ?? '',
+        Department: p.department?.name ?? '',
+        Region: p.region?.name ?? '',
+        Contributions: p.contribution ?? 0,
+      }))
+    exportToCsv('people.csv', rows)
+  }
 
   const handleImport = async () => {
     if (!importFile) return
@@ -82,6 +103,9 @@ export default function PeoplePage() {
           <p className="text-sm text-slate-400 mt-1">{people.length} attendee{people.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={handleExport} disabled={people.length === 0}>
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
           <Button variant="ghost" onClick={() => { setImporting(true); setImportResult(null); setImportFile(null) }}>
             <Upload className="h-4 w-4" /> Import CSV
           </Button>
@@ -120,6 +144,7 @@ export default function PeoplePage() {
         <div className="space-y-4">
           <p className="text-xs text-slate-400">
             CSV columns: <span className="text-slate-300 font-mono">name, phone, gender, region, department, total_contribution</span>
+            {' '}or an exported file with <span className="text-slate-300 font-mono">Name, Phone, Department, Region, Contributions</span>.
           </p>
 
           <label className="flex items-center gap-2 cursor-pointer bg-slate-800 border border-slate-700 hover:border-cyan-500/50 transition rounded-lg px-4 py-2 text-sm text-slate-300">

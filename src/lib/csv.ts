@@ -1,3 +1,31 @@
+/** Escape a CSV field value — wraps in quotes if it contains commas, quotes, or newlines. */
+function escapeCsvField(value: string | number | null | undefined): string {
+  const str = value == null ? '' : String(value)
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return '"' + str.replace(/"/g, '""') + '"'
+  }
+  return str
+}
+
+/**
+ * Convert an array of row objects to a CSV string and trigger a browser download.
+ */
+export function exportToCsv(filename: string, rows: Record<string, string | number | null | undefined>[]): void {
+  if (rows.length === 0) return
+  const headers = Object.keys(rows[0])
+  const lines = [
+    headers.map(escapeCsvField).join(','),
+    ...rows.map((row) => headers.map((h) => escapeCsvField(row[h])).join(',')),
+  ]
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 /**
  * Parse a CSV string into an array of row objects.
  * Row 1 is treated as headers. Empty rows are skipped.
