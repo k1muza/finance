@@ -209,6 +209,8 @@ export interface LeaderboardEntry {
   department_name: string | null
   rank: number
   certificate_name: string | null
+  prev_rank: number | null
+  rank_change: number | null
 }
 
 export interface Page {

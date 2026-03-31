@@ -82,7 +82,7 @@ export default function EditPersonPage() {
         .eq('id', id)
       if (error) throw new Error(error.message)
       toast.success('Person updated')
-      await fetchPerson()
+      router.push('/dashboard/people')
     } catch (e) {
       toast.error(String(e))
     } finally {
