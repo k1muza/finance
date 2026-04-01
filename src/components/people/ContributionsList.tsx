@@ -10,12 +10,12 @@ import { PlusCircle, Trash2 } from 'lucide-react'
 
 interface ContributionsListProps {
   personId: string
-  onTotalChange?: (total: number) => void
+  onChange?: () => Promise<void> | void
 }
 
 const today = () => new Date().toISOString().split('T')[0]
 
-export function ContributionsList({ personId, onTotalChange }: ContributionsListProps) {
+export function ContributionsList({ personId, onChange }: ContributionsListProps) {
   const { data, loading, total, add, remove } = useContributions(personId)
   const toast = useToast()
 
@@ -35,7 +35,7 @@ export function ContributionsList({ personId, onTotalChange }: ContributionsList
       await add({ amount, note: form.note.trim() || null as unknown as string, date: form.date })
       setForm({ amount: '', note: '', date: today() })
       setAdding(false)
-      onTotalChange?.(total + amount)
+      void onChange?.()
       toast.success('Contribution added')
     } catch (e) {
       toast.error(String(e))
@@ -44,11 +44,11 @@ export function ContributionsList({ personId, onTotalChange }: ContributionsList
     }
   }
 
-  const handleDelete = async (id: string, amount: number) => {
+  const handleDelete = async (id: string) => {
     setDeletingId(id)
     try {
       await remove(id)
-      onTotalChange?.(total - amount)
+      void onChange?.()
       toast.success('Contribution removed')
     } catch (e) {
       toast.error(String(e))
@@ -147,7 +147,7 @@ export function ContributionsList({ personId, onTotalChange }: ContributionsList
                   <td className="px-4 py-3">
                     <button
                       type="button"
-                      onClick={() => handleDelete(c.id, c.amount)}
+                      onClick={() => handleDelete(c.id)}
                       disabled={deletingId === c.id}
                       className="text-slate-500 hover:text-red-400 transition disabled:opacity-40"
                       title="Delete contribution"

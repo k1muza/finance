@@ -48,6 +48,7 @@ export default function PeoplePage() {
   const handleFilterChange = useCallback((field: string, value: string) => {
     setFilters((current) => ({ ...current, [field]: value }))
   }, [])
+  const handleContributionsChange = useCallback(() => refresh(), [refresh])
   const handleDeleteClick = useCallback((person: Person) => {
     setConfirm({ open: true, person })
   }, [])
@@ -152,6 +153,7 @@ export default function PeoplePage() {
           departments={departments}
           onUpdate={update}
           onDelete={handleDeleteClick}
+          onContributionsChange={handleContributionsChange}
         />
       )}
 

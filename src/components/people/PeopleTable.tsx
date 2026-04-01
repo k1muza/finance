@@ -1,13 +1,13 @@
 'use client'
 
-import { memo, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { Person, Region, Department } from '@/types'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { ContributionsList } from '@/components/people/ContributionsList'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
-import { Pencil, Trash2, Check, X, DollarSign } from 'lucide-react'
+import { Pencil, Trash2, Check, X, DollarSign, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 
 interface PeopleTableProps {
@@ -16,6 +16,7 @@ interface PeopleTableProps {
   departments: Department[]
   onUpdate: (id: string, values: Partial<Pick<Person, 'name' | 'phone' | 'gender' | 'region_id' | 'department_id'>>) => Promise<void>
   onDelete: (person: Person) => void
+  onContributionsChange?: () => Promise<void> | void
 }
 
 interface DraftRow {
@@ -26,15 +27,121 @@ interface DraftRow {
   department_id: string
 }
 
-export const PeopleTable = memo(function PeopleTable({ people, regions, departments, onUpdate, onDelete }: PeopleTableProps) {
+type SortKey = 'name' | 'phone' | 'gender' | 'region' | 'department' | 'contribution'
+type SortDirection = 'asc' | 'desc'
+
+export const PeopleTable = memo(function PeopleTable({
+  people,
+  regions,
+  departments,
+  onUpdate,
+  onDelete,
+  onContributionsChange,
+}: PeopleTableProps) {
   const toast = useToast()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState<DraftRow>({ name: '', phone: '', gender: '', region_id: '', department_id: '' })
   const [saving, setSaving] = useState(false)
   const [contributionPersonId, setContributionPersonId] = useState<string | null>(null)
   const [contributionPersonName, setContributionPersonName] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('name')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const regionNameById = useMemo(() => new Map(regions.map((region) => [region.id, region.name])), [regions])
   const departmentNameById = useMemo(() => new Map(departments.map((department) => [department.id, department.name])), [departments])
+
+  const getRegionName = useCallback((person: Person) => (
+    (person.region as { name?: string } | null)?.name
+    ?? (person.region_id ? regionNameById.get(person.region_id) : undefined)
+    ?? ''
+  ), [regionNameById])
+
+  const getDepartmentName = useCallback((person: Person) => (
+    (person.department as { name?: string } | null)?.name
+    ?? (person.department_id ? departmentNameById.get(person.department_id) : undefined)
+    ?? ''
+  ), [departmentNameById])
+
+  const compareText = (a: string, b: string) => {
+    const left = a.trim()
+    const right = b.trim()
+
+    if (!left && !right) return 0
+    if (!left) return 1
+    if (!right) return -1
+
+    return left.localeCompare(right, undefined, { sensitivity: 'base' })
+  }
+
+  const sortedPeople = useMemo(() => {
+    const direction = sortDirection === 'asc' ? 1 : -1
+
+    return [...people].sort((a, b) => {
+      let comparison = 0
+
+      switch (sortKey) {
+        case 'name':
+          comparison = compareText(a.name, b.name)
+          break
+        case 'phone':
+          comparison = compareText(a.phone ?? '', b.phone ?? '')
+          break
+        case 'gender':
+          comparison = compareText(a.gender ?? '', b.gender ?? '')
+          break
+        case 'region':
+          comparison = compareText(getRegionName(a), getRegionName(b))
+          break
+        case 'department':
+          comparison = compareText(getDepartmentName(a), getDepartmentName(b))
+          break
+        case 'contribution':
+          comparison = (a.contribution ?? 0) - (b.contribution ?? 0)
+          break
+      }
+
+      if (comparison === 0) {
+        comparison = compareText(a.name, b.name)
+      }
+
+      return comparison * direction
+    })
+  }, [people, sortDirection, sortKey, getRegionName, getDepartmentName])
+
+  const toggleSort = (nextKey: SortKey) => {
+    if (sortKey === nextKey) {
+      setSortDirection((currentDirection) => currentDirection === 'asc' ? 'desc' : 'asc')
+      return
+    }
+
+    setSortKey(nextKey)
+    setSortDirection(nextKey === 'contribution' ? 'desc' : 'asc')
+  }
+
+  const renderSortIcon = (key: SortKey) => {
+    if (sortKey !== key) {
+      return <ArrowUpDown className="h-3.5 w-3.5 text-slate-500" />
+    }
+
+    return sortDirection === 'asc'
+      ? <ChevronUp className="h-3.5 w-3.5 text-cyan-400" />
+      : <ChevronDown className="h-3.5 w-3.5 text-cyan-400" />
+  }
+
+  const renderSortableHeader = (key: SortKey, label: string, align: 'left' | 'right' = 'left') => (
+    <th
+      className={`px-4 py-3 text-slate-400 font-medium ${align === 'right' ? 'text-right' : 'text-left'}`}
+      aria-sort={sortKey === key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        onClick={() => toggleSort(key)}
+        className={`inline-flex items-center gap-1.5 transition hover:text-slate-200 ${align === 'right' ? 'ml-auto' : ''}`}
+      >
+        <span>{label}</span>
+        {renderSortIcon(key)}
+      </button>
+    </th>
+  )
 
   const startEdit = (person: Person) => {
     setEditingId(person.id)
@@ -94,24 +201,20 @@ export const PeopleTable = memo(function PeopleTable({ people, regions, departme
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-700">
-                <th className="text-left px-4 py-3 text-slate-400 font-medium">Name</th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium">Phone</th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium">Gender</th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium">Region</th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium">Department</th>
-                <th className="text-right px-4 py-3 text-slate-400 font-medium">Contribution</th>
+                {renderSortableHeader('name', 'Name')}
+                {renderSortableHeader('phone', 'Phone')}
+                {renderSortableHeader('gender', 'Gender')}
+                {renderSortableHeader('region', 'Region')}
+                {renderSortableHeader('department', 'Department')}
+                {renderSortableHeader('contribution', 'Contribution', 'right')}
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
-              {people.map((person) => {
+              {sortedPeople.map((person) => {
                 const isEditing = editingId === person.id
-                const regionName = (person.region as { name?: string } | null)?.name
-                  ?? (person.region_id ? regionNameById.get(person.region_id) : undefined)
-                  ?? '-'
-                const departmentName = (person.department as { name?: string } | null)?.name
-                  ?? (person.department_id ? departmentNameById.get(person.department_id) : undefined)
-                  ?? '-'
+                const regionName = getRegionName(person) || '-'
+                const departmentName = getDepartmentName(person) || '-'
 
                 return (
                   <tr
@@ -276,9 +379,7 @@ export const PeopleTable = memo(function PeopleTable({ people, regions, departme
         {contributionPersonId && (
           <ContributionsList
             personId={contributionPersonId}
-            onTotalChange={() => {
-              // Contribution totals are refreshed separately from inline row edits.
-            }}
+            onChange={onContributionsChange}
           />
         )}
       </Modal>
