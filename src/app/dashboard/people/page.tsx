@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePeople } from '@/hooks/usePeople'
 import { useRegions } from '@/hooks/useRegions'
@@ -21,6 +21,7 @@ export default function PeoplePage() {
   const router = useRouter()
   const { districtId, isAdmin } = useAuth()
   const [filters, setFilters] = useState({ search: '', gender: '', regionId: '', departmentId: '' })
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [confirm, setConfirm] = useState<{ open: boolean; person: Person | null }>({ open: false, person: null })
   const [deleting, setDeleting] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -28,8 +29,13 @@ export default function PeoplePage() {
   const [importLoading, setImportLoading] = useState(false)
   const [importResult, setImportResult] = useState<{ imported: number; updated: number; errors: string[] } | null>(null)
 
-  const { data: people, loading, remove, refresh } = usePeople({
-    search: filters.search,
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedSearch(filters.search), 250)
+    return () => window.clearTimeout(timeoutId)
+  }, [filters.search])
+
+  const { data: people, loading, remove, update, refresh } = usePeople({
+    search: debouncedSearch,
     gender: filters.gender,
     region_id: filters.regionId,
     department_id: filters.departmentId,
@@ -37,11 +43,21 @@ export default function PeoplePage() {
   const { data: regions } = useRegions(isAdmin ? undefined : districtId ?? undefined)
   const { data: departments } = useDepartments()
   const toast = useToast()
+  const regionNameById = useMemo(() => new Map(regions.map((region) => [region.id, region.name])), [regions])
+  const departmentNameById = useMemo(() => new Map(departments.map((department) => [department.id, department.name])), [departments])
+  const handleFilterChange = useCallback((field: string, value: string) => {
+    setFilters((current) => ({ ...current, [field]: value }))
+  }, [])
+  const handleDeleteClick = useCallback((person: Person) => {
+    setConfirm({ open: true, person })
+  }, [])
 
   const handleExport = () => {
     const rows = [...people]
       .sort((a, b) => {
-        const regionComparison = (a.region?.name ?? '').localeCompare(b.region?.name ?? '', undefined, {
+        const aRegionName = a.region?.name ?? (a.region_id ? regionNameById.get(a.region_id) ?? '' : '')
+        const bRegionName = b.region?.name ?? (b.region_id ? regionNameById.get(b.region_id) ?? '' : '')
+        const regionComparison = aRegionName.localeCompare(bRegionName, undefined, {
           sensitivity: 'base',
         })
         if (regionComparison !== 0) return regionComparison
@@ -51,8 +67,8 @@ export default function PeoplePage() {
       .map((p) => ({
         Name: p.name,
         Phone: p.phone ?? '',
-        Department: p.department?.name ?? '',
-        Region: p.region?.name ?? '',
+        Department: p.department?.name ?? (p.department_id ? departmentNameById.get(p.department_id) ?? '' : ''),
+        Region: p.region?.name ?? (p.region_id ? regionNameById.get(p.region_id) ?? '' : ''),
         Contributions: p.contribution ?? 0,
       }))
     exportToCsv('people.csv', rows)
@@ -95,6 +111,8 @@ export default function PeoplePage() {
     }
   }
 
+  const showInitialLoading = loading && people.length === 0
+
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -122,16 +140,18 @@ export default function PeoplePage() {
         departmentId={filters.departmentId}
         regions={regions}
         departments={departments}
-        onChange={(field, value) => setFilters((f) => ({ ...f, [field]: value }))}
+        onChange={handleFilterChange}
       />
 
-      {loading ? (
+      {showInitialLoading ? (
         <PageSpinner />
       ) : (
         <PeopleTable
           people={people}
-          onEdit={(p) => router.push(`/dashboard/people/${p.id}`)}
-          onDelete={(p) => setConfirm({ open: true, person: p })}
+          regions={regions}
+          departments={departments}
+          onUpdate={update}
+          onDelete={handleDeleteClick}
         />
       )}
 
