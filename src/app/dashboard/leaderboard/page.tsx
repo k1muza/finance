@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useDistricts } from '@/hooks/useDistricts'
@@ -12,7 +13,7 @@ import { CertificatesPanel } from '@/components/leaderboard/CertificatesPanel'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { Trophy, Award, Download, Camera, TrendingUp, TrendingDown, Minus, Users, MapPin, Percent } from 'lucide-react'
+import { Trophy, Award, Download, Camera, TrendingUp, TrendingDown, Minus, Users, MapPin, Percent, ScrollText } from 'lucide-react'
 
 type Tab = 'individual' | 'region' | 'participation'
 
@@ -39,8 +40,17 @@ export default function LeaderboardPage() {
   const [certOpen, setCertOpen] = useState(false)
   const [printing, setPrinting] = useState(false)
   const [snapshotting, setSnapshotting] = useState(false)
+  const [availableTemplates, setAvailableTemplates] = useState<Set<string>>(new Set())
   const { districtId, district, activeDistrictId } = useAuth()
   const { data: districts } = useDistricts()
+  const router = useRouter()
+
+  useEffect(() => {
+    fetch('/api/certificates/templates')
+      .then((r) => r.json())
+      .then((map: Record<string, string>) => setAvailableTemplates(new Set(Object.keys(map))))
+      .catch(() => {/* silently ignore */})
+  }, [])
 
   useEffect(() => {
     if (!districtId) { setEntries([]); setLoading(false); return }
@@ -219,6 +229,7 @@ export default function LeaderboardPage() {
                     <th className="text-right px-4 py-3 text-slate-400 font-medium">Contribution</th>
                     <th className="text-left px-4 py-3 text-slate-400 font-medium">Certificate</th>
                     <th className="px-4 py-3 text-slate-400 font-medium">Bar</th>
+                    <th className="px-4 py-3 text-slate-400 font-medium w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -249,6 +260,17 @@ export default function LeaderboardPage() {
                       </td>
                       <td className="px-4 py-3">
                         <ContributionBar value={entry.contribution} max={maxContribution} />
+                      </td>
+                      <td className="px-4 py-3">
+                        {entry.certificate_name && availableTemplates.has(entry.certificate_name.toLowerCase()) && (
+                          <button
+                            onClick={() => router.push(`/certificate/${encodeURIComponent(entry.certificate_name!.toLowerCase())}?name=${encodeURIComponent(entry.name)}`)}
+                            title="Open certificate"
+                            className="text-slate-400 hover:text-amber-400 transition"
+                          >
+                            <ScrollText className="h-4 w-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
