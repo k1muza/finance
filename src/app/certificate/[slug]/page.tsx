@@ -4,10 +4,7 @@ import { useEffect, useRef, useState, Suspense } from 'react'
 import { useSearchParams, useParams } from 'next/navigation'
 import { Download, Printer, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-
-const NAME_Y_FRAC = 0.50
-const NAME_X_FRAC = 0.575
-const NAME_FONT_SIZE_FRAC = 0.048
+import { getCertCoords } from '@/lib/certificates/coords'
 
 function CertificatePage() {
   const params = useParams<{ slug: string }>()
@@ -55,12 +52,13 @@ function CertificatePage() {
     canvas.height = imgEl.naturalHeight
     ctx.drawImage(imgEl, 0, 0)
 
-    const fontSize = Math.round(imgEl.naturalHeight * NAME_FONT_SIZE_FRAC)
+    const coords = getCertCoords(params.slug)
+    const fontSize = Math.round(imgEl.naturalHeight * coords.fontSize)
     ctx.font = `bold ${fontSize}px "Times New Roman", Georgia, serif`
-    ctx.fillStyle = '#1a3a2a'
+    ctx.fillStyle = coords.color
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(name, imgEl.naturalWidth * NAME_X_FRAC, imgEl.naturalHeight * NAME_Y_FRAC)
+    ctx.fillText(name, imgEl.naturalWidth * coords.x, imgEl.naturalHeight * coords.y)
   }, [ready, imgEl, name])
 
   const handleDownload = () => {
