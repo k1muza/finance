@@ -33,7 +33,7 @@ const CERT_COORDS: Record<string, CertCoords> = {
   },
   silver: { x: 0.55, y: 0.52, fontSize: 0.05, color: '#1e293b' },
   gold:   { x: 0.55, y: 0.49, fontSize: 0.05, color: '#78350f' },
-  platinum: { x: 0.55, y: 0.49, fontSize: 0.05, color: '#1e293b' },
+  platinum: { x: 0.55, y: 0.49, fontSize: 0.05, color: '#666666' },
 }
 
 export function getCertCoords(slug: string): CertCoords {
