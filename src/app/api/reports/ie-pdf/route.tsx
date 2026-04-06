@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
-import { renderToBuffer, Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'
+import { renderToBuffer, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import React from 'react'
 
 // ---- helpers ----
@@ -16,6 +16,18 @@ function pct(part: number, total: number) {
 
 function fmtDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function isUnassignedContributionIncome(entry: { description: string; category: string | null }) {
+  const category = entry.category?.trim().toLowerCase() ?? ''
+  const description = entry.description.trim().toLowerCase()
+
+  return (
+    category === 'unassigned contributions' ||
+    category === 'unassigned contribution' ||
+    description === 'unassigned contributions' ||
+    description === 'unassigned contribution'
+  )
 }
 
 // ---- styles ----
@@ -108,7 +120,7 @@ function TableHeader({ cols }: { cols: { label: string; width: string; align?: '
   )
 }
 
-function SubsectionHeading({ label, colCount = 1 }: { label: string; colCount?: number }) {
+function SubsectionHeading({ label }: { label: string }) {
   return (
     <View style={s.subsectionRow}>
       <Text style={[s.subsectionCell, { flex: 1 }]}>{label}</Text>
@@ -182,7 +194,7 @@ function IEReport({
           <Text style={[s.tableHeaderCell, { width: COL.sCount, textAlign: 'center' }]}>Count</Text>
         </View>
         <View style={s.tableRow}>
-          <Text style={[s.tableCell, { width: COL.sLabel }]}>People's Contributions</Text>
+          <Text style={[s.tableCell, { width: COL.sLabel }]}>{"People's Contributions"}</Text>
           <Text style={[s.tableCell, { width: COL.sAmt, textAlign: 'right' }]}>{fmt(contribTotal)}</Text>
           <Text style={[s.tableCell, { width: COL.sPct, textAlign: 'center' }]}>{pct(contribTotal, totalIncome)}</Text>
           <Text style={[s.tableCell, { width: COL.sCount, textAlign: 'center' }]}>{contributions.length} {contributions.length === 1 ? 'entry' : 'entries'}</Text>
@@ -224,7 +236,7 @@ function IEReport({
           <Text style={[s.tableHeaderCell, { width: '18%', textAlign: 'right' }]}>Amount</Text>
         </View>
         <View style={s.subtotalRow}>
-          <Text style={[s.subtotalCell, { flex: 1 }]}>Assigned Contributions Subtotal</Text>
+          <Text style={[s.subtotalCell, { flex: 1 }]}>{"People's Contributions Subtotal"}</Text>
           <Text style={[s.subtotalCell, { width: '18%', textAlign: 'right' }]}>{fmt(contribTotal)}</Text>
         </View>
 
@@ -320,6 +332,28 @@ export async function GET(req: NextRequest) {
 
   const supabase = createServerClient()
 
+  type ContributionSelectRow = {
+    id: string
+    amount: number
+    note: string | null
+    date: string
+    person: { name?: string } | null
+  }
+  type IncomeSelectRow = {
+    id: string
+    amount: number
+    description: string
+    category: string | null
+    date: string
+  }
+  type ExpenseSelectRow = {
+    id: string
+    amount: number
+    description: string
+    category: string | null
+    date: string
+  }
+
   // Fetch district name
   let districtName = 'All Districts'
   if (districtId) {
@@ -341,7 +375,7 @@ export async function GET(req: NextRequest) {
           .select('id, amount, note, date, person:people(name)')
           .in('person_id', personIds)
           .order('date', { ascending: false })
-        contributions = (contribs ?? []).map((c: any) => ({
+        contributions = ((contribs ?? []) as ContributionSelectRow[]).map((c) => ({
           id: c.id,
           date: c.date,
           person_name: c.person?.name ?? 'Unknown',
@@ -355,7 +389,7 @@ export async function GET(req: NextRequest) {
       .from('contributions')
       .select('id, amount, note, date, person:people(name)')
       .order('date', { ascending: false })
-    contributions = (contribs ?? []).map((c: any) => ({
+    contributions = ((contribs ?? []) as ContributionSelectRow[]).map((c) => ({
       id: c.id,
       date: c.date,
       person_name: c.person?.name ?? 'Unknown',
@@ -368,18 +402,51 @@ export async function GET(req: NextRequest) {
   let incomeQuery = supabase.from('income').select('id, amount, description, category, date').order('date', { ascending: false })
   if (districtId) incomeQuery = incomeQuery.eq('district_id', districtId)
   const { data: incomeRows } = await incomeQuery
-  const manualIncome = (incomeRows ?? []).map((i: any) => ({ id: i.id, date: i.date, description: i.description, category: i.category, amount: i.amount }))
+  const manualIncome = ((incomeRows ?? []) as IncomeSelectRow[]).map((i) => ({
+    id: i.id,
+    date: i.date,
+    description: i.description,
+    category: i.category,
+    amount: i.amount,
+  }))
+
+  const unassignedContributionIncome = manualIncome.filter(isUnassignedContributionIncome)
+  const otherIncome = manualIncome.filter((entry) => !isUnassignedContributionIncome(entry))
+
+  const promotedContributions = unassignedContributionIncome.map((entry) => ({
+    id: `income-${entry.id}`,
+    date: entry.date,
+    person_name: 'Unassigned',
+    note: entry.description,
+    amount: entry.amount,
+  }))
+
+  const allContributions = [...contributions, ...promotedContributions].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  )
 
   // Fetch expenses
   let expQuery = supabase.from('expenses').select('id, amount, description, category, date').order('date', { ascending: false })
   if (districtId) expQuery = expQuery.eq('district_id', districtId)
   const { data: expRows } = await expQuery
-  const expenses = (expRows ?? []).map((e: any) => ({ id: e.id, date: e.date, description: e.description, category: e.category, amount: e.amount }))
+  const expenses = ((expRows ?? []) as ExpenseSelectRow[]).map((e) => ({
+    id: e.id,
+    date: e.date,
+    description: e.description,
+    category: e.category,
+    amount: e.amount,
+  }))
 
   const preparedDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 
   const buffer = await renderToBuffer(
-    React.createElement(IEReport, { districtName, preparedDate, contributions, manualIncome, expenses })
+    React.createElement(IEReport, {
+      districtName,
+      preparedDate,
+      contributions: allContributions,
+      manualIncome: otherIncome,
+      expenses,
+    })
   )
 
   const filename = `IE-Report-${districtName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`
