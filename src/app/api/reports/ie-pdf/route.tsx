@@ -446,7 +446,7 @@ export async function GET(req: NextRequest) {
       contributions: allContributions,
       manualIncome: otherIncome,
       expenses,
-    })
+    }) as unknown as React.ReactElement<React.ComponentProps<typeof Document>>
   )
 
   const filename = `IE-Report-${districtName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`
