@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
-export default function ExpensesPage() {
+export default function DeprecatedFinanceSettingsPage() {
   redirect('/dashboard/expenses/transactions')
 }

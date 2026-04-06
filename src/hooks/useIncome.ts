@@ -2,22 +2,22 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Expense } from '@/types'
+import { Income } from '@/types'
 
-interface ExpenseFilter {
+interface IncomeFilter {
   district_id?: string
   search?: string
 }
 
-export function useExpenses(filter: ExpenseFilter = {}) {
-  const [data, setData] = useState<Expense[]>([])
+export function useIncome(filter: IncomeFilter = {}) {
+  const [data, setData] = useState<Income[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   const fetch = useCallback(async () => {
     setLoading(true)
     let query = supabase
-      .from('expenses')
+      .from('income')
       .select('*, district:districts(id,name)')
       .order('date', { ascending: false })
       .order('created_at', { ascending: false })
@@ -33,19 +33,19 @@ export function useExpenses(filter: ExpenseFilter = {}) {
   useEffect(() => { fetch() }, [fetch])
 
   const add = async (values: { district_id: string; description: string; amount: number; date: string; category?: string | null }) => {
-    const { error } = await supabase.from('expenses').insert(values)
+    const { error } = await supabase.from('income').insert(values)
     if (error) throw new Error(error.message)
     await fetch()
   }
 
   const update = async (id: string, values: Partial<{ description: string; amount: number; date: string; category: string | null }>) => {
-    const { error } = await supabase.from('expenses').update(values).eq('id', id)
+    const { error } = await supabase.from('income').update(values).eq('id', id)
     if (error) throw new Error(error.message)
     await fetch()
   }
 
   const remove = async (id: string) => {
-    const { error } = await supabase.from('expenses').delete().eq('id', id)
+    const { error } = await supabase.from('income').delete().eq('id', id)
     if (error) throw new Error(error.message)
     await fetch()
   }

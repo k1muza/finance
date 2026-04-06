@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { District } from '@/types'
 
+const DISTRICTS_CACHE_KEY = 'conf_districts'
+
 export function useDistricts() {
   const [data, setData] = useState<District[]>([])
   const [loading, setLoading] = useState(true)
@@ -12,12 +14,30 @@ export function useDistricts() {
 
   const fetch = useCallback(async () => {
     setLoading(true)
-    const { data: rows, error: err } = await supabase
-      .from('districts')
-      .select('*')
-      .order('name')
-    if (err) setError(err.message)
-    else setData(rows ?? [])
+    try {
+      const { data: rows, error: err } = await supabase
+        .from('districts')
+        .select('*')
+        .order('name')
+      if (err) {
+        setError(err.message)
+        // Offline fallback
+        try {
+          const cached = localStorage.getItem(DISTRICTS_CACHE_KEY)
+          if (cached) setData(JSON.parse(cached))
+        } catch { /* ignore */ }
+      } else {
+        const result = rows ?? []
+        setData(result)
+        localStorage.setItem(DISTRICTS_CACHE_KEY, JSON.stringify(result))
+      }
+    } catch {
+      // Network error: offline fallback
+      try {
+        const cached = localStorage.getItem(DISTRICTS_CACHE_KEY)
+        if (cached) setData(JSON.parse(cached))
+      } catch { /* ignore */ }
+    }
     setLoading(false)
   }, []) // eslint-disable-line
 

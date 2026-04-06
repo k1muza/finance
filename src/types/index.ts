@@ -239,12 +239,50 @@ export interface Song {
   updated_at: string
 }
 
+export const EXPENSE_CATEGORIES = [
+  'Catering',
+  'Hosting / Venue',
+  'Transport',
+  'Accommodation',
+  'Equipment',
+  'Printing',
+  'Marketing',
+  'Security',
+  'Medical',
+  'Administration',
+  'Other',
+] as const
+export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number]
+
+export const INCOME_CATEGORIES = [
+  'Offerings',
+  'Donations',
+  'Registration Fees',
+  'Sponsorship',
+  'Fundraising',
+  'Other',
+] as const
+export type IncomeCategory = typeof INCOME_CATEGORIES[number]
+
 export interface Expense {
   id: string
   district_id: string
   description: string
   amount: number
   date: string
+  category: string | null
+  created_at: string
+  // joined
+  district?: District | null
+}
+
+export interface Income {
+  id: string
+  district_id: string
+  description: string
+  amount: number
+  date: string
+  category: string | null
   created_at: string
   // joined
   district?: District | null

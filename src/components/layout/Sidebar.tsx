@@ -36,7 +36,7 @@ const baseNav = [
   { href: '/dashboard/leaderboard', icon: Trophy, label: 'Leaderboard' },
   { href: '/dashboard/pages', icon: FileText, label: 'Pages' },
   { href: '/dashboard/songs', icon: Music, label: 'Songs' },
-  { href: '/dashboard/expenses', icon: Receipt, label: 'Expenses' },
+  { href: '/dashboard/expenses', icon: Receipt, label: 'Finances' },
   { href: '/dashboard/notifications', icon: Bell, label: 'Notifications' },
 ]
 

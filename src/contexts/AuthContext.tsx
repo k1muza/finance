@@ -5,6 +5,8 @@ import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { District } from '@/types'
 
+const PROFILE_CACHE_KEY = 'conf_profile'
+
 interface Profile {
   district_id: string | null
   role: 'admin' | 'district'
@@ -45,29 +47,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = createClient()
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('district_id, role, district:districts(*)')
-      .eq('id', userId)
-      .single()
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('district_id, role, district:districts(*)')
+        .eq('id', userId)
+        .single()
 
-    if (data) {
-      setProfile({ district_id: data.district_id, role: data.role as 'admin' | 'district' })
-      setDistrict((data.district as unknown as District) ?? null)
+      if (data) {
+        const profileData: Profile = { district_id: data.district_id, role: data.role as 'admin' | 'district' }
+        const districtData = (data.district as unknown as District) ?? null
+        setProfile(profileData)
+        setDistrict(districtData)
+        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({ profile: profileData, district: districtData }))
+      }
+    } catch {
+      // Offline: restore from cache so the user can still access the app
+      try {
+        const cached = localStorage.getItem(PROFILE_CACHE_KEY)
+        if (cached) {
+          const { profile: p, district: d } = JSON.parse(cached)
+          setProfile(p)
+          setDistrict(d)
+        }
+      } catch { /* ignore */ }
     }
   }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
       if (session?.user) {
+        setUser(session.user)
         fetchProfile(session.user.id).finally(() => setLoading(false))
+      } else if (!navigator.onLine) {
+        // Offline and no fresh session — restore from cache so the app stays usable
+        try {
+          const cached = localStorage.getItem(PROFILE_CACHE_KEY)
+          if (cached) {
+            const { profile: p, district: d } = JSON.parse(cached)
+            setProfile(p)
+            setDistrict(d)
+            // Keep user non-null so guards don't redirect; real session check happens when back online
+            setUser({ id: p.district_id ?? 'offline' } as User)
+          }
+        } catch { /* ignore */ }
+        setLoading(false)
       } else {
         setLoading(false)
       }
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Ignore SIGNED_OUT when offline — it's just a failed token refresh, not a real logout
+      if (event === 'SIGNED_OUT' && !navigator.onLine) return
+
       setUser(session?.user ?? null)
       if (session?.user) {
         fetchProfile(session.user.id)
@@ -81,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []) // eslint-disable-line
 
   const logout = async () => {
+    localStorage.removeItem(PROFILE_CACHE_KEY)
     await supabase.auth.signOut()
   }
 

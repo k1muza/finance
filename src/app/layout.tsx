@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { ThemeProvider } from '@/components/layout/ThemeProvider'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration'
 
 export const metadata: Metadata = {
   title: 'Conference',
@@ -21,6 +22,7 @@ export default function RootLayout({
             {children}
           </AuthProvider>
         </ThemeProvider>
+        <ServiceWorkerRegistration />
       </body>
     </html>
   )
