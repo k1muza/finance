@@ -14,7 +14,7 @@ export function StatsRow({ stats }: { stats: OverviewStats }) {
         icon={<Users className="h-5 w-5" />}
       />
       <StatCard
-        label="Total Contributions"
+        label="Total Income"
         value={formatCurrency(stats.totalFunds)}
         icon={<DollarSign className="h-5 w-5" />}
       />

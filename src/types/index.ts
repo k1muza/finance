@@ -313,5 +313,17 @@ export interface OverviewStats {
   netBalance: number
   totalDays: number
   totalDepartments: number
+  totalRegions: number
+  totalSessions: number
+  totalEvents: number
+  totalMainEvents: number
+  totalMeals: number
+  totalPages: number
+  publishedPages: number
+  totalSongs: number
+  publishedSongs: number
+  totalDevices: number
+  totalNotifications: number
+  totalContributors: number
   topContributors: LeaderboardEntry[]
 }
