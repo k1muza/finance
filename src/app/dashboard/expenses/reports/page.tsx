@@ -241,34 +241,6 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Income vs Expenses bar */}
-      {(totalIncome > 0 || totalExpenses > 0) && (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-3">
-          <h3 className="text-sm font-semibold text-slate-300">Income vs Expenses</h3>
-          <div className="space-y-2">
-            {totalIncome > 0 && (
-              <div>
-                <div className="flex justify-between text-xs text-slate-400 mb-1">
-                  <span>Income</span><span>{formatCurrency(totalIncome)}</span>
-                </div>
-                <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: totalIncome >= totalExpenses ? '100%' : `${(totalIncome / Math.max(totalIncome, totalExpenses)) * 100}%` }} />
-                </div>
-              </div>
-            )}
-            {totalExpenses > 0 && (
-              <div>
-                <div className="flex justify-between text-xs text-slate-400 mb-1">
-                  <span>Expenses</span><span>{formatCurrency(totalExpenses)}</span>
-                </div>
-                <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-red-500 rounded-full" style={{ width: totalExpenses >= totalIncome ? '100%' : `${(totalExpenses / Math.max(totalIncome, totalExpenses)) * 100}%` }} />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Detailed I&E report */}
       {(totalIncome > 0 || totalExpenses > 0) && (
