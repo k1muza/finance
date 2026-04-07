@@ -241,8 +241,8 @@ export function TopBar() {
 
   if (isAdmin) {
     return (
-      <header className="border-b border-slate-800 bg-slate-950">
-        <div className="p-6 max-w-6xl mx-auto flex items-center gap-4">
+      <header className="hidden md:block border-b border-slate-800 bg-slate-950">
+        <div className="p-4 xl:p-6 max-w-6xl mx-auto flex items-center gap-4">
           <GlobalSearch />
           <div className="flex-1" />
           <div className="flex items-center gap-3 shrink-0">
@@ -263,8 +263,8 @@ export function TopBar() {
   if (district) {
     const stat = allDistricts.find((d) => d.id === district.id)
     return (
-      <header className="border-b border-slate-800 bg-slate-950">
-        <div className="p-6 max-w-6xl mx-auto flex items-center gap-4">
+      <header className="hidden md:block border-b border-slate-800 bg-slate-950">
+        <div className="p-4 xl:p-6 max-w-6xl mx-auto flex items-center gap-4">
           <GlobalSearch />
           <div className="flex-1" />
           <div className="flex items-center gap-3 shrink-0">

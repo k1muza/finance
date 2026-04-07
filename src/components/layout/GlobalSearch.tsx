@@ -26,7 +26,7 @@ const TYPE_META: Record<ResultType, { label: string; icon: React.ReactNode; colo
 
 const LIMIT = 4
 
-export function GlobalSearch() {
+export function GlobalSearch({ className }: { className?: string }) {
   const { districtId } = useAuth()
   const router = useRouter()
   const supabase = createClient()
@@ -189,7 +189,7 @@ export function GlobalSearch() {
   }, [])
 
   return (
-    <div ref={containerRef} className="relative w-80">
+    <div ref={containerRef} className={cn("relative w-80", className)}>
       {/* Input */}
       <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 focus-within:border-cyan-500/50 transition-colors">
         <Search className={cn('h-3.5 w-3.5 shrink-0 transition-colors', loading ? 'text-cyan-400 animate-pulse' : 'text-slate-500')} />

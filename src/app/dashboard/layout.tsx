@@ -9,7 +9,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ToastProvider>
       <DistrictGuard>
-        <div className="flex h-screen overflow-hidden bg-slate-950">
+        <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-slate-950">
           <Sidebar />
           <div className="flex flex-col flex-1 overflow-hidden">
             <TopBar />

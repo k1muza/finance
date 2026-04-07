@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/contexts/AuthContext'
@@ -24,8 +24,10 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { GlobalSearch } from '@/components/layout/GlobalSearch'
 
 const baseNav = [
   { href: '/dashboard/overview', icon: BarChart3, label: 'Overview' },
@@ -85,9 +87,16 @@ function DistrictBadge({ collapsed }: { collapsed: boolean }) {
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(true)
-  const { isAdmin } = useAuth()
+  const { isAdmin, user, logout } = useAuth()
+
+  const handleMobileLogout = async () => {
+    setMobileOpen(false)
+    await logout()
+    router.push('/login')
+  }
 
   // Default: collapsed on < lg, expanded on lg+
   useEffect(() => {
@@ -169,17 +178,31 @@ export function Sidebar() {
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-30 flex">
           <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
-          <div className="relative w-64 bg-slate-900 border-r border-slate-700 p-4 flex flex-col h-full">
+          <div className="relative w-72 bg-slate-900 border-r border-slate-700 p-4 flex flex-col h-full overflow-y-auto">
             <div className="flex items-center gap-2 text-cyan-400 font-bold mb-3">
               <Church className="h-6 w-6" />
               <span className="text-slate-100">Conference</span>
+            </div>
+            <div className="mb-3">
+              <GlobalSearch className="w-full" />
             </div>
             <div className="mb-4">
               <DistrictBadge collapsed={false} />
             </div>
             {mobileLinks}
-            <div className="mt-auto pt-4 border-t border-slate-700">
+            <div className="mt-auto pt-4 border-t border-slate-700 space-y-1">
               <ThemeToggle collapsed={false} />
+              {user?.email && (
+                <p className="px-3 py-1 text-xs text-slate-500 truncate">{user.email}</p>
+              )}
+              <button
+                type="button"
+                onClick={handleMobileLogout}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors w-full"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                <span>Sign out</span>
+              </button>
             </div>
           </div>
         </div>
