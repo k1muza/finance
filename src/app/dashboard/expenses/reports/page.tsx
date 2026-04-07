@@ -194,11 +194,11 @@ export default function ReportsPage() {
           <Button
             onClick={() => {
               const params = districtId ? `?district_id=${districtId}` : ''
-              window.location.href = `/api/reports/ie-pdf${params}`
+              window.location.href = `/api/reports/ie-docx${params}`
             }}
             disabled={totalIncome === 0 && totalExpenses === 0}
           >
-            <FileDown className="h-4 w-4" /> Download PDF
+            <FileDown className="h-4 w-4" /> Download Doc
           </Button>
         </div>
       </div>
