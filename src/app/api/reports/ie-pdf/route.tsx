@@ -6,11 +6,11 @@ import React from 'react'
 // ---- helpers ----
 
 function fmt(amount: number) {
-  return `$ ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function pct(part: number, total: number) {
-  if (total === 0) return '—'
+  if (total === 0) return '0.0%'
   return `${((part / total) * 100).toFixed(1)}%`
 }
 
@@ -21,7 +21,6 @@ function fmtDate(dateStr: string) {
 function isUnassignedContributionIncome(entry: { description: string; category: string | null }) {
   const category = entry.category?.trim().toLowerCase() ?? ''
   const description = entry.description.trim().toLowerCase()
-
   return (
     category === 'unassigned contributions' ||
     category === 'unassigned contribution' ||
@@ -30,105 +29,201 @@ function isUnassignedContributionIncome(entry: { description: string; category: 
   )
 }
 
-// ---- styles ----
+// ---- colours ----
 
 const C = {
-  maroon: '#7a1c1c',
-  gold: '#856404',
-  goldBg: '#fdf8e8',
-  goldBorder: '#c9a227',
-  dark: '#1a1a1a',
-  mid: '#444444',
-  light: '#f5f5f5',
-  sub: '#fafafa',
-  catBg: '#fdf5e8',
-  border: '#dddddd',
-  green: '#15642a',
+  navy: '#1e3a5f',
+  blue: '#2e5fa3',
+  summaryBg: '#edf2fb',
+  summaryBorder: '#b0bbd0',
   white: '#ffffff',
-  text: '#1a1a1a',
+  dark: '#1a1a1a',
   muted: '#666666',
+  border: '#d0d7e6',
+  rowAlt: '#f5f8ff',
 }
 
+// ---- styles ----
+
 const s = StyleSheet.create({
-  page: { fontFamily: 'Helvetica', fontSize: 9, color: C.text, paddingTop: 36, paddingBottom: 48, paddingHorizontal: 40, backgroundColor: C.white },
+  page: {
+    fontFamily: 'Helvetica',
+    fontSize: 9,
+    color: C.dark,
+    paddingTop: 36,
+    paddingBottom: 48,
+    paddingHorizontal: 40,
+    backgroundColor: C.white,
+  },
 
-  // header
-  docHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1.5, borderBottomColor: C.dark, paddingBottom: 5, marginBottom: 16 },
-  docHeaderOrg: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 0.5 },
-  docHeaderSub: { fontSize: 7.5, color: C.muted },
+  // title block
+  orgName: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  titleMain: {
+    fontSize: 22,
+    fontFamily: 'Helvetica-Bold',
+    color: C.navy,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  titleSub: {
+    fontSize: 15,
+    fontFamily: 'Helvetica-Bold',
+    color: C.navy,
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  titleMeta: {
+    fontSize: 8,
+    color: C.muted,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  titleDivider: {
+    borderBottomWidth: 1.5,
+    borderBottomColor: C.navy,
+    marginTop: 10,
+    marginBottom: 14,
+  },
 
-  titleBlock: { alignItems: 'center', marginBottom: 16 },
-  titleMain: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: C.maroon, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 },
-  titleSub: { fontSize: 12, fontFamily: 'Helvetica-Bold', marginBottom: 3 },
-  titleMeta: { fontSize: 8.5, color: C.muted, fontStyle: 'italic' },
+  // section headings
+  sectionHeading: {
+    fontSize: 10,
+    fontFamily: 'Helvetica-Bold',
+    color: C.dark,
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  sectionSubheading: {
+    fontSize: 8,
+    color: C.muted,
+    marginBottom: 8,
+  },
 
-  // section heading
-  sectionHeading: { fontSize: 9, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 0.8, color: C.maroon, borderBottomWidth: 1.2, borderBottomColor: C.maroon, paddingBottom: 2, marginTop: 16, marginBottom: 8 },
+  // financial summary cards
+  summaryBox: {
+    backgroundColor: C.summaryBg,
+    borderWidth: 0.5,
+    borderColor: C.summaryBorder,
+    marginBottom: 12,
+  },
+  summaryRow: { flexDirection: 'row' },
+  summaryDivider: { borderTopWidth: 0.5, borderTopColor: C.summaryBorder },
+  summaryCell: {
+    flex: 1,
+    padding: 10,
+    borderRightWidth: 0.5,
+    borderRightColor: C.summaryBorder,
+  },
+  summaryCellLast: { flex: 1, padding: 10 },
+  summaryLabel: {
+    fontSize: 7.5,
+    color: C.blue,
+    fontFamily: 'Helvetica-Bold',
+    marginBottom: 3,
+  },
+  summaryValueLg: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: C.dark },
+  summaryValueSm: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.dark },
 
-  // table
-  tableHeaderRow: { flexDirection: 'row', backgroundColor: C.dark },
-  tableHeaderCell: { color: C.white, fontFamily: 'Helvetica-Bold', fontSize: 8, paddingHorizontal: 6, paddingVertical: 4 },
-  tableRow: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: C.border },
+  // bullet insights
+  bullet: { flexDirection: 'row', marginBottom: 4 },
+  bulletDot: { width: 12, fontSize: 9 },
+  bulletText: { flex: 1, fontSize: 8.5 },
+
+  // tables
+  tableHeaderRow: { flexDirection: 'row', backgroundColor: C.navy },
+  tableHeaderCell: {
+    color: C.white,
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 0.5,
+    borderBottomColor: C.border,
+  },
+  tableRowAlt: {
+    flexDirection: 'row',
+    borderBottomWidth: 0.5,
+    borderBottomColor: C.border,
+    backgroundColor: C.rowAlt,
+  },
   tableCell: { paddingHorizontal: 6, paddingVertical: 3.5, fontSize: 8.5 },
+  tableCellBold: {
+    paddingHorizontal: 6,
+    paddingVertical: 3.5,
+    fontSize: 8.5,
+    fontFamily: 'Helvetica-Bold',
+  },
+  totalRow: { flexDirection: 'row', backgroundColor: C.navy },
+  totalCell: {
+    color: C.white,
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 9,
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+  },
 
-  subsectionRow: { flexDirection: 'row', backgroundColor: C.catBg },
-  subsectionCell: { fontFamily: 'Helvetica-Bold', fontSize: 8, color: C.maroon, paddingHorizontal: 6, paddingVertical: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  // category heading in detailed schedule
+  catHeadingRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: C.blue,
+    marginTop: 12,
+    marginBottom: 0,
+  },
+  catHeadingText: {
+    fontSize: 9.5,
+    fontFamily: 'Helvetica-Bold',
+    color: C.blue,
+    paddingBottom: 3,
+  },
+  subtotalText: {
+    fontSize: 8.5,
+    color: C.muted,
+    fontFamily: 'Helvetica-BoldOblique',
+    textAlign: 'right',
+    paddingVertical: 3,
+    paddingRight: 6,
+  },
 
-  subtotalRow: { flexDirection: 'row', backgroundColor: C.sub, borderTopWidth: 0.75, borderTopColor: '#aaaaaa' },
-  subtotalCell: { fontFamily: 'Helvetica-BoldOblique', fontSize: 8.5, color: C.maroon, paddingHorizontal: 6, paddingVertical: 3.5 },
+  // sign-off
+  signOffHeading: {
+    fontSize: 11,
+    fontFamily: 'Helvetica-Bold',
+    marginBottom: 16,
+    marginTop: 28,
+  },
+  signOffRow: { flexDirection: 'row' },
+  signOffCol: { flex: 1, marginRight: 24 },
+  signOffColLast: { flex: 1 },
+  signOffLabel: { fontSize: 9, fontFamily: 'Helvetica-Bold', marginBottom: 22 },
+  signOffLine: { borderBottomWidth: 1, borderBottomColor: C.dark, marginBottom: 6 },
+  signOffSub: { fontSize: 7.5, color: C.muted, fontStyle: 'italic' },
 
-  totalRow: { flexDirection: 'row', backgroundColor: C.dark },
-  totalCell: { color: C.white, fontFamily: 'Helvetica-Bold', fontSize: 9.5, paddingHorizontal: 6, paddingVertical: 5 },
-
-  summaryTotalIncomeRow: { flexDirection: 'row', backgroundColor: C.light },
-  summaryTotalIncomeCell: { fontFamily: 'Helvetica-Bold', color: C.green, fontSize: 9, paddingHorizontal: 6, paddingVertical: 4 },
-
-  summaryTotalExpRow: { flexDirection: 'row', backgroundColor: C.light },
-  summaryTotalExpCell: { fontFamily: 'Helvetica-Bold', color: C.maroon, fontSize: 9, paddingHorizontal: 6, paddingVertical: 4 },
-
-  netRow: { flexDirection: 'row', backgroundColor: C.goldBg, borderWidth: 1.2, borderColor: C.goldBorder, marginTop: 4 },
-  netCell: { fontFamily: 'Helvetica-Bold', color: C.gold, fontSize: 10, paddingHorizontal: 6, paddingVertical: 5 },
-
-  spacer: { height: 6 },
-
-  footer: { position: 'absolute', bottom: 24, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.75, borderTopColor: '#cccccc', paddingTop: 4 },
+  // footer
+  footer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 40,
+    right: 40,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTopWidth: 0.75,
+    borderTopColor: '#cccccc',
+    paddingTop: 4,
+  },
   footerText: { fontSize: 7, color: C.muted },
 })
 
-// ---- column widths ----
-const COL = {
-  date: '14%',
-  cat: '22%',
-  desc: '50%',
-  amt: '14%',
-  // summary
-  sLabel: '46%',
-  sAmt: '22%',
-  sPct: '16%',
-  sCount: '16%',
-}
-
-// ---- components ----
-
-function TableHeader({ cols }: { cols: { label: string; width: string; align?: 'right' | 'center' }[] }) {
-  return (
-    <View style={[s.tableHeaderRow, { backgroundColor: C.mid }]}>
-      {cols.map((c, i) => (
-        <Text key={i} style={[s.tableHeaderCell, { width: c.width, textAlign: c.align ?? 'left' }]}>{c.label}</Text>
-      ))}
-    </View>
-  )
-}
-
-function SubsectionHeading({ label }: { label: string }) {
-  return (
-    <View style={s.subsectionRow}>
-      <Text style={[s.subsectionCell, { flex: 1 }]}>{label}</Text>
-    </View>
-  )
-}
-
-// ---- main PDF document ----
+// ---- PDF document ----
 
 function IEReport({
   districtName,
@@ -143,14 +238,14 @@ function IEReport({
   manualIncome: { id: string; date: string; description: string; category: string | null; amount: number }[]
   expenses: { id: string; date: string; description: string; category: string | null; amount: number }[]
 }) {
-  const contribTotal = contributions.reduce((s, c) => s + c.amount, 0)
-  const manualTotal = manualIncome.reduce((s, i) => s + i.amount, 0)
+  const contribTotal = contributions.reduce((sum, c) => sum + c.amount, 0)
+  const manualTotal = manualIncome.reduce((sum, i) => sum + i.amount, 0)
   const totalIncome = contribTotal + manualTotal
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0)
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
   const net = totalIncome - totalExpenses
   const netPositive = net >= 0
 
-  // Group expenses by category
+  // Group expenses by category, sorted by total desc
   const expByCategory: Record<string, { amount: number; items: typeof expenses }> = {}
   for (const e of expenses) {
     const key = e.category ?? 'Uncategorised'
@@ -160,165 +255,200 @@ function IEReport({
   }
   const sortedCats = Object.entries(expByCategory).sort(([, a], [, b]) => b.amount - a.amount)
 
-  // Group manual income by category
-  const incByCategory: Record<string, { amount: number; items: typeof manualIncome }> = {}
-  for (const i of manualIncome) {
-    const key = i.category ?? 'Uncategorised'
-    if (!incByCategory[key]) incByCategory[key] = { amount: 0, items: [] }
-    incByCategory[key].amount += i.amount
-    incByCategory[key].items.push(i)
-  }
+  // Key financial insights
+  const insight1 =
+    net === 0
+      ? 'The conference closed at break-even, with total income exactly matching total expenditure.'
+      : netPositive
+        ? `The conference generated a surplus of ${fmt(net)}, with total income exceeding total expenditure.`
+        : `The conference ran a deficit of ${fmt(Math.abs(net))}, with total expenditure exceeding total income.`
+
+  const insight2 = `People's contributions were the primary source of funding, contributing ${pct(contribTotal, totalIncome)} of all income.`
+
+  const topCats = sortedCats.slice(0, 3).map(([cat]) => cat)
+  const insight3 =
+    topCats.length > 0
+      ? `The largest expenditure category was ${topCats[0]}${topCats[1] ? `, followed by ${topCats[1]}` : ''}${topCats[2] ? ` and ${topCats[2]}` : ''}.`
+      : 'No expenditure categories recorded.'
 
   return (
     <Document title={`I&E Report — ${districtName}`} author="Conference App">
       <Page size="A4" style={s.page}>
-        {/* Doc header */}
-        <View style={s.docHeaderRow} fixed>
-          <Text style={s.docHeaderOrg}>Southgate Christian Centre International</Text>
-          <Text style={s.docHeaderSub}>Easter Conference 2026 — Income &amp; Expenditure Report</Text>
-        </View>
 
-        {/* Title */}
-        <View style={s.titleBlock}>
+        {/* ── Title block ── */}
+        <View style={{ alignItems: 'center', marginBottom: 4 }}>
+          <Text style={s.orgName}>Southgate Christian Centre International</Text>
           <Text style={s.titleMain}>Easter Conference 2026</Text>
           <Text style={s.titleSub}>Income &amp; Expenditure Report</Text>
-          <Text style={s.titleMeta}>{districtName} · Prepared: {preparedDate}</Text>
+          <Text style={s.titleMeta}>Prepared: {preparedDate} | Youth Secretary</Text>
+        </View>
+        <View style={s.titleDivider} />
+
+        {/* ── Financial Summary ── */}
+        <Text style={s.sectionHeading}>Financial Summary</Text>
+        <View style={s.summaryBox}>
+          {/* Row 1: headline totals */}
+          <View style={s.summaryRow}>
+            <View style={s.summaryCell}>
+              <Text style={s.summaryLabel}>Total Income</Text>
+              <Text style={s.summaryValueLg}>{fmt(totalIncome)}</Text>
+            </View>
+            <View style={s.summaryCell}>
+              <Text style={s.summaryLabel}>Total Expenditure</Text>
+              <Text style={s.summaryValueLg}>{fmt(totalExpenses)}</Text>
+            </View>
+            <View style={s.summaryCellLast}>
+              <Text style={s.summaryLabel}>{netPositive ? 'Net Surplus' : 'Net Deficit'}</Text>
+              <Text style={s.summaryValueLg}>{fmt(Math.abs(net))}</Text>
+            </View>
+          </View>
+          {/* Row 2: breakdown */}
+          <View style={[s.summaryRow, s.summaryDivider]}>
+            <View style={s.summaryCell}>
+              <Text style={s.summaryLabel}>{"People's Contributions"}</Text>
+              <Text style={s.summaryValueSm}>{fmt(contribTotal)} ({pct(contribTotal, totalIncome)})</Text>
+            </View>
+            <View style={s.summaryCell}>
+              <Text style={s.summaryLabel}>Other Income</Text>
+              <Text style={s.summaryValueSm}>{fmt(manualTotal)} ({pct(manualTotal, totalIncome)})</Text>
+            </View>
+            <View style={s.summaryCellLast}>
+              <Text style={s.summaryLabel}>Activity Count</Text>
+              <Text style={s.summaryValueSm}>
+                {contributions.length} contributions | {expenses.length} expense items
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {/* Financial Summary */}
-        <Text style={s.sectionHeading}>Financial Summary</Text>
+        {/* ── Key Financial Insights ── */}
+        <Text style={s.sectionHeading}>Key Financial Insights</Text>
+        {[insight1, insight2, insight3].map((text, i) => (
+          <View key={i} style={s.bullet}>
+            <Text style={s.bulletDot}>•</Text>
+            <Text style={s.bulletText}>{text}</Text>
+          </View>
+        ))}
+
+        {/* ── Income Summary ── */}
+        <Text style={s.sectionHeading}>Income Summary</Text>
         <View style={s.tableHeaderRow}>
-          <Text style={[s.tableHeaderCell, { width: COL.sLabel }]}>Summary</Text>
-          <Text style={[s.tableHeaderCell, { width: COL.sAmt, textAlign: 'right' }]}>Amount ($)</Text>
-          <Text style={[s.tableHeaderCell, { width: COL.sPct, textAlign: 'center' }]}>% of Income</Text>
-          <Text style={[s.tableHeaderCell, { width: COL.sCount, textAlign: 'center' }]}>Count</Text>
+          <Text style={[s.tableHeaderCell, { flex: 1 }]}>Income Source</Text>
+          <Text style={[s.tableHeaderCell, { width: '20%', textAlign: 'right' }]}>Amount ($)</Text>
+          <Text style={[s.tableHeaderCell, { width: '16%', textAlign: 'center' }]}>% of Income</Text>
+          <Text style={[s.tableHeaderCell, { width: '18%' }]}>Notes</Text>
         </View>
         <View style={s.tableRow}>
-          <Text style={[s.tableCell, { width: COL.sLabel }]}>{"People's Contributions"}</Text>
-          <Text style={[s.tableCell, { width: COL.sAmt, textAlign: 'right' }]}>{fmt(contribTotal)}</Text>
-          <Text style={[s.tableCell, { width: COL.sPct, textAlign: 'center' }]}>{pct(contribTotal, totalIncome)}</Text>
-          <Text style={[s.tableCell, { width: COL.sCount, textAlign: 'center' }]}>{contributions.length} {contributions.length === 1 ? 'entry' : 'entries'}</Text>
+          <Text style={[s.tableCell, { flex: 1 }]}>{"People's Contributions"}</Text>
+          <Text style={[s.tableCell, { width: '20%', textAlign: 'right' }]}>{fmt(contribTotal)}</Text>
+          <Text style={[s.tableCell, { width: '16%', textAlign: 'center' }]}>{pct(contribTotal, totalIncome)}</Text>
+          <Text style={[s.tableCell, { width: '18%' }]}>{contributions.length} entries</Text>
         </View>
         {manualTotal > 0 && (
-          <View style={s.tableRow}>
-            <Text style={[s.tableCell, { width: COL.sLabel }]}>Other Income</Text>
-            <Text style={[s.tableCell, { width: COL.sAmt, textAlign: 'right' }]}>{fmt(manualTotal)}</Text>
-            <Text style={[s.tableCell, { width: COL.sPct, textAlign: 'center' }]}>{pct(manualTotal, totalIncome)}</Text>
-            <Text style={[s.tableCell, { width: COL.sCount, textAlign: 'center' }]}>{manualIncome.length} {manualIncome.length === 1 ? 'entry' : 'entries'}</Text>
+          <View style={s.tableRowAlt}>
+            <Text style={[s.tableCell, { flex: 1 }]}>Other Income</Text>
+            <Text style={[s.tableCell, { width: '20%', textAlign: 'right' }]}>{fmt(manualTotal)}</Text>
+            <Text style={[s.tableCell, { width: '16%', textAlign: 'center' }]}>{pct(manualTotal, totalIncome)}</Text>
+            <Text style={[s.tableCell, { width: '18%' }]}>{manualIncome.length} entries</Text>
           </View>
         )}
-        <View style={s.summaryTotalIncomeRow}>
-          <Text style={[s.summaryTotalIncomeCell, { width: COL.sLabel }]}>Total Income</Text>
-          <Text style={[s.summaryTotalIncomeCell, { width: COL.sAmt, textAlign: 'right' }]}>{fmt(totalIncome)}</Text>
-          <Text style={[s.summaryTotalIncomeCell, { width: COL.sPct, textAlign: 'center' }]}>100%</Text>
-          <Text style={[s.summaryTotalIncomeCell, { width: COL.sCount }]} />
-        </View>
-        <View style={s.summaryTotalExpRow}>
-          <Text style={[s.summaryTotalExpCell, { width: COL.sLabel }]}>Total Expenditure</Text>
-          <Text style={[s.summaryTotalExpCell, { width: COL.sAmt, textAlign: 'right' }]}>{fmt(totalExpenses)}</Text>
-          <Text style={[s.summaryTotalExpCell, { width: COL.sPct, textAlign: 'center' }]}>{pct(totalExpenses, totalIncome)}</Text>
-          <Text style={[s.summaryTotalExpCell, { width: COL.sCount, textAlign: 'center' }]}>{expenses.length} items</Text>
-        </View>
-        <View style={s.netRow}>
-          <Text style={[s.netCell, { width: COL.sLabel }]}>{netPositive ? 'Net Surplus' : 'Net Deficit'}</Text>
-          <Text style={[s.netCell, { width: COL.sAmt, textAlign: 'right' }]}>{fmt(Math.abs(net))}</Text>
-          <Text style={[s.netCell, { width: COL.sPct, textAlign: 'center' }]}>{pct(Math.abs(net), totalIncome)}</Text>
-          <Text style={[s.netCell, { width: COL.sCount }]} />
+        <View style={s.totalRow}>
+          <Text style={[s.totalCell, { flex: 1 }]}>Total Income</Text>
+          <Text style={[s.totalCell, { width: '20%', textAlign: 'right' }]}>{fmt(totalIncome)}</Text>
+          <Text style={[s.totalCell, { width: '16%', textAlign: 'center' }]}>100.0%</Text>
+          <Text style={[s.totalCell, { width: '18%' }]} />
         </View>
 
-        {/* INCOME */}
-        <Text style={s.sectionHeading}>Income</Text>
-
-        <SubsectionHeading label="People's Contributions" />
-        <View style={[s.tableHeaderRow, { backgroundColor: C.mid }]}>
-          <Text style={[s.tableHeaderCell, { width: '20%' }]}>Date</Text>
-          <Text style={[s.tableHeaderCell, { flex: 1 }]}>Contributor</Text>
-          <Text style={[s.tableHeaderCell, { width: '18%', textAlign: 'right' }]}>Amount</Text>
-        </View>
-        <View style={s.subtotalRow}>
-          <Text style={[s.subtotalCell, { flex: 1 }]}>{"People's Contributions Subtotal"}</Text>
-          <Text style={[s.subtotalCell, { width: '18%', textAlign: 'right' }]}>{fmt(contribTotal)}</Text>
-        </View>
-
+        {/* Other Income Detail */}
         {manualIncome.length > 0 && (
           <>
-            <View style={s.spacer} />
-            <SubsectionHeading label="Other Income" />
-            <View style={[s.tableHeaderRow, { backgroundColor: C.mid }]}>
-              <Text style={[s.tableHeaderCell, { width: '20%' }]}>Date</Text>
-              <Text style={[s.tableHeaderCell, { flex: 1 }]}>Description</Text>
-              <Text style={[s.tableHeaderCell, { width: '18%', textAlign: 'right' }]}>Amount</Text>
+            <View style={{ marginTop: 10, marginBottom: 5 }}>
+              <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: C.blue }}>Other Income Detail</Text>
             </View>
-            {Object.entries(incByCategory).sort(([, a], [, b]) => b.amount - a.amount).map(([cat, { items, amount }]) => (
-              <React.Fragment key={cat}>
-                {items.map((item) => (
-                  <View key={item.id} style={s.tableRow}>
-                    <Text style={[s.tableCell, { width: '20%' }]}>{fmtDate(item.date)}</Text>
-                    <Text style={[s.tableCell, { flex: 1 }]}>{item.description}</Text>
-                    <Text style={[s.tableCell, { width: '18%', textAlign: 'right' }]}>{fmt(item.amount)}</Text>
-                  </View>
-                ))}
-                <View style={s.subtotalRow}>
-                  <Text style={[s.subtotalCell, { flex: 1 }]}>{cat} Subtotal</Text>
-                  <Text style={[s.subtotalCell, { width: '18%', textAlign: 'right' }]}>{fmt(amount)}</Text>
-                </View>
-              </React.Fragment>
+            <View style={s.tableHeaderRow}>
+              <Text style={[s.tableHeaderCell, { width: '22%' }]}>Date</Text>
+              <Text style={[s.tableHeaderCell, { flex: 1 }]}>Description</Text>
+              <Text style={[s.tableHeaderCell, { width: '20%' }]}>Type</Text>
+              <Text style={[s.tableHeaderCell, { width: '18%', textAlign: 'right' }]}>Amount ($)</Text>
+            </View>
+            {manualIncome.map((item, i) => (
+              <View key={item.id} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+                <Text style={[s.tableCell, { width: '22%' }]}>{fmtDate(item.date)}</Text>
+                <Text style={[s.tableCell, { flex: 1 }]}>{item.description}</Text>
+                <Text style={[s.tableCell, { width: '20%' }]}>{item.category ?? 'Other'}</Text>
+                <Text style={[s.tableCell, { width: '18%', textAlign: 'right' }]}>{fmt(item.amount)}</Text>
+              </View>
             ))}
           </>
         )}
 
-        <View style={s.spacer} />
-        <View style={s.totalRow}>
-          <Text style={[s.totalCell, { flex: 1 }]}>Total Income</Text>
-          <Text style={[s.totalCell, { width: '18%', textAlign: 'right' }]}>{fmt(totalIncome)}</Text>
+        {/* ── Expenditure Summary by Category ── */}
+        <Text style={s.sectionHeading}>Expenditure Summary by Category</Text>
+        <View style={s.tableHeaderRow}>
+          <Text style={[s.tableHeaderCell, { flex: 1 }]}>Category</Text>
+          <Text style={[s.tableHeaderCell, { width: '20%', textAlign: 'right' }]}>Amount ($)</Text>
+          <Text style={[s.tableHeaderCell, { width: '20%', textAlign: 'center' }]}>% of Expenditure</Text>
+          <Text style={[s.tableHeaderCell, { width: '12%', textAlign: 'center' }]}>Rank</Text>
         </View>
+        {sortedCats.map(([cat, { amount }], i) => (
+          <View key={cat} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt}>
+            <Text style={[s.tableCell, { flex: 1 }]}>{cat}</Text>
+            <Text style={[s.tableCell, { width: '20%', textAlign: 'right' }]}>{fmt(amount)}</Text>
+            <Text style={[s.tableCell, { width: '20%', textAlign: 'center' }]}>{pct(amount, totalExpenses)}</Text>
+            <Text style={[s.tableCell, { width: '12%', textAlign: 'center' }]}>{i + 1}</Text>
+          </View>
+        ))}
 
-        {/* EXPENDITURE */}
-        <Text style={s.sectionHeading}>Expenditure</Text>
-
-        <SubsectionHeading label="Expenditure Details" />
-        <TableHeader cols={[
-          { label: 'Date', width: COL.date },
-          { label: 'Category', width: COL.cat },
-          { label: 'Description', width: COL.desc },
-          { label: 'Amount', width: COL.amt, align: 'right' },
-        ]} />
+        {/* ── Detailed Expenditure Schedule ── */}
+        <Text style={[s.sectionHeading, { marginTop: 20 }]}>Detailed Expenditure Schedule</Text>
+        <Text style={s.sectionSubheading}>Grouped by category for easier review and sign-off.</Text>
 
         {sortedCats.map(([cat, { items, amount }]) => (
           <React.Fragment key={cat}>
+            <View style={s.catHeadingRow} wrap={false}>
+              <Text style={s.catHeadingText}>{cat} - {fmt(amount)}</Text>
+            </View>
+            <View style={s.tableHeaderRow}>
+              <Text style={[s.tableHeaderCell, { width: '25%' }]}>Date</Text>
+              <Text style={[s.tableHeaderCell, { flex: 1 }]}>Description</Text>
+              <Text style={[s.tableHeaderCell, { width: '20%', textAlign: 'right' }]}>Amount ($)</Text>
+            </View>
             {items.map((item, i) => (
-              <View key={item.id} style={s.tableRow} wrap={false}>
-                <Text style={[s.tableCell, { width: COL.date }]}>{fmtDate(item.date)}</Text>
-                <Text style={[s.tableCell, { width: COL.cat, fontFamily: i === 0 ? 'Helvetica-Bold' : 'Helvetica' }]}>{i === 0 ? cat : ''}</Text>
-                <Text style={[s.tableCell, { width: COL.desc }]}>{item.description}</Text>
-                <Text style={[s.tableCell, { width: COL.amt, textAlign: 'right' }]}>{fmt(item.amount)}</Text>
+              <View key={item.id} style={i % 2 === 0 ? s.tableRow : s.tableRowAlt} wrap={false}>
+                <Text style={[s.tableCell, { width: '25%' }]}>{fmtDate(item.date)}</Text>
+                <Text style={[s.tableCell, { flex: 1 }]}>{item.description}</Text>
+                <Text style={[s.tableCell, { width: '20%', textAlign: 'right' }]}>{fmt(item.amount)}</Text>
               </View>
             ))}
-            <View style={s.subtotalRow} wrap={false}>
-              <Text style={[s.subtotalCell, { width: COL.date }]} />
-              <Text style={[s.subtotalCell, { width: COL.cat }]} />
-              <Text style={[s.subtotalCell, { width: COL.desc }]}>{cat} Subtotal</Text>
-              <Text style={[s.subtotalCell, { width: COL.amt, textAlign: 'right' }]}>{fmt(amount)}</Text>
-            </View>
-            <View style={s.spacer} />
+            <Text style={s.subtotalText}>Subtotal: {fmt(amount)}</Text>
           </React.Fragment>
         ))}
 
-        <View style={s.totalRow} wrap={false}>
-          <Text style={[s.totalCell, { flex: 1 }]}>Total Expenditure</Text>
-          <Text style={[s.totalCell, { width: COL.amt, textAlign: 'right' }]}>{fmt(totalExpenses)}</Text>
-        </View>
-        <View style={s.spacer} />
-        <View style={s.netRow} wrap={false}>
-          <Text style={[s.netCell, { flex: 1 }]}>{netPositive ? 'Net Surplus' : 'Net Deficit'}</Text>
-          <Text style={[s.netCell, { width: COL.amt, textAlign: 'right' }]}>{fmt(Math.abs(net))}</Text>
+        {/* ── Sign-off ── */}
+        <View wrap={false}>
+          <Text style={s.signOffHeading}>Sign-off</Text>
+          <View style={s.signOffRow}>
+            {(['Prepared by', 'Reviewed by', 'Approved by'] as const).map((label, i, arr) => (
+              <View key={label} style={i === arr.length - 1 ? s.signOffColLast : s.signOffCol}>
+                <Text style={s.signOffLabel}>{label}</Text>
+                <View style={s.signOffLine} />
+                <Text style={s.signOffSub}>Name / Signature / Date</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
         {/* Footer */}
         <View style={s.footer} fixed>
-          <Text style={s.footerText}>Prepared by the Finance Committee · {districtName}</Text>
-          <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Prepared: ${preparedDate} | Page ${pageNumber} of ${totalPages}`} />
+          <Text style={s.footerText}>Prepared by the Youth Secretary · {districtName}</Text>
+          <Text
+            style={s.footerText}
+            render={({ pageNumber, totalPages }) =>
+              `Prepared: ${preparedDate} | Page ${pageNumber} of ${totalPages}`
+            }
+          />
         </View>
+
       </Page>
     </Document>
   )

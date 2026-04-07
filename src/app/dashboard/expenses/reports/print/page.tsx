@@ -229,7 +229,7 @@ export default function PrintReportPage() {
         <table>
           <tbody>
             {/* People's Contributions */}
-            <tr className="subsection-heading"><td colSpan={3}>People&apos;s Contributions</td></tr>
+            <tr className="subsection-heading"><td colSpan={3}>Individual&apos;s Contributions</td></tr>
             <tr>
               <th style={{ background: '#444' }}>Date</th>
               <th style={{ background: '#444' }}>Contributor</th>
