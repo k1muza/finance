@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Church } from 'lucide-react'
+import { Landmark } from 'lucide-react'
 
 const registrationEnabled = process.env.NEXT_PUBLIC_REGISTRATION_ENABLED === 'true'
 
@@ -19,7 +19,6 @@ export default function RegisterPage() {
 
   const supabase = createClient()
 
-  // Redirect if already logged in
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) router.replace('/dashboard/overview')
@@ -57,18 +56,17 @@ export default function RegisterPage() {
     }
   }
 
-  // Registration disabled state
   if (!registrationEnabled) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
         <div className="w-full max-w-sm space-y-8 text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 mb-4">
-            <Church className="h-8 w-8 text-cyan-400" />
+            <Landmark className="h-8 w-8 text-cyan-400" />
           </div>
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-4">
             <p className="text-base font-semibold text-slate-100">Registration closed</p>
             <p className="text-sm text-slate-400">
-              New account registration is currently disabled. Contact your administrator to get access.
+              New account registration is currently disabled. Contact your finance administrator to get access.
             </p>
             <Link
               href="/login"
@@ -82,13 +80,12 @@ export default function RegisterPage() {
     )
   }
 
-  // Success state
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
         <div className="w-full max-w-sm space-y-8 text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 mb-4">
-            <Church className="h-8 w-8 text-cyan-400" />
+            <Landmark className="h-8 w-8 text-cyan-400" />
           </div>
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-4">
             <p className="text-base font-semibold text-slate-100">Account created</p>
@@ -110,22 +107,20 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
       <div className="w-full max-w-sm space-y-8">
-        {/* Logo */}
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 mb-4">
-            <Church className="h-8 w-8 text-cyan-400" />
+            <Landmark className="h-8 w-8 text-cyan-400" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-100">Conference</h1>
+          <h1 className="text-2xl font-bold text-slate-100">District Finance Dashboard</h1>
           <p className="text-sm text-slate-400 mt-1">
-            ZAOGA FIF · Easter Conference 2026
+            Set up your finance administration access
           </p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleRegister} className="bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-5">
           <div>
             <p className="text-base font-semibold text-slate-100 mb-1">Create account</p>
-            <p className="text-sm text-slate-400">Register an admin account</p>
+            <p className="text-sm text-slate-400">Register an admin account for the finance dashboard</p>
           </div>
 
           {error && (
@@ -178,7 +173,7 @@ export default function RegisterPage() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Confirm password"
                 className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
               />
             </div>
@@ -195,7 +190,7 @@ export default function RegisterPage() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
             ) : null}
-            {loading ? 'Creating account…' : 'Create account'}
+            {loading ? 'Creating account...' : 'Create account'}
           </button>
         </form>
 

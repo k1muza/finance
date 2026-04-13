@@ -7,18 +7,11 @@ import { useTheme } from 'next-themes'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   BarChart3,
-  Calendar,
-  Users,
-  Briefcase,
-  Globe,
-  Trophy,
-  FileText,
-  Music,
-  Bell,
-  Receipt,
+  Wallet,
+  Settings2,
   Menu,
   X,
-  Church,
+  Landmark,
   Sun,
   Moon,
   ShieldCheck,
@@ -27,19 +20,11 @@ import {
   LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import { GlobalSearch } from '@/components/layout/GlobalSearch'
 
 const baseNav = [
   { href: '/dashboard/overview', icon: BarChart3, label: 'Overview' },
-  { href: '/dashboard/schedule', icon: Calendar, label: 'Schedule' },
-  { href: '/dashboard/people', icon: Users, label: 'People' },
-  { href: '/dashboard/departments', icon: Briefcase, label: 'Departments' },
-  { href: '/dashboard/regions', icon: Globe, label: 'Regions' },
-  { href: '/dashboard/leaderboard', icon: Trophy, label: 'Leaderboard' },
-  { href: '/dashboard/pages', icon: FileText, label: 'Pages' },
-  { href: '/dashboard/songs', icon: Music, label: 'Songs' },
-  { href: '/dashboard/expenses', icon: Receipt, label: 'Finances' },
-  { href: '/dashboard/notifications', icon: Bell, label: 'Notifications' },
+  { href: '/dashboard/finance', icon: Wallet, label: 'Finance' },
+  { href: '/dashboard/settings', icon: Settings2, label: 'Settings' },
 ]
 
 const adminNav: typeof baseNav = []
@@ -64,13 +49,15 @@ function ThemeToggle({ collapsed }: { collapsed: boolean }) {
 }
 
 function DistrictBadge({ collapsed }: { collapsed: boolean }) {
-  const { district, isAdmin } = useAuth()
+  const { district, isAdmin, activeDistrictId } = useAuth()
   if (collapsed) return null
   if (isAdmin) {
     return (
       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
         <ShieldCheck className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-        <span className="text-xs text-cyan-400 font-medium truncate">Admin</span>
+        <span className="text-xs text-cyan-400 font-medium truncate">
+          {activeDistrictId ? 'Admin · District view' : 'Admin · All districts'}
+        </span>
       </div>
     )
   }
@@ -98,7 +85,6 @@ export function Sidebar() {
     router.push('/login')
   }
 
-  // Default: collapsed on < lg, expanded on lg+
   useEffect(() => {
     const update = () => setCollapsed(window.innerWidth < 1024)
     update()
@@ -159,11 +145,10 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile top bar (< md) */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-700">
         <div className="flex items-center gap-2 text-cyan-400 font-bold">
-          <Church className="h-6 w-6" />
-          <span className="text-slate-100">Conference</span>
+          <Landmark className="h-6 w-6" />
+          <span className="text-slate-100">Finance</span>
         </div>
         <button
           type="button"
@@ -174,17 +159,13 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Mobile overlay (< md) */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-30 flex">
           <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
           <div className="relative w-72 bg-slate-900 border-r border-slate-700 p-4 flex flex-col h-full overflow-y-auto">
             <div className="flex items-center gap-2 text-cyan-400 font-bold mb-3">
-              <Church className="h-6 w-6" />
-              <span className="text-slate-100">Conference</span>
-            </div>
-            <div className="mb-3">
-              <GlobalSearch className="w-full" />
+              <Landmark className="h-6 w-6" />
+              <span className="text-slate-100">Finance</span>
             </div>
             <div className="mb-4">
               <DistrictBadge collapsed={false} />
@@ -208,21 +189,18 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Desktop sidebar (md+) */}
       <aside className={cn(
         'hidden md:flex flex-col shrink-0 bg-slate-900 border-r border-slate-700 h-full overflow-y-auto transition-all duration-200',
         collapsed ? 'w-14 p-2' : 'w-60 p-4'
       )}>
-        {/* Logo */}
         <div className={cn(
           'flex items-center text-cyan-400 font-bold mb-3',
           collapsed ? 'justify-center' : 'gap-2'
         )}>
-          <Church className={collapsed ? 'h-6 w-6' : 'h-7 w-7'} />
-          {!collapsed && <span className="text-slate-100 text-lg">Conference</span>}
+          <Landmark className={collapsed ? 'h-6 w-6' : 'h-7 w-7'} />
+          {!collapsed && <span className="text-slate-100 text-lg">Finance</span>}
         </div>
 
-        {/* District badge */}
         {!collapsed && (
           <div className="mb-4">
             <DistrictBadge collapsed={collapsed} />
@@ -231,14 +209,8 @@ export function Sidebar() {
 
         {desktopLinks}
 
-        {/* Bottom actions */}
-        <div className={cn(
-          'mt-auto pt-4 border-t border-slate-700',
-          collapsed ? 'space-y-1' : 'space-y-1'
-        )}>
+        <div className="mt-auto pt-4 border-t border-slate-700 space-y-1">
           <ThemeToggle collapsed={collapsed} />
-
-          {/* Collapse toggle */}
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}

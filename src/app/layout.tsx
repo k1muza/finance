@@ -5,8 +5,8 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration'
 
 export const metadata: Metadata = {
-  title: 'Conference',
-  description: 'Manage conference data and publish to the mobile app',
+  title: 'District Finance Dashboard',
+  description: 'Track income, expenditure, and district financial performance',
 }
 
 export default function RootLayout({

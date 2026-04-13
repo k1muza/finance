@@ -30,6 +30,7 @@ export function useIncome(filter: IncomeFilter = {}) {
     setLoading(false)
   }, [filter.district_id, filter.search]) // eslint-disable-line
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetch() }, [fetch])
 
   const add = async (values: { district_id: string; description: string; amount: number; date: string; category?: string | null }) => {

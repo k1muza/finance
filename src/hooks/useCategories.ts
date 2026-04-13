@@ -28,6 +28,7 @@ export function useCategories(table: CategoryTable) {
     setLoading(false)
   }, [table]) // eslint-disable-line
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetch() }, [fetch])
 
   const add = async (name: string) => {

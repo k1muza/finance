@@ -16,11 +16,10 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient()
 
-    // Build district name → id lookup (case-insensitive)
     const { data: districts } = await supabase.from('districts').select('id, name')
     const districtByName: Record<string, string> = {}
-    for (const d of districts ?? []) {
-      districtByName[d.name.toLowerCase()] = d.id
+    for (const district of districts ?? []) {
+      districtByName[district.name.toLowerCase()] = district.id
     }
 
     let imported = 0
@@ -28,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     for (const row of rows) {
       const description = row['description']?.trim()
-      if (!description) { errors.push(`Skipped row: missing description`); continue }
+      if (!description) { errors.push('Skipped row: missing description'); continue }
 
       const amountRaw = row['amount']?.trim()
       const amount = parseFloat(amountRaw ?? '')
@@ -40,13 +39,12 @@ export async function POST(req: NextRequest) {
       const date = row['date']?.trim()
       if (!date) { errors.push(`"${description}": missing date`); continue }
 
-      // Resolve district: prefer column value, fall back to form param
       let district_id: string | null = null
       const districtName = row['district']?.trim()
       if (districtName) {
         district_id = districtByName[districtName.toLowerCase()] ?? null
         if (!district_id) {
-          errors.push(`"${description}": district "${districtName}" not found — skipping`)
+          errors.push(`"${description}": district "${districtName}" not found - skipping`)
           continue
         }
       } else if (districtIdParam) {
@@ -59,7 +57,7 @@ export async function POST(req: NextRequest) {
       }
 
       const { error } = await supabase
-        .from('expenses')
+        .from('income')
         .insert({
           district_id,
           description,

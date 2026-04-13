@@ -5,7 +5,7 @@ import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { District } from '@/types'
 
-const PROFILE_CACHE_KEY = 'conf_profile'
+const PROFILE_CACHE_KEY = 'finance_profile'
 
 interface Profile {
   district_id: string | null

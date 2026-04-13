@@ -1,6 +1,4 @@
 @import "tailwindcss";
-@import "@mdi/font/css/materialdesignicons.min.css";
-
 @theme {
   --font-sans: ui-sans-serif, system-ui, sans-serif;
 }

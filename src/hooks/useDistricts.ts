@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { District } from '@/types'
 
-const DISTRICTS_CACHE_KEY = 'conf_districts'
+const DISTRICTS_CACHE_KEY = 'finance_districts'
 
 export function useDistricts() {
   const [data, setData] = useState<District[]>([])
@@ -41,6 +41,7 @@ export function useDistricts() {
     setLoading(false)
   }, []) // eslint-disable-line
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetch() }, [fetch])
 
   const create = async (values: Omit<District, 'id' | 'created_at' | 'updated_at'>) => {

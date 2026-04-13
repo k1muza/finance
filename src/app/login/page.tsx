@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Church } from 'lucide-react'
+import { Landmark } from 'lucide-react'
 
 const registrationEnabled = process.env.NEXT_PUBLIC_REGISTRATION_ENABLED === 'true'
 
@@ -17,7 +17,6 @@ export default function LoginPage() {
 
   const supabase = createClient()
 
-  // Redirect if already logged in
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) router.replace('/dashboard/overview')
@@ -43,22 +42,20 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
       <div className="w-full max-w-sm space-y-8">
-        {/* Logo */}
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 mb-4">
-            <Church className="h-8 w-8 text-cyan-400" />
+            <Landmark className="h-8 w-8 text-cyan-400" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-100">Conference</h1>
+          <h1 className="text-2xl font-bold text-slate-100">District Finance Dashboard</h1>
           <p className="text-sm text-slate-400 mt-1">
-            ZAOGA FIF · Easter Conference 2026
+            Secure district income and expenditure tracking
           </p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleLogin} className="bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-5">
           <div>
             <p className="text-base font-semibold text-slate-100 mb-1">Sign in</p>
-            <p className="text-sm text-slate-400">Enter your district account credentials</p>
+            <p className="text-sm text-slate-400">Enter your finance dashboard credentials</p>
           </div>
 
           {error && (
@@ -95,7 +92,7 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Password"
                 className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
               />
             </div>
@@ -112,7 +109,7 @@ export default function LoginPage() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
             ) : null}
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 

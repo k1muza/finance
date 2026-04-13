@@ -9,8 +9,8 @@ if (!supabaseUrl || !serviceRoleKey || !anonKey) {
   process.exit(1)
 }
 
-const EMAIL    = 'ado@gmail.com'
-const PASSWORD = 'Conference2026!'
+const EMAIL    = 'finance-admin@example.com'
+const PASSWORD = 'Finance2026!'
 
 // Admin client (service role)
 const admin = createClient(supabaseUrl, serviceRoleKey, {

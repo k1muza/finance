@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { OverviewStats } from '@/types'
+import { DistrictFinanceBreakdown, OverviewStats } from '@/types'
 
 export function useOverview(districtId?: string | null) {
   const [data, setData] = useState<OverviewStats | null>(null)
@@ -13,180 +13,99 @@ export function useOverview(districtId?: string | null) {
     async function load() {
       setLoading(true)
 
-      // Resolve district-scoped IDs first so we can filter downstream metrics.
-      let scopedRegionIds: string[] | null = null
-      let scopedDayIds: string[] | null = null
-      if (districtId) {
-        const [{ data: regionRows }, { data: dayRows }] = await Promise.all([
-          supabase.from('regions').select('id').eq('district_id', districtId),
-          supabase.from('days').select('id').eq('district_id', districtId),
-        ])
-        scopedRegionIds = regionRows?.map((row) => row.id) ?? []
-        scopedDayIds = dayRows?.map((row) => row.id) ?? []
-      }
-
-      let scopedPersonIds: string[] | null = null
-      if (scopedRegionIds !== null) {
-        if (scopedRegionIds.length > 0) {
-          const { data: personRows } = await supabase
-            .from('people')
-            .select('id')
-            .in('region_id', scopedRegionIds)
-          scopedPersonIds = personRows?.map((row) => row.id) ?? []
-        } else {
-          scopedPersonIds = []
-        }
-      }
-
-      let scopedSessionIds: string[] | null = null
-      if (scopedDayIds !== null) {
-        if (scopedDayIds.length > 0) {
-          const { data: sessionRows } = await supabase
-            .from('sessions')
-            .select('id')
-            .in('day_id', scopedDayIds)
-          scopedSessionIds = sessionRows?.map((row) => row.id) ?? []
-        } else {
-          scopedSessionIds = []
-        }
-      }
-
-      const zeroCount = { count: 0 as number | null }
-
-      let fundsQuery = supabase.from('contributions').select('amount, person_id')
-      if (scopedPersonIds !== null) {
-        if (scopedPersonIds.length > 0) {
-          fundsQuery = fundsQuery.in('person_id', scopedPersonIds)
-        } else {
-          fundsQuery = fundsQuery.eq('person_id', null)
-        }
-      }
-
-      let expensesQuery = supabase.from('expenses').select('amount')
-      if (districtId) expensesQuery = expensesQuery.eq('district_id', districtId)
-
-      let incomeQuery = supabase.from('income').select('amount')
-      if (districtId) incomeQuery = incomeQuery.eq('district_id', districtId)
-
-      let pagesQuery = supabase.from('pages').select('published')
-      if (districtId) pagesQuery = pagesQuery.eq('district_id', districtId)
-
-      let topQuery = supabase.from('leaderboard').select('*').limit(5)
-      if (districtId) {
-        topQuery = topQuery.eq('district_id', districtId).order('rank')
-      } else {
-        topQuery = topQuery.order('contribution', { ascending: false })
-      }
-
-      const peopleCountPromise = scopedPersonIds === null
-        ? supabase.from('people').select('id', { count: 'exact', head: true })
-        : Promise.resolve({ count: scopedPersonIds.length })
-
-      const dayCountPromise = scopedDayIds === null
-        ? supabase.from('days').select('id', { count: 'exact', head: true })
-        : Promise.resolve({ count: scopedDayIds.length })
-
-      const regionCountPromise = scopedRegionIds === null
-        ? supabase.from('regions').select('id', { count: 'exact', head: true })
-        : Promise.resolve({ count: scopedRegionIds.length })
-
-      const sessionCountPromise = scopedSessionIds === null
-        ? supabase.from('sessions').select('id', { count: 'exact', head: true })
-        : Promise.resolve({ count: scopedSessionIds.length })
-
-      const mealsCountPromise = scopedDayIds === null
-        ? supabase.from('meals').select('id', { count: 'exact', head: true })
-        : scopedDayIds.length > 0
-          ? supabase.from('meals').select('id', { count: 'exact', head: true }).in('day_id', scopedDayIds)
-          : Promise.resolve(zeroCount)
-
-      const eventsCountPromise = scopedSessionIds === null
-        ? supabase.from('events').select('id', { count: 'exact', head: true })
-        : scopedSessionIds.length > 0
-          ? supabase.from('events').select('id', { count: 'exact', head: true }).in('session_id', scopedSessionIds)
-          : Promise.resolve(zeroCount)
-
-      const mainEventsCountPromise = scopedSessionIds === null
-        ? supabase.from('events').select('id', { count: 'exact', head: true }).eq('is_main_event', true)
-        : scopedSessionIds.length > 0
-          ? supabase.from('events').select('id', { count: 'exact', head: true }).eq('is_main_event', true).in('session_id', scopedSessionIds)
-          : Promise.resolve(zeroCount)
-
       const [
-        peopleCountResult,
-        dayCountResult,
-        regionCountResult,
-        sessionCountResult,
-        mealsCountResult,
-        eventsCountResult,
-        mainEventsCountResult,
-        { count: totalDepartments },
-        { data: fundsData },
-        { data: manualIncomeData },
+        { data: districtsData },
+        { data: incomeData },
         { data: expensesData },
-        { data: pagesData },
-        { data: songsData },
-        { count: totalDevices },
-        { count: totalNotifications },
-        { data: topContributors },
       ] = await Promise.all([
-        peopleCountPromise,
-        dayCountPromise,
-        regionCountPromise,
-        sessionCountPromise,
-        mealsCountPromise,
-        eventsCountPromise,
-        mainEventsCountPromise,
-        supabase.from('departments').select('id', { count: 'exact', head: true }),
-        fundsQuery,
-        incomeQuery,
-        expensesQuery,
-        pagesQuery,
-        supabase.from('songs').select('published'),
-        supabase.from('device_tokens').select('id', { count: 'exact', head: true }),
-        supabase.from('notifications').select('id', { count: 'exact', head: true }),
-        topQuery,
+        supabase.from('districts').select('id, name').order('name'),
+        supabase.from('income').select('district_id, amount, category'),
+        supabase.from('expenses').select('district_id, amount, category'),
       ])
 
-      const contributionRows = fundsData ?? []
-      const contributionTotal = contributionRows.reduce((sum, row) => sum + (row.amount ?? 0), 0)
-      const manualIncomeTotal = (manualIncomeData ?? []).reduce((sum, row) => sum + (row.amount ?? 0), 0)
-      const totalFunds = contributionTotal + manualIncomeTotal
-      const contributorIds = new Set(
-        contributionRows
-          .map((row) => row.person_id)
-          .filter((id): id is string => typeof id === 'string' && id.length > 0)
-      )
+      const scopedIncome = districtId
+        ? (incomeData ?? []).filter((row) => row.district_id === districtId)
+        : (incomeData ?? [])
+      const scopedExpenses = districtId
+        ? (expensesData ?? []).filter((row) => row.district_id === districtId)
+        : (expensesData ?? [])
+      const visibleDistricts = districtId
+        ? (districtsData ?? []).filter((district) => district.id === districtId)
+        : (districtsData ?? [])
 
-      const totalExpenses = (expensesData ?? []).reduce((sum, row) => sum + (row.amount ?? 0), 0)
-      const publishedPages = (pagesData ?? []).filter((row) => row.published).length
-      const publishedSongs = (songsData ?? []).filter((row) => row.published).length
+      const totalsByDistrict = new Map<string, DistrictFinanceBreakdown>()
+      for (const district of visibleDistricts) {
+        totalsByDistrict.set(district.id, {
+          district_id: district.id,
+          district_name: district.name,
+          income_total: 0,
+          expense_total: 0,
+          net_balance: 0,
+          income_count: 0,
+          expense_count: 0,
+        })
+      }
+
+      for (const row of scopedIncome) {
+        const entry = totalsByDistrict.get(row.district_id)
+        if (!entry) continue
+        entry.income_total += row.amount ?? 0
+        entry.income_count += 1
+      }
+
+      for (const row of scopedExpenses) {
+        const entry = totalsByDistrict.get(row.district_id)
+        if (!entry) continue
+        entry.expense_total += row.amount ?? 0
+        entry.expense_count += 1
+      }
+
+      const districtBreakdown = [...totalsByDistrict.values()]
+        .map((entry) => ({
+          ...entry,
+          net_balance: entry.income_total - entry.expense_total,
+        }))
+        .sort((a, b) => b.net_balance - a.net_balance || a.district_name.localeCompare(b.district_name))
+
+      const totalIncome = scopedIncome.reduce((sum, row) => sum + (row.amount ?? 0), 0)
+      const totalExpenses = scopedExpenses.reduce((sum, row) => sum + (row.amount ?? 0), 0)
 
       setData({
-        totalPeople: peopleCountResult.count ?? 0,
-        totalFunds,
+        totalIncome,
         totalExpenses,
-        netBalance: totalFunds - totalExpenses,
-        totalDays: dayCountResult.count ?? 0,
-        totalDepartments: totalDepartments ?? 0,
-        totalRegions: regionCountResult.count ?? 0,
-        totalSessions: sessionCountResult.count ?? 0,
-        totalEvents: eventsCountResult.count ?? 0,
-        totalMainEvents: mainEventsCountResult.count ?? 0,
-        totalMeals: mealsCountResult.count ?? 0,
-        totalPages: pagesData?.length ?? 0,
-        publishedPages,
-        totalSongs: songsData?.length ?? 0,
-        publishedSongs,
-        totalDevices: totalDevices ?? 0,
-        totalNotifications: totalNotifications ?? 0,
-        totalContributors: contributorIds.size,
-        topContributors: topContributors ?? [],
+        netBalance: totalIncome - totalExpenses,
+        incomeCount: scopedIncome.length,
+        expenseCount: scopedExpenses.length,
+        topIncomeCategories: groupByCategory(scopedIncome),
+        topExpenseCategories: groupByCategory(scopedExpenses),
+        districtBreakdown,
       })
+
       setLoading(false)
     }
+
     load()
   }, [districtId]) // eslint-disable-line
 
   return { data, loading }
+}
+
+function groupByCategory(rows: { category: string | null; amount: number | null }[]) {
+  const grouped = rows.reduce<Map<string, { amount: number; count: number }>>((map, row) => {
+    const category = row.category?.trim() || 'Uncategorised'
+    const current = map.get(category) ?? { amount: 0, count: 0 }
+    current.amount += row.amount ?? 0
+    current.count += 1
+    map.set(category, current)
+    return map
+  }, new Map())
+
+  return [...grouped.entries()]
+    .map(([category, value]) => ({
+      category,
+      amount: value.amount,
+      count: value.count,
+    }))
+    .sort((a, b) => b.amount - a.amount || a.category.localeCompare(b.category))
+    .slice(0, 5)
 }

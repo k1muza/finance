@@ -32,7 +32,11 @@ export async function POST(req: NextRequest) {
         .single()
 
       if (error) { errors.push(`${name}: ${error.message}`); continue }
-      data ? imported++ : updated++
+      if (data) {
+        imported++
+      } else {
+        updated++
+      }
     }
 
     return NextResponse.json({ imported, updated, errors })

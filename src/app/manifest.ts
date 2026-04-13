@@ -2,12 +2,12 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Conference',
-    short_name: 'Conference',
-    description: 'Conference schedules, people, and leaderboard',
+    name: 'District Finance Dashboard',
+    short_name: 'Finance',
+    description: 'Track district income, expenditure, and reports',
     start_url: '/dashboard/overview',
     display: 'standalone',
-    background_color: '#020617', // slate-950 to match app bg
+    background_color: '#020617',
     theme_color: '#020617',
     icons: [
       {
