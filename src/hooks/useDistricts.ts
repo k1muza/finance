@@ -2,18 +2,30 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
 import { District } from '@/types'
 
 const DISTRICTS_CACHE_KEY = 'finance_districts'
 
 export function useDistricts() {
+  const { user, loading: authLoading } = useAuth()
   const [data, setData] = useState<District[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
 
   const fetch = useCallback(async () => {
+    if (authLoading) return
+
+    if (!user) {
+      setData([])
+      setError(null)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
+    setError(null)
     try {
       const { data: rows, error: err } = await supabase
         .from('districts')
@@ -39,10 +51,12 @@ export function useDistricts() {
       } catch { /* ignore */ }
     }
     setLoading(false)
-  }, []) // eslint-disable-line
+  }, [authLoading, user?.id]) // eslint-disable-line
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { fetch() }, [fetch])
+  useEffect(() => {
+    if (!authLoading) fetch()
+  }, [authLoading, fetch])
 
   const create = async (values: Omit<District, 'id' | 'created_at' | 'updated_at'>) => {
     const { error: err } = await supabase.from('districts').insert(values)

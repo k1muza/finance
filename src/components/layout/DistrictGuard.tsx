@@ -14,19 +14,20 @@ export function DistrictGuard({ children }: { children: React.ReactNode }) {
 
   const isSetup = pathname.startsWith('/dashboard/setup')
   const loading = authLoading || districtsLoading
-  const needsSetup = !loading && !isSetup && (
-    isAdmin ? districts.length === 0 : !districtId
-  )
+  const setupRequired = isAdmin ? districts.length === 0 : !districtId
+  const needsSetup = !loading && !isSetup && setupRequired
+  const shouldLeaveSetup = !loading && isSetup && !setupRequired
 
   useEffect(() => {
     if (needsSetup) router.replace('/dashboard/setup')
-  }, [needsSetup, router])
+    if (shouldLeaveSetup) router.replace('/dashboard/overview')
+  }, [needsSetup, shouldLeaveSetup, router])
 
-  // Always render setup page as-is
-  if (isSetup) return <>{children}</>
+  // Only keep setup visible when setup is actually still required.
+  if (isSetup && !shouldLeaveSetup) return <>{children}</>
 
   // Block children until we know whether to redirect
-  if (loading || needsSetup) return <PageSpinner />
+  if (loading || needsSetup || shouldLeaveSetup) return <PageSpinner />
 
   return <>{children}</>
 }
