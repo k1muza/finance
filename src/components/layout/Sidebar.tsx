@@ -17,16 +17,15 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  PiggyBank,
-  ReceiptText,
   FileText,
+  BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 const baseNav = [
   { href: '/dashboard/overview', icon: BarChart3, label: 'Overview' },
-  { href: '/dashboard/finance/income', icon: PiggyBank, label: 'Income' },
-  { href: '/dashboard/finance/expenditure', icon: ReceiptText, label: 'Expenditure' },
+  { href: '/dashboard/finance/cashbook', icon: BookOpen, label: 'Cashbook' },
+  { href: '/dashboard/finance/accounts', icon: Landmark, label: 'Accounts' },
   { href: '/dashboard/finance/reports', icon: FileText, label: 'Reports' },
   { href: '/dashboard/settings', icon: Settings2, label: 'Settings' },
 ]

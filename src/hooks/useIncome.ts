@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Income } from '@/types'
+import { Currency, Income, PaymentMethod } from '@/types'
 
 interface IncomeFilter {
-  district_id?: string
+  district_id?: string | null
   search?: string
 }
 
@@ -15,10 +15,16 @@ export function useIncome(filter: IncomeFilter = {}) {
   const supabase = createClient()
 
   const fetch = useCallback(async () => {
+    if (filter.district_id === null) {
+      setData([])
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     let query = supabase
       .from('income')
-      .select('*, district:districts(id,name), fund:funds(id,district_id,name,description,is_restricted,created_at,updated_at)')
+      .select('*, district:districts(id,name), account:accounts(id,district_id,name,code,type,currency,status,description,created_at,updated_at), fund:funds(id,district_id,name,description,is_restricted,created_at,updated_at)')
       .order('date', { ascending: false })
       .order('created_at', { ascending: false })
 
@@ -33,13 +39,32 @@ export function useIncome(filter: IncomeFilter = {}) {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetch() }, [fetch])
 
-  const add = async (values: { district_id: string; description: string; amount: number; date: string; category?: string | null; fund_id?: string | null }) => {
+  const add = async (values: {
+    district_id: string
+    account_id?: string | null
+    description: string
+    amount: number
+    date: string
+    category?: string | null
+    fund_id?: string | null
+    currency?: Currency
+    payment_method?: PaymentMethod
+  }) => {
     const { error } = await supabase.from('income').insert(values)
     if (error) throw new Error(error.message)
     await fetch()
   }
 
-  const update = async (id: string, values: Partial<{ description: string; amount: number; date: string; category: string | null; fund_id: string | null }>) => {
+  const update = async (id: string, values: Partial<{
+    account_id: string | null
+    description: string
+    amount: number
+    date: string
+    category: string | null
+    fund_id: string | null
+    currency: Currency
+    payment_method: PaymentMethod
+  }>) => {
     const { error } = await supabase.from('income').update(values).eq('id', id)
     if (error) throw new Error(error.message)
     await fetch()
@@ -51,7 +76,10 @@ export function useIncome(filter: IncomeFilter = {}) {
     await fetch()
   }
 
-  const total = data.reduce((sum, e) => sum + e.amount, 0)
+  const totalsByCurrency = data.reduce<Partial<Record<Currency, number>>>((acc, e) => {
+    acc[e.currency] = (acc[e.currency] ?? 0) + e.amount
+    return acc
+  }, {})
 
-  return { data, loading, total, add, update, remove, refresh: fetch }
+  return { data, loading, totalsByCurrency, add, update, remove, refresh: fetch }
 }

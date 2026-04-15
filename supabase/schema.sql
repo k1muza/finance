@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS public.expense_categories (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TYPE IF NOT EXISTS public.currency_code AS ENUM ('USD', 'ZAR', 'ZWG');
+CREATE TYPE IF NOT EXISTS public.payment_method AS ENUM ('cash', 'bank', 'ecocash');
+
 CREATE TABLE IF NOT EXISTS public.funds (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   district_id UUID NOT NULL REFERENCES public.districts(id) ON DELETE CASCADE,
@@ -55,13 +58,30 @@ CREATE TABLE IF NOT EXISTS public.funds (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  district_id UUID NOT NULL REFERENCES public.districts(id) ON DELETE CASCADE,
+  name TEXT NOT NULL CHECK (btrim(name) <> ''),
+  code TEXT,
+  type TEXT NOT NULL CHECK (type IN ('cash', 'bank', 'mobile_money', 'petty_cash')),
+  currency public.currency_code NOT NULL DEFAULT 'USD',
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  description TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (code IS NULL OR btrim(code) <> '')
+);
+
 CREATE TABLE IF NOT EXISTS public.income (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   district_id UUID NOT NULL REFERENCES public.districts(id) ON DELETE CASCADE,
+  account_id UUID REFERENCES public.accounts(id) ON DELETE SET NULL,
   fund_id UUID REFERENCES public.funds(id) ON DELETE SET NULL,
   description TEXT NOT NULL,
   amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
   category TEXT,
+  currency public.currency_code NOT NULL DEFAULT 'USD',
+  payment_method public.payment_method NOT NULL DEFAULT 'cash',
   date DATE NOT NULL DEFAULT CURRENT_DATE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -69,10 +89,13 @@ CREATE TABLE IF NOT EXISTS public.income (
 CREATE TABLE IF NOT EXISTS public.expenses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   district_id UUID NOT NULL REFERENCES public.districts(id) ON DELETE CASCADE,
+  account_id UUID REFERENCES public.accounts(id) ON DELETE SET NULL,
   fund_id UUID REFERENCES public.funds(id) ON DELETE SET NULL,
   description TEXT NOT NULL,
   amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
   category TEXT,
+  currency public.currency_code NOT NULL DEFAULT 'USD',
+  payment_method public.payment_method NOT NULL DEFAULT 'cash',
   date DATE NOT NULL DEFAULT CURRENT_DATE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -84,6 +107,7 @@ CREATE TABLE IF NOT EXISTS public.budgets (
   type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
   category TEXT NOT NULL,
   amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
+  currency public.currency_code NOT NULL DEFAULT 'USD',
   period_start DATE NOT NULL,
   period_end DATE NOT NULL,
   notes TEXT,
@@ -94,21 +118,40 @@ CREATE TABLE IF NOT EXISTS public.budgets (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_funds_district_name_unique
   ON public.funds (district_id, lower(name));
+CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_district_name_unique
+  ON public.accounts (district_id, lower(name));
+CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_district_code_unique
+  ON public.accounts (district_id, lower(code))
+  WHERE code IS NOT NULL AND btrim(code) <> '';
 CREATE INDEX IF NOT EXISTS idx_income_district ON public.income(district_id);
 CREATE INDEX IF NOT EXISTS idx_income_date ON public.income(date DESC);
+CREATE INDEX IF NOT EXISTS idx_income_account ON public.income(account_id);
+CREATE INDEX IF NOT EXISTS idx_income_account_currency ON public.income(account_id, currency);
 CREATE INDEX IF NOT EXISTS idx_income_fund ON public.income(fund_id);
+CREATE INDEX IF NOT EXISTS idx_income_fund_currency ON public.income(fund_id, currency);
 CREATE INDEX IF NOT EXISTS idx_expenses_district ON public.expenses(district_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_date ON public.expenses(date DESC);
+CREATE INDEX IF NOT EXISTS idx_expenses_account ON public.expenses(account_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_account_currency ON public.expenses(account_id, currency);
 CREATE INDEX IF NOT EXISTS idx_expenses_fund ON public.expenses(fund_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_fund_currency ON public.expenses(fund_id, currency);
 CREATE INDEX IF NOT EXISTS idx_profiles_district ON public.profiles(district_id);
 CREATE INDEX IF NOT EXISTS idx_funds_district ON public.funds(district_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_district ON public.accounts(district_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_district_status ON public.accounts(district_id, status);
 CREATE INDEX IF NOT EXISTS idx_budgets_district ON public.budgets(district_id);
 CREATE INDEX IF NOT EXISTS idx_budgets_fund ON public.budgets(fund_id);
 CREATE INDEX IF NOT EXISTS idx_budgets_period_start ON public.budgets(period_start DESC);
+CREATE INDEX IF NOT EXISTS idx_budgets_fund_currency ON public.budgets(fund_id, currency);
 
 DROP TRIGGER IF EXISTS trg_funds_updated_at ON public.funds;
 CREATE TRIGGER trg_funds_updated_at
   BEFORE UPDATE ON public.funds
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_accounts_updated_at ON public.accounts;
+CREATE TRIGGER trg_accounts_updated_at
+  BEFORE UPDATE ON public.accounts
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 DROP TRIGGER IF EXISTS trg_budgets_updated_at ON public.budgets;
@@ -188,15 +231,61 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION public.validate_account_transaction_match()
+RETURNS TRIGGER AS $$
+DECLARE
+  account_district_id UUID;
+  account_currency public.currency_code;
+  account_status TEXT;
+BEGIN
+  IF NEW.account_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT district_id, currency, status
+  INTO account_district_id, account_currency, account_status
+  FROM public.accounts
+  WHERE id = NEW.account_id;
+
+  IF account_district_id IS NULL THEN
+    RAISE EXCEPTION 'Selected account does not exist';
+  END IF;
+
+  IF account_district_id <> NEW.district_id THEN
+    RAISE EXCEPTION 'Selected account must belong to the same district';
+  END IF;
+
+  IF account_currency <> NEW.currency THEN
+    RAISE EXCEPTION 'Selected account currency must match the transaction currency';
+  END IF;
+
+  IF account_status <> 'active' THEN
+    RAISE EXCEPTION 'Selected account must be active';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 DROP TRIGGER IF EXISTS trg_income_fund_district ON public.income;
 CREATE TRIGGER trg_income_fund_district
   BEFORE INSERT OR UPDATE OF district_id, fund_id ON public.income
   FOR EACH ROW EXECUTE FUNCTION public.validate_fund_district_match();
 
+DROP TRIGGER IF EXISTS trg_income_account_match ON public.income;
+CREATE TRIGGER trg_income_account_match
+  BEFORE INSERT OR UPDATE OF district_id, account_id, currency ON public.income
+  FOR EACH ROW EXECUTE FUNCTION public.validate_account_transaction_match();
+
 DROP TRIGGER IF EXISTS trg_expenses_fund_district ON public.expenses;
 CREATE TRIGGER trg_expenses_fund_district
   BEFORE INSERT OR UPDATE OF district_id, fund_id ON public.expenses
   FOR EACH ROW EXECUTE FUNCTION public.validate_fund_district_match();
+
+DROP TRIGGER IF EXISTS trg_expenses_account_match ON public.expenses;
+CREATE TRIGGER trg_expenses_account_match
+  BEFORE INSERT OR UPDATE OF district_id, account_id, currency ON public.expenses
+  FOR EACH ROW EXECUTE FUNCTION public.validate_account_transaction_match();
 
 DROP TRIGGER IF EXISTS trg_budgets_fund_district ON public.budgets;
 CREATE TRIGGER trg_budgets_fund_district
@@ -251,6 +340,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.income_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.expense_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.funds ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.income ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
@@ -281,6 +371,15 @@ DROP POLICY IF EXISTS "district_manage_own_funds" ON public.funds;
 CREATE POLICY "admin_manage_funds" ON public.funds
   FOR ALL USING (public.is_admin_user()) WITH CHECK (public.is_admin_user());
 CREATE POLICY "district_manage_own_funds" ON public.funds
+  FOR ALL
+  USING (district_id = public.current_district_id())
+  WITH CHECK (district_id = public.current_district_id());
+
+DROP POLICY IF EXISTS "admin_manage_accounts" ON public.accounts;
+DROP POLICY IF EXISTS "district_manage_own_accounts" ON public.accounts;
+CREATE POLICY "admin_manage_accounts" ON public.accounts
+  FOR ALL USING (public.is_admin_user()) WITH CHECK (public.is_admin_user());
+CREATE POLICY "district_manage_own_accounts" ON public.accounts
   FOR ALL
   USING (district_id = public.current_district_id())
   WITH CHECK (district_id = public.current_district_id());

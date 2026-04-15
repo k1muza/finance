@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.budgets (
   type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
   category TEXT NOT NULL,
   amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
+  currency public.currency_code NOT NULL DEFAULT 'USD',
   period_start DATE NOT NULL,
   period_end DATE NOT NULL,
   notes TEXT,
@@ -35,6 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_funds_district ON public.funds(district_id);
 CREATE INDEX IF NOT EXISTS idx_budgets_district ON public.budgets(district_id);
 CREATE INDEX IF NOT EXISTS idx_budgets_fund ON public.budgets(fund_id);
 CREATE INDEX IF NOT EXISTS idx_budgets_period_start ON public.budgets(period_start DESC);
+CREATE INDEX IF NOT EXISTS idx_budgets_fund_currency ON public.budgets(fund_id, currency);
 CREATE INDEX IF NOT EXISTS idx_income_fund ON public.income(fund_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_fund ON public.expenses(fund_id);
 

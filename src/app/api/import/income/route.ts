@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { parseCsv } from '@/lib/csv'
+import type { Currency, PaymentMethod } from '@/types'
+
+const VALID_CURRENCIES: Currency[] = ['USD', 'ZAR', 'ZWG']
+const VALID_PAYMENT_METHODS: PaymentMethod[] = ['cash', 'bank', 'ecocash']
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,14 +19,18 @@ export async function POST(req: NextRequest) {
     if (rows.length === 0) return NextResponse.json({ imported: 0, errors: [] })
 
     const supabase = createServerClient()
-    const [{ data: districts }, { data: funds }] = await Promise.all([
+    const [{ data: districts }, { data: funds }, { data: accounts }] = await Promise.all([
       supabase.from('districts').select('id, name'),
       supabase.from('funds').select('id, district_id, name'),
+      supabase.from('accounts').select('id, district_id, name, status'),
     ])
 
     const districtByName: Record<string, string> = {}
     const fundByDistrictAndName: Record<string, string> = {}
     const generalFundByDistrict: Record<string, string> = {}
+    const activeAccountByDistrictAndName: Record<string, string> = {}
+    const defaultActiveAccountByDistrict: Record<string, string> = {}
+    const activeAccountCountByDistrict: Record<string, number> = {}
 
     for (const district of districts ?? []) {
       districtByName[district.name.toLowerCase()] = district.id
@@ -31,6 +39,14 @@ export async function POST(req: NextRequest) {
       fundByDistrictAndName[`${fund.district_id}:${fund.name.toLowerCase()}`] = fund.id
       if (fund.name.toLowerCase() === 'general fund') {
         generalFundByDistrict[fund.district_id] = fund.id
+      }
+    }
+    for (const account of accounts ?? []) {
+      if (account.status !== 'active') continue
+      activeAccountByDistrictAndName[`${account.district_id}:${account.name.toLowerCase()}`] = account.id
+      activeAccountCountByDistrict[account.district_id] = (activeAccountCountByDistrict[account.district_id] ?? 0) + 1
+      if (!defaultActiveAccountByDistrict[account.district_id]) {
+        defaultActiveAccountByDistrict[account.district_id] = account.id
       }
     }
 
@@ -74,6 +90,24 @@ export async function POST(req: NextRequest) {
         continue
       }
 
+      const accountName = row['account']?.trim()
+      let account_id: string | null = null
+      if (accountName) {
+        account_id = activeAccountByDistrictAndName[`${district_id}:${accountName.toLowerCase()}`] ?? null
+        if (!account_id) {
+          errors.push(`"${description}": account "${accountName}" not found or inactive in the selected district`)
+          continue
+        }
+      } else if ((activeAccountCountByDistrict[district_id] ?? 0) === 1) {
+        account_id = defaultActiveAccountByDistrict[district_id] ?? null
+      } else if ((activeAccountCountByDistrict[district_id] ?? 0) === 0) {
+        errors.push(`"${description}": no active account found in the selected district`)
+        continue
+      } else {
+        errors.push(`"${description}": account is required because the selected district has multiple active accounts`)
+        continue
+      }
+
       const fundName = row['fund']?.trim()
       let fund_id: string | null = generalFundByDistrict[district_id] ?? null
       if (fundName) {
@@ -84,15 +118,28 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      const rawCurrency = row['currency']?.trim()?.toUpperCase()
+      const currency: Currency = VALID_CURRENCIES.includes(rawCurrency as Currency)
+        ? (rawCurrency as Currency)
+        : 'USD'
+
+      const rawPaymentMethod = row['payment_method']?.trim()?.toLowerCase()
+      const payment_method: PaymentMethod = VALID_PAYMENT_METHODS.includes(rawPaymentMethod as PaymentMethod)
+        ? (rawPaymentMethod as PaymentMethod)
+        : 'cash'
+
       const { error } = await supabase
         .from('income')
         .insert({
           district_id,
+          account_id,
           fund_id,
           description,
           amount,
           date,
           category: row['category']?.trim() || null,
+          currency,
+          payment_method,
         })
 
       if (error) {

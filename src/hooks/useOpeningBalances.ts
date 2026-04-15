@@ -3,15 +3,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { Budget, BudgetType, Currency } from '@/types'
+import { AccountOpeningBalance, Currency } from '@/types'
 
-interface BudgetFilter {
-  district_id?: string
+interface OpeningBalanceFilter {
+  account_id?: string | null
+  district_id?: string | null
 }
 
-export function useBudgets(filter: BudgetFilter = {}) {
+export function useOpeningBalances(filter: OpeningBalanceFilter = {}) {
   const { user, loading: authLoading } = useAuth()
-  const [data, setData] = useState<Budget[]>([])
+  const [data, setData] = useState<AccountOpeningBalance[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
@@ -26,15 +27,22 @@ export function useBudgets(filter: BudgetFilter = {}) {
       return
     }
 
+    if (filter.account_id === null || filter.district_id === null) {
+      setData([])
+      setError(null)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
     let query = supabase
-      .from('budgets')
-      .select('*, district:districts(id,name), fund:funds(id,district_id,name,description,is_restricted,created_at,updated_at)')
-      .order('period_start', { ascending: false })
-      .order('created_at', { ascending: false })
+      .from('account_opening_balances')
+      .select('*, account:accounts(id,name,currency,type,status)')
+      .order('effective_date', { ascending: false })
 
+    if (filter.account_id) query = query.eq('account_id', filter.account_id)
     if (filter.district_id) query = query.eq('district_id', filter.district_id)
 
     const { data: rows, error: err } = await query
@@ -42,10 +50,10 @@ export function useBudgets(filter: BudgetFilter = {}) {
       setError(err.message)
       setData([])
     } else {
-      setData((rows ?? []) as Budget[])
+      setData((rows ?? []) as AccountOpeningBalance[])
     }
     setLoading(false)
-  }, [authLoading, filter.district_id, user]) // eslint-disable-line
+  }, [authLoading, filter.account_id, filter.district_id, user]) // eslint-disable-line
 
   useEffect(() => {
     if (authLoading) return
@@ -58,25 +66,19 @@ export function useBudgets(filter: BudgetFilter = {}) {
   }, [authLoading, fetch])
 
   const add = async (values: {
+    account_id: string
     district_id: string
-    fund_id?: string | null
-    type: BudgetType
-    category: string
+    effective_date: string
     amount: number
-    currency?: Currency
-    period_start: string
-    period_end: string
+    currency: Currency
     notes?: string | null
   }) => {
-    const { error: err } = await supabase.from('budgets').insert({
+    const { error: err } = await supabase.from('account_opening_balances').insert({
+      account_id: values.account_id,
       district_id: values.district_id,
-      fund_id: values.fund_id || null,
-      type: values.type,
-      category: values.category.trim(),
+      effective_date: values.effective_date,
       amount: values.amount,
-      currency: values.currency ?? 'USD',
-      period_start: values.period_start,
-      period_end: values.period_end,
+      currency: values.currency,
       notes: values.notes?.trim() || null,
     })
     if (err) throw new Error(err.message)
@@ -86,33 +88,29 @@ export function useBudgets(filter: BudgetFilter = {}) {
   const update = async (
     id: string,
     values: Partial<{
-      fund_id: string | null
-      type: BudgetType
-      category: string
+      effective_date: string
       amount: number
-      currency: Currency
-      period_start: string
-      period_end: string
       notes: string | null
     }>
   ) => {
     const payload = {
-      ...(values.fund_id !== undefined ? { fund_id: values.fund_id || null } : {}),
-      ...(values.type !== undefined ? { type: values.type } : {}),
-      ...(values.category !== undefined ? { category: values.category.trim() } : {}),
+      ...(values.effective_date !== undefined ? { effective_date: values.effective_date } : {}),
       ...(values.amount !== undefined ? { amount: values.amount } : {}),
-      ...(values.currency !== undefined ? { currency: values.currency } : {}),
-      ...(values.period_start !== undefined ? { period_start: values.period_start } : {}),
-      ...(values.period_end !== undefined ? { period_end: values.period_end } : {}),
       ...(values.notes !== undefined ? { notes: values.notes?.trim() || null } : {}),
     }
-    const { error: err } = await supabase.from('budgets').update(payload).eq('id', id)
+    const { error: err } = await supabase
+      .from('account_opening_balances')
+      .update(payload)
+      .eq('id', id)
     if (err) throw new Error(err.message)
     await fetch()
   }
 
   const remove = async (id: string) => {
-    const { error: err } = await supabase.from('budgets').delete().eq('id', id)
+    const { error: err } = await supabase
+      .from('account_opening_balances')
+      .delete()
+      .eq('id', id)
     if (err) throw new Error(err.message)
     await fetch()
   }

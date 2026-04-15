@@ -51,11 +51,16 @@ export function useDistricts() {
       } catch { /* ignore */ }
     }
     setLoading(false)
-  }, [authLoading, user?.id]) // eslint-disable-line
+  }, [authLoading, user]) // eslint-disable-line
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
-    if (!authLoading) fetch()
+    if (authLoading) return
+
+    const timeout = setTimeout(() => {
+      void fetch()
+    }, 0)
+
+    return () => clearTimeout(timeout)
   }, [authLoading, fetch])
 
   const create = async (values: Omit<District, 'id' | 'created_at' | 'updated_at'>) => {
