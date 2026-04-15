@@ -16,10 +16,12 @@ import {
 type TransactionRow = {
   id: string
   district_id: string
+  fund_id: string | null
   description: string
   amount: number
   category: string | null
   date: string
+  fund?: { name?: string } | { name?: string }[] | null
   district?: { name?: string } | { name?: string }[] | null
 }
 
@@ -34,6 +36,11 @@ function fmtDate(date: string) {
 function districtNameOf(row: TransactionRow) {
   if (Array.isArray(row.district)) return row.district[0]?.name ?? 'Unknown district'
   return row.district?.name ?? 'Unknown district'
+}
+
+function fundNameOf(row: TransactionRow) {
+  if (Array.isArray(row.fund)) return row.fund[0]?.name ?? 'Unassigned'
+  return row.fund?.name ?? 'Unassigned'
 }
 
 function baseCell(text: string, opts?: { bold?: boolean; align?: typeof AlignmentType[keyof typeof AlignmentType]; fill?: string }) {
@@ -97,6 +104,7 @@ function transactionTable(title: string, rows: TransactionRow[], showDistrict: b
     baseCell('Date', { bold: true, fill: '0F172A' }),
     ...(showDistrict ? [baseCell('District', { bold: true, fill: '0F172A' })] : []),
     baseCell('Description', { bold: true, fill: '0F172A' }),
+    baseCell('Fund', { bold: true, fill: '0F172A' }),
     baseCell('Category', { bold: true, fill: '0F172A' }),
     baseCell('Amount', { bold: true, align: AlignmentType.RIGHT, fill: '0F172A' }),
   ]
@@ -107,6 +115,7 @@ function transactionTable(title: string, rows: TransactionRow[], showDistrict: b
         baseCell(fmtDate(row.date)),
         ...(showDistrict ? [baseCell(districtNameOf(row))] : []),
         baseCell(row.description),
+        baseCell(fundNameOf(row)),
         baseCell(row.category ?? 'Uncategorised'),
         baseCell(fmtCurrency(row.amount), { align: AlignmentType.RIGHT }),
       ],
@@ -116,6 +125,7 @@ function transactionTable(title: string, rows: TransactionRow[], showDistrict: b
         children: [
           baseCell(`No ${title.toLowerCase()} entries recorded.`),
           ...(showDistrict ? [baseCell('')] : []),
+          baseCell(''),
           baseCell(''),
           baseCell(''),
           baseCell('', { align: AlignmentType.RIGHT }),
@@ -138,12 +148,12 @@ export async function GET(request: NextRequest) {
 
   let incomeQuery = supabase
     .from('income')
-    .select('id, district_id, description, amount, category, date, district:districts(name)')
+    .select('id, district_id, fund_id, description, amount, category, date, fund:funds(name), district:districts(name)')
     .order('date', { ascending: false })
 
   let expensesQuery = supabase
     .from('expenses')
-    .select('id, district_id, description, amount, category, date, district:districts(name)')
+    .select('id, district_id, fund_id, description, amount, category, date, fund:funds(name), district:districts(name)')
     .order('date', { ascending: false })
 
   if (districtId) {

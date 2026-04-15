@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useExpenses } from '@/hooks/useExpenses'
 import { useDistricts } from '@/hooks/useDistricts'
+import { useFunds } from '@/hooks/useFunds'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -12,7 +13,7 @@ import { Select } from '@/components/ui/Select'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
 import { Modal } from '@/components/ui/Modal'
-import { PlusCircle, Trash2, TrendingDown, Search, Upload, FileText, Pencil, Check, X, Settings2 } from 'lucide-react'
+import { PlusCircle, Trash2, TrendingDown, Search, Upload, FileText, Pencil, Check, X, Settings2, Landmark } from 'lucide-react'
 import { Expense } from '@/types'
 import { useCategories } from '@/hooks/useCategories'
 import { CategoryManagerModal } from '@/components/expenses/CategoryManagerModal'
@@ -21,6 +22,7 @@ const today = () => new Date().toISOString().split('T')[0]
 
 interface AddForm {
   district_id: string
+  fund_id: string
   description: string
   amount: string
   date: string
@@ -28,13 +30,14 @@ interface AddForm {
 }
 
 interface DraftRow {
+  fund_id: string
   description: string
   amount: string
   date: string
   category: string
 }
 
-const emptyForm: AddForm = { district_id: '', description: '', amount: '', date: today(), category: '' }
+const emptyForm: AddForm = { district_id: '', fund_id: '', description: '', amount: '', date: today(), category: '' }
 
 export default function ExpenditurePage() {
   const { districtId, isAdmin, activeDistrictId } = useAuth()
@@ -48,7 +51,7 @@ export default function ExpenditurePage() {
   const [saving, setSaving] = useState(false)
 
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [draft, setDraft] = useState<DraftRow>({ description: '', amount: '', date: '', category: '' })
+  const [draft, setDraft] = useState<DraftRow>({ fund_id: '', description: '', amount: '', date: '', category: '' })
   const [editSaving, setEditSaving] = useState(false)
 
   const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: string; label: string }>({
@@ -67,39 +70,77 @@ export default function ExpenditurePage() {
     search: search || undefined,
   })
   const { data: districts } = useDistricts()
+  const { data: funds } = useFunds()
   const { data: categoryList } = useCategories('expense_categories')
   const toast = useToast()
 
   const selectedDistrictName = districtId
-    ? (districts.find((d) => d.id === districtId)?.name ?? 'Selected district')
+    ? (districts.find((district) => district.id === districtId)?.name ?? 'Selected district')
     : 'All districts'
 
+  const fundsForDistrict = (selectedDistrictId: string | null | undefined) =>
+    funds.filter((fund) => fund.district_id === selectedDistrictId)
+
+  const defaultFundIdForDistrict = (selectedDistrictId: string | null | undefined) => {
+    const fundOptions = fundsForDistrict(selectedDistrictId)
+    return fundOptions.find((fund) => fund.name.toLowerCase() === 'general fund')?.id
+      ?? fundOptions[0]?.id
+      ?? ''
+  }
+
+  const openAddForm = () => {
+    const nextDistrictId = districtId ?? ''
+    setForm({
+      ...emptyForm,
+      district_id: nextDistrictId,
+      fund_id: nextDistrictId ? defaultFundIdForDistrict(nextDistrictId) : '',
+    })
+    setFormErrors({})
+    setAdding(true)
+  }
+
+  const handleDistrictChange = (nextDistrictId: string) => {
+    setForm((current) => ({
+      ...current,
+      district_id: nextDistrictId,
+      fund_id: defaultFundIdForDistrict(nextDistrictId),
+    }))
+  }
+
   const setField = (field: keyof AddForm, value: string) =>
-    setForm((f) => ({ ...f, [field]: value }))
+    setForm((current) => ({ ...current, [field]: value }))
 
   const validateForm = () => {
-    const e: Record<string, string> = {}
-    if (needsDistrictPicker && !form.district_id) e.district_id = 'Select a district'
-    if (!form.description.trim()) e.description = 'Description is required'
-    const amt = parseFloat(form.amount)
-    if (!form.amount || isNaN(amt) || amt <= 0) e.amount = 'Enter a valid amount'
-    if (!form.date) e.date = 'Date is required'
-    setFormErrors(e)
-    return Object.keys(e).length === 0
+    const errors: Record<string, string> = {}
+    if (needsDistrictPicker && !form.district_id) errors.district_id = 'Select a district'
+    if (!form.description.trim()) errors.description = 'Description is required'
+    const amount = parseFloat(form.amount)
+    if (!form.amount || isNaN(amount) || amount <= 0) errors.amount = 'Enter a valid amount'
+    if (!form.date) errors.date = 'Date is required'
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
   }
 
   const handleAdd = async () => {
     if (!validateForm()) return
     setSaving(true)
     try {
+      const selectedDistrictId = form.district_id || districtId
+      if (!selectedDistrictId) throw new Error('Select a district before saving expenditure.')
+
       await add({
-        district_id: form.district_id || districtId!,
+        district_id: selectedDistrictId,
+        fund_id: form.fund_id || null,
         description: form.description.trim(),
         amount: parseFloat(form.amount),
         date: form.date,
         category: form.category || null,
       })
-      setForm({ ...emptyForm, district_id: districtId ?? '' })
+      setForm({
+        ...emptyForm,
+        district_id: districtId ?? '',
+        fund_id: districtId ? defaultFundIdForDistrict(districtId) : '',
+      })
       setAdding(false)
       toast.success('Expenditure recorded')
     } catch (e) {
@@ -112,6 +153,7 @@ export default function ExpenditurePage() {
   const startEdit = (expense: Expense) => {
     setEditingId(expense.id)
     setDraft({
+      fund_id: expense.fund_id ?? defaultFundIdForDistrict(expense.district_id),
       description: expense.description,
       amount: String(expense.amount),
       date: expense.date,
@@ -121,16 +163,17 @@ export default function ExpenditurePage() {
 
   const cancelEdit = () => setEditingId(null)
 
-  const saveEdit = async (id: string) => {
+  const saveEdit = async (expense: Expense) => {
     if (!draft.description.trim()) { toast.error('Description is required'); return }
-    const amt = parseFloat(draft.amount)
-    if (!draft.amount || isNaN(amt) || amt <= 0) { toast.error('Enter a valid amount'); return }
+    const amount = parseFloat(draft.amount)
+    if (!draft.amount || isNaN(amount) || amount <= 0) { toast.error('Enter a valid amount'); return }
     if (!draft.date) { toast.error('Date is required'); return }
     setEditSaving(true)
     try {
-      await update(id, {
+      await update(expense.id, {
+        fund_id: draft.fund_id || null,
         description: draft.description.trim(),
-        amount: amt,
+        amount,
         date: draft.date,
         category: draft.category || null,
       })
@@ -180,6 +223,7 @@ export default function ExpenditurePage() {
   }
 
   const inputCls = 'w-full rounded-md bg-slate-900 border border-slate-600 px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-cyan-500'
+  const addFormFunds = fundsForDistrict(form.district_id || districtId)
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -198,10 +242,7 @@ export default function ExpenditurePage() {
             <Upload className="h-4 w-4" /> Import CSV
           </Button>
           {!adding && (
-            <Button onClick={() => {
-              setForm({ ...emptyForm, district_id: districtId ?? '' })
-              setAdding(true)
-            }}>
+            <Button onClick={openAddForm}>
               <PlusCircle className="h-4 w-4" /> Add Expenditure
             </Button>
           )}
@@ -224,18 +265,18 @@ export default function ExpenditurePage() {
       {adding && (
         <div className="bg-slate-800 border border-cyan-500/30 rounded-xl p-5 space-y-4">
           <h2 className="text-sm font-semibold text-slate-300">New Expenditure</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
             {needsDistrictPicker && (
               <Select
                 label="District *"
                 value={form.district_id}
-                onChange={(e) => setField('district_id', e.target.value)}
+                onChange={(e) => handleDistrictChange(e.target.value)}
                 placeholder="Select district"
-                options={districts.map((d) => ({ value: d.id, label: d.name }))}
+                options={districts.map((district) => ({ value: district.id, label: district.name }))}
                 error={formErrors.district_id}
               />
             )}
-            <div className={needsDistrictPicker ? '' : 'lg:col-span-2'}>
+            <div className={needsDistrictPicker ? '' : 'xl:col-span-2'}>
               <Input
                 label="Description *"
                 value={form.description}
@@ -245,11 +286,22 @@ export default function ExpenditurePage() {
               />
             </div>
             <Select
+              label="Fund"
+              value={form.fund_id}
+              onChange={(e) => setField('fund_id', e.target.value)}
+              placeholder="Unassigned fund"
+              options={addFormFunds.map((fund) => ({
+                value: fund.id,
+                label: `${fund.name}${fund.is_restricted ? ' (Restricted)' : ''}`,
+              }))}
+              disabled={(form.district_id || districtId) ? false : needsDistrictPicker}
+            />
+            <Select
               label="Category"
               value={form.category}
               onChange={(e) => setField('category', e.target.value)}
               placeholder="Uncategorised"
-              options={categoryList.map((c) => ({ value: c.name, label: c.name }))}
+              options={categoryList.map((category) => ({ value: category.name, label: category.name }))}
             />
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-slate-300">Amount (USD) *</label>
@@ -299,8 +351,9 @@ export default function ExpenditurePage() {
       >
         <div className="space-y-4">
           <p className="text-xs text-slate-400">
-            CSV columns: <span className="text-slate-300 font-mono">district, description, amount, date, category</span>
+            CSV columns: <span className="text-slate-300 font-mono">district, fund, description, amount, date, category</span>
             {districtId && <span> — district column is optional when a district is already selected.</span>}
+            <span> fund is optional and defaults to General Fund when available.</span>
           </p>
           <label className="flex items-center gap-2 cursor-pointer bg-slate-800 border border-slate-700 hover:border-cyan-500/50 transition rounded-lg px-4 py-2 text-sm text-slate-300">
             <FileText className="h-4 w-4 text-slate-400 shrink-0" />
@@ -368,6 +421,7 @@ export default function ExpenditurePage() {
                   {showDistrictColumn && <th className="text-left px-4 py-3 text-slate-400 font-medium">District</th>}
                   <th className="text-left px-4 py-3 text-slate-400 font-medium">Date</th>
                   <th className="text-left px-4 py-3 text-slate-400 font-medium">Description</th>
+                  <th className="text-left px-4 py-3 text-slate-400 font-medium">Fund</th>
                   <th className="text-left px-4 py-3 text-slate-400 font-medium">Category</th>
                   <th className="text-right px-4 py-3 text-slate-400 font-medium">Amount</th>
                   <th className="px-4 py-3 w-20" />
@@ -376,6 +430,7 @@ export default function ExpenditurePage() {
               <tbody>
                 {expenses.map((expense) => {
                   const isEditing = editingId === expense.id
+                  const entryFunds = fundsForDistrict(expense.district_id)
                   return (
                     <tr
                       key={expense.id}
@@ -392,7 +447,7 @@ export default function ExpenditurePage() {
                             type="date"
                             className={inputCls}
                             value={draft.date}
-                            onChange={(ev) => setDraft((d) => ({ ...d, date: ev.target.value }))}
+                            onChange={(ev) => setDraft((current) => ({ ...current, date: ev.target.value }))}
                           />
                         ) : (
                           new Date(expense.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -403,7 +458,7 @@ export default function ExpenditurePage() {
                           <input
                             className={inputCls}
                             value={draft.description}
-                            onChange={(ev) => setDraft((d) => ({ ...d, description: ev.target.value }))}
+                            onChange={(ev) => setDraft((current) => ({ ...current, description: ev.target.value }))}
                             autoFocus
                           />
                         ) : (
@@ -412,15 +467,28 @@ export default function ExpenditurePage() {
                           </button>
                         )}
                       </td>
+                      <td className="px-4 py-2 text-slate-400 min-w-[170px]">
+                        {isEditing ? (
+                          <select className={inputCls} value={draft.fund_id} onChange={(ev) => setDraft((current) => ({ ...current, fund_id: ev.target.value }))}>
+                            <option value="">Unassigned fund</option>
+                            {entryFunds.map((fund) => <option key={fund.id} value={fund.id}>{fund.name}</option>)}
+                          </select>
+                        ) : (
+                          <span className={expense.fund?.name ? 'text-slate-300 inline-flex items-center gap-1.5' : 'text-slate-600 inline-flex items-center gap-1.5'}>
+                            <Landmark className="h-3.5 w-3.5" />
+                            {expense.fund?.name ?? 'Unassigned'}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-2 text-slate-400 min-w-[140px]">
                         {isEditing ? (
                           <select
                             className={inputCls}
                             value={draft.category}
-                            onChange={(ev) => setDraft((d) => ({ ...d, category: ev.target.value }))}
+                            onChange={(ev) => setDraft((current) => ({ ...current, category: ev.target.value }))}
                           >
                             <option value="">Uncategorised</option>
-                            {categoryList.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                            {categoryList.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}
                           </select>
                         ) : (
                           <span className={expense.category ? 'text-slate-300' : 'text-slate-600'}>
@@ -438,7 +506,7 @@ export default function ExpenditurePage() {
                               step="0.01"
                               className={`${inputCls} pl-5 text-right`}
                               value={draft.amount}
-                              onChange={(ev) => setDraft((d) => ({ ...d, amount: ev.target.value }))}
+                              onChange={(ev) => setDraft((current) => ({ ...current, amount: ev.target.value }))}
                             />
                           </div>
                         ) : (
@@ -448,7 +516,7 @@ export default function ExpenditurePage() {
                       <td className="px-4 py-2 whitespace-nowrap">
                         {isEditing ? (
                           <div className="flex items-center gap-1 justify-end">
-                            <Button variant="ghost" size="sm" onClick={() => saveEdit(expense.id)} disabled={editSaving} className="text-emerald-400 hover:text-emerald-300" title="Save">
+                            <Button variant="ghost" size="sm" onClick={() => saveEdit(expense)} disabled={editSaving} className="text-emerald-400 hover:text-emerald-300" title="Save">
                               <Check className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="sm" onClick={cancelEdit} disabled={editSaving} title="Cancel">
@@ -472,7 +540,7 @@ export default function ExpenditurePage() {
               </tbody>
               <tfoot>
                 <tr className="border-t border-slate-700 bg-slate-900/50">
-                  <td colSpan={showDistrictColumn ? 4 : 3} className="px-4 py-3 text-slate-400 text-sm font-medium">
+                  <td colSpan={showDistrictColumn ? 5 : 4} className="px-4 py-3 text-slate-400 text-sm font-medium">
                     {districtId ? `${selectedDistrictName} total` : 'Grand total'}
                   </td>
                   <td className="px-4 py-3 text-right font-bold text-red-400">{formatCurrency(total)}</td>

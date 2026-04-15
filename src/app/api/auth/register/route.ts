@@ -6,10 +6,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Registration is currently disabled.' }, { status: 403 })
   }
 
-  const { email, password } = await request.json()
+  const { email, password, district_id } = await request.json()
 
-  if (!email || !password) {
-    return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 })
+  if (!email || !password || !district_id) {
+    return NextResponse.json({ error: 'Email, password, and district are required.' }, { status: 400 })
   }
 
   if (password.length < 8) {
@@ -17,6 +17,15 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServerClient()
+  const { data: district, error: districtError } = await supabase
+    .from('districts')
+    .select('id')
+    .eq('id', district_id)
+    .single()
+
+  if (districtError || !district) {
+    return NextResponse.json({ error: 'Selected district is not available.' }, { status: 400 })
+  }
 
   // Create the auth user
   const { data: userData, error: authError } = await supabase.auth.admin.createUser({
@@ -29,10 +38,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: authError.message }, { status: 400 })
   }
 
-  // Insert the profile as admin with no district
+  // Insert the profile as a district user linked to the selected district
   const { error: profileError } = await supabase
     .from('profiles')
-    .insert({ id: userData.user.id, role: 'admin', district_id: null })
+    .insert({ id: userData.user.id, role: 'district', district_id })
 
   if (profileError) {
     // Roll back: delete the auth user so there's no orphan

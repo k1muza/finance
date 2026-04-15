@@ -18,7 +18,7 @@ export function useExpenses(filter: ExpenseFilter = {}) {
     setLoading(true)
     let query = supabase
       .from('expenses')
-      .select('*, district:districts(id,name)')
+      .select('*, district:districts(id,name), fund:funds(id,district_id,name,description,is_restricted,created_at,updated_at)')
       .order('date', { ascending: false })
       .order('created_at', { ascending: false })
 
@@ -33,13 +33,13 @@ export function useExpenses(filter: ExpenseFilter = {}) {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetch() }, [fetch])
 
-  const add = async (values: { district_id: string; description: string; amount: number; date: string; category?: string | null }) => {
+  const add = async (values: { district_id: string; description: string; amount: number; date: string; category?: string | null; fund_id?: string | null }) => {
     const { error } = await supabase.from('expenses').insert(values)
     if (error) throw new Error(error.message)
     await fetch()
   }
 
-  const update = async (id: string, values: Partial<{ description: string; amount: number; date: string; category: string | null }>) => {
+  const update = async (id: string, values: Partial<{ description: string; amount: number; date: string; category: string | null; fund_id: string | null }>) => {
     const { error } = await supabase.from('expenses').update(values).eq('id', id)
     if (error) throw new Error(error.message)
     await fetch()

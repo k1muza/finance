@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 const endpoints = [
   { method: 'POST', path: '/api/auth/register' },
+  { method: 'GET', path: '/api/public/districts' },
   { method: 'POST', path: '/api/import/districts' },
   { method: 'POST', path: '/api/import/income' },
   { method: 'POST', path: '/api/import/expenses' },

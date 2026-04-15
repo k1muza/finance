@@ -15,12 +15,23 @@ export async function POST(req: NextRequest) {
     if (rows.length === 0) return NextResponse.json({ imported: 0, errors: [] })
 
     const supabase = createServerClient()
+    const [{ data: districts }, { data: funds }] = await Promise.all([
+      supabase.from('districts').select('id, name'),
+      supabase.from('funds').select('id, district_id, name'),
+    ])
 
-    // Build district name → id lookup (case-insensitive)
-    const { data: districts } = await supabase.from('districts').select('id, name')
     const districtByName: Record<string, string> = {}
-    for (const d of districts ?? []) {
-      districtByName[d.name.toLowerCase()] = d.id
+    const fundByDistrictAndName: Record<string, string> = {}
+    const generalFundByDistrict: Record<string, string> = {}
+
+    for (const district of districts ?? []) {
+      districtByName[district.name.toLowerCase()] = district.id
+    }
+    for (const fund of funds ?? []) {
+      fundByDistrictAndName[`${fund.district_id}:${fund.name.toLowerCase()}`] = fund.id
+      if (fund.name.toLowerCase() === 'general fund') {
+        generalFundByDistrict[fund.district_id] = fund.id
+      }
     }
 
     let imported = 0
@@ -28,7 +39,10 @@ export async function POST(req: NextRequest) {
 
     for (const row of rows) {
       const description = row['description']?.trim()
-      if (!description) { errors.push(`Skipped row: missing description`); continue }
+      if (!description) {
+        errors.push('Skipped row: missing description')
+        continue
+      }
 
       const amountRaw = row['amount']?.trim()
       const amount = parseFloat(amountRaw ?? '')
@@ -38,15 +52,17 @@ export async function POST(req: NextRequest) {
       }
 
       const date = row['date']?.trim()
-      if (!date) { errors.push(`"${description}": missing date`); continue }
+      if (!date) {
+        errors.push(`"${description}": missing date`)
+        continue
+      }
 
-      // Resolve district: prefer column value, fall back to form param
       let district_id: string | null = null
       const districtName = row['district']?.trim()
       if (districtName) {
         district_id = districtByName[districtName.toLowerCase()] ?? null
         if (!district_id) {
-          errors.push(`"${description}": district "${districtName}" not found — skipping`)
+          errors.push(`"${description}": district "${districtName}" not found - skipping`)
           continue
         }
       } else if (districtIdParam) {
@@ -58,17 +74,31 @@ export async function POST(req: NextRequest) {
         continue
       }
 
+      const fundName = row['fund']?.trim()
+      let fund_id: string | null = generalFundByDistrict[district_id] ?? null
+      if (fundName) {
+        fund_id = fundByDistrictAndName[`${district_id}:${fundName.toLowerCase()}`] ?? null
+        if (!fund_id) {
+          errors.push(`"${description}": fund "${fundName}" not found in the selected district`)
+          continue
+        }
+      }
+
       const { error } = await supabase
         .from('expenses')
         .insert({
           district_id,
+          fund_id,
           description,
           amount,
           date,
           category: row['category']?.trim() || null,
         })
 
-      if (error) { errors.push(`"${description}": ${error.message}`); continue }
+      if (error) {
+        errors.push(`"${description}": ${error.message}`)
+        continue
+      }
       imported++
     }
 

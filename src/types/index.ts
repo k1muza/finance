@@ -5,6 +5,35 @@ export interface District {
   updated_at: string
 }
 
+export interface Fund {
+  id: string
+  district_id: string
+  name: string
+  description: string | null
+  is_restricted: boolean
+  created_at: string
+  updated_at: string
+  district?: District | null
+}
+
+export type BudgetType = 'income' | 'expense'
+
+export interface Budget {
+  id: string
+  district_id: string
+  fund_id: string | null
+  type: BudgetType
+  category: string
+  amount: number
+  period_start: string
+  period_end: string
+  notes: string | null
+  created_at: string
+  updated_at: string
+  district?: District | null
+  fund?: Fund | null
+}
+
 export interface FinanceCategoryBreakdown {
   category: string
   amount: number
@@ -24,23 +53,27 @@ export interface DistrictFinanceBreakdown {
 export interface Expense {
   id: string
   district_id: string
+  fund_id: string | null
   description: string
   amount: number
   date: string
   category: string | null
   created_at: string
   district?: District | null
+  fund?: Fund | null
 }
 
 export interface Income {
   id: string
   district_id: string
+  fund_id: string | null
   description: string
   amount: number
   date: string
   category: string | null
   created_at: string
   district?: District | null
+  fund?: Fund | null
 }
 
 export interface OverviewStats {

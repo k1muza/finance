@@ -1,4 +1,4 @@
-const APP_SHELL_CACHE = 'app-shell-v2'
+const APP_SHELL_CACHE = 'app-shell-v3'
 const DATA_CACHE = 'supabase-data-v1'
 const IMAGE_CACHE = 'image-cache-v1'
 const IMAGE_CACHE_LIMIT = 50
@@ -20,16 +20,13 @@ function isSupabaseDataRequest(url) {
   return url.includes('.supabase.co/rest/v1/')
 }
 
-// Next.js static assets
+function isNextAsset(url) {
+  return url.includes('/_next/')
+}
+
+// Non-Next static assets we can safely cache here.
 function isStaticAsset(url) {
-  return (
-    url.includes('/_next/static/') ||
-    url.includes('/_next/image') ||
-    url.endsWith('.js') ||
-    url.endsWith('.css') ||
-    url.endsWith('.woff2') ||
-    url.endsWith('.woff')
-  )
+  return url.endsWith('.woff2') || url.endsWith('.woff')
 }
 
 function isImageRequest(request) {
@@ -101,6 +98,9 @@ self.addEventListener('fetch', (event) => {
 
   // Auth: always network-only, never cache
   if (isAuthRequest(url)) return
+
+  // Let Next.js manage its own runtime and chunk assets.
+  if (isNextAsset(url)) return
 
   // Supabase data: network-first, fall back to cache
   if (isSupabaseDataRequest(url)) {

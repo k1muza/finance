@@ -7,7 +7,6 @@ import { useTheme } from 'next-themes'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   BarChart3,
-  Wallet,
   Settings2,
   Menu,
   X,
@@ -18,12 +17,17 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  PiggyBank,
+  ReceiptText,
+  FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 const baseNav = [
   { href: '/dashboard/overview', icon: BarChart3, label: 'Overview' },
-  { href: '/dashboard/finance', icon: Wallet, label: 'Finance' },
+  { href: '/dashboard/finance/income', icon: PiggyBank, label: 'Income' },
+  { href: '/dashboard/finance/expenditure', icon: ReceiptText, label: 'Expenditure' },
+  { href: '/dashboard/finance/reports', icon: FileText, label: 'Reports' },
   { href: '/dashboard/settings', icon: Settings2, label: 'Settings' },
 ]
 

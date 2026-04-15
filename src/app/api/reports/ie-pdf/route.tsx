@@ -6,10 +6,12 @@ import React from 'react'
 type TransactionRow = {
   id: string
   district_id: string
+  fund_id: string | null
   description: string
   amount: number
   category: string | null
   date: string
+  fund?: { name?: string } | { name?: string }[] | null
   district?: { name?: string } | { name?: string }[] | null
 }
 
@@ -24,6 +26,11 @@ function fmtDate(date: string) {
 function districtNameOf(row: TransactionRow) {
   if (Array.isArray(row.district)) return row.district[0]?.name ?? 'Unknown district'
   return row.district?.name ?? 'Unknown district'
+}
+
+function fundNameOf(row: TransactionRow) {
+  if (Array.isArray(row.fund)) return row.fund[0]?.name ?? 'Unassigned'
+  return row.fund?.name ?? 'Unassigned'
 }
 
 const styles = StyleSheet.create({
@@ -83,11 +90,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
   },
-  dateCol: { width: '16%' },
-  districtCol: { width: '18%' },
-  descriptionCol: { width: '34%' },
-  categoryCol: { width: '18%' },
-  amountCol: { width: '14%', textAlign: 'right' },
+  dateCol: { width: '14%' },
+  districtCol: { width: '16%' },
+  descriptionCol: { width: '24%' },
+  fundCol: { width: '18%' },
+  categoryCol: { width: '16%' },
+  amountCol: { width: '12%', textAlign: 'right' },
   spacer: {
     height: 16,
   },
@@ -153,6 +161,7 @@ function TransactionSection({ rows, showDistrict }: { rows: TransactionRow[]; sh
         <Text style={styles.dateCol}>Date</Text>
         {showDistrict && <Text style={styles.districtCol}>District</Text>}
         <Text style={styles.descriptionCol}>Description</Text>
+        <Text style={styles.fundCol}>Fund</Text>
         <Text style={styles.categoryCol}>Category</Text>
         <Text style={styles.amountCol}>Amount</Text>
       </View>
@@ -165,6 +174,7 @@ function TransactionSection({ rows, showDistrict }: { rows: TransactionRow[]; sh
           <Text style={styles.dateCol}>{fmtDate(row.date)}</Text>
           {showDistrict && <Text style={styles.districtCol}>{districtNameOf(row)}</Text>}
           <Text style={styles.descriptionCol}>{row.description}</Text>
+          <Text style={styles.fundCol}>{fundNameOf(row)}</Text>
           <Text style={styles.categoryCol}>{row.category ?? 'Uncategorised'}</Text>
           <Text style={styles.amountCol}>{fmtCurrency(row.amount)}</Text>
         </View>
@@ -179,12 +189,12 @@ export async function GET(request: NextRequest) {
 
   let incomeQuery = supabase
     .from('income')
-    .select('id, district_id, description, amount, category, date, district:districts(name)')
+    .select('id, district_id, fund_id, description, amount, category, date, fund:funds(name), district:districts(name)')
     .order('date', { ascending: false })
 
   let expensesQuery = supabase
     .from('expenses')
-    .select('id, district_id, description, amount, category, date, district:districts(name)')
+    .select('id, district_id, fund_id, description, amount, category, date, fund:funds(name), district:districts(name)')
     .order('date', { ascending: false })
 
   if (districtId) {
