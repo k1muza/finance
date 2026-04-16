@@ -5,6 +5,7 @@ import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { District } from '@/types'
 import { DistrictRole, normalizeDistrictRole } from '@/lib/auth/permissions'
+import { useAppUiStore } from '@/stores/app-ui-store'
 
 export type { DistrictRole }
 
@@ -55,12 +56,31 @@ interface CachedSession {
   activeDistrictId: string | null
 }
 
+function resolveActiveDistrictId(
+  memberships: DistrictMembership[],
+  preferredDistrictId: string | null,
+  isSuperuser = false,
+) {
+  if (isSuperuser) {
+    return preferredDistrictId
+  }
+
+  if (preferredDistrictId && memberships.some((membership) => membership.district.id === preferredDistrictId)) {
+    return preferredDistrictId
+  }
+
+  return memberships.length === 1 ? memberships[0].district.id : null
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [memberships, setMemberships] = useState<DistrictMembership[]>([])
-  const [activeDistrictId, setActiveDistrictId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const activeDistrictId = useAppUiStore((state) => state.activeDistrictId)
+  const hasHydratedAppUiState = useAppUiStore((state) => state.hasHydrated)
+  const setActiveDistrictId = useAppUiStore((state) => state.setActiveDistrictId)
+  const resetAppUiState = useAppUiStore((state) => state.resetAppUiState)
 
   const supabase = createClient()
 
@@ -89,15 +109,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               role,
             }]
           })
+        const resolvedActiveDistrictId = resolveActiveDistrictId(
+          ms,
+          useAppUiStore.getState().activeDistrictId,
+          up.is_superuser,
+        )
 
         setUserProfile(up)
         setMemberships(ms)
-        setActiveDistrictId((prev) => {
-          if (prev) return prev
-          return ms.length === 1 ? ms[0].district.id : null
-        })
+        setActiveDistrictId(resolvedActiveDistrictId)
 
-        const cached: CachedSession = { userProfile: up, memberships: ms, activeDistrictId: null }
+        const cached: CachedSession = {
+          userProfile: up,
+          memberships: ms,
+          activeDistrictId: resolvedActiveDistrictId,
+        }
         localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(cached))
         return
       }
@@ -115,15 +141,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const ms: DistrictMembership[] = legacyDistrict
           ? [{ district: legacyDistrict, role: legacyProfile.role === 'admin' ? 'admin' : 'treasurer' }]
           : []
+        const resolvedActiveDistrictId = resolveActiveDistrictId(
+          ms,
+          useAppUiStore.getState().activeDistrictId ?? legacyProfile.district_id ?? null,
+          up.is_superuser,
+        )
 
         setUserProfile(up)
         setMemberships(ms)
-        setActiveDistrictId((prev) => {
-          if (prev) return prev
-          return legacyProfile.district_id ?? null
-        })
+        setActiveDistrictId(resolvedActiveDistrictId)
 
-        const cached: CachedSession = { userProfile: up, memberships: ms, activeDistrictId: legacyProfile.district_id ?? null }
+        const cached: CachedSession = {
+          userProfile: up,
+          memberships: ms,
+          activeDistrictId: resolvedActiveDistrictId,
+        }
         localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(cached))
       }
     } catch {
@@ -132,15 +164,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const raw = localStorage.getItem(PROFILE_CACHE_KEY)
         if (raw) {
           const cached: CachedSession = JSON.parse(raw)
+          const resolvedActiveDistrictId = resolveActiveDistrictId(
+            cached.memberships,
+            useAppUiStore.getState().activeDistrictId ?? cached.activeDistrictId ?? null,
+            cached.userProfile.is_superuser,
+          )
           setUserProfile(cached.userProfile)
           setMemberships(cached.memberships)
-          setActiveDistrictId((prev) => prev ?? cached.activeDistrictId ?? null)
+          setActiveDistrictId(resolvedActiveDistrictId)
         }
       } catch { /* ignore */ }
     }
   }
 
   useEffect(() => {
+    if (!hasHydratedAppUiState) return
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
@@ -150,9 +189,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const raw = localStorage.getItem(PROFILE_CACHE_KEY)
           if (raw) {
             const cached: CachedSession = JSON.parse(raw)
+            const resolvedActiveDistrictId = resolveActiveDistrictId(
+              cached.memberships,
+              useAppUiStore.getState().activeDistrictId ?? cached.activeDistrictId ?? null,
+              cached.userProfile.is_superuser,
+            )
             setUserProfile(cached.userProfile)
             setMemberships(cached.memberships)
-            setActiveDistrictId(cached.activeDistrictId ?? null)
+            setActiveDistrictId(resolvedActiveDistrictId)
             setUser({ id: 'offline' } as User)
           }
         } catch { /* ignore */ }
@@ -189,10 +233,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, []) // eslint-disable-line
+  }, [hasHydratedAppUiState]) // eslint-disable-line
 
   const logout = async () => {
     localStorage.removeItem(PROFILE_CACHE_KEY)
+    resetAppUiState()
     await supabase.auth.signOut()
   }
 

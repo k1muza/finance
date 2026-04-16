@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireDistrictAction } from '@/lib/auth/server'
 import { canTransitionTransaction } from '@/lib/finance/transactions'
+import { hydrateTransactionSources } from '@/lib/finance/transaction-server'
 import { ApiRouteError, toErrorResponse } from '@/lib/server/errors'
 import { createServerClient } from '@/lib/supabase/server'
 
@@ -98,7 +99,7 @@ export async function POST(
         posted_at: now,
       })
       .select(
-        '*, account:accounts(id,name,type,currency,status), fund:funds(id,name), source:sources!source_id(id,name,type,title,parent_id,is_active), assembly_snapshot:sources!assembly_snapshot_id(id,name,type,title), region_snapshot:sources!region_snapshot_id(id,name,type,title)',
+        '*, account:accounts(id,name,type,currency,status), fund:funds(id,name)',
       )
       .single()
 
@@ -157,7 +158,9 @@ export async function POST(
       )
     }
 
-    return NextResponse.json({ data: reversal }, { status: 201 })
+    const [hydratedReversal] = await hydrateTransactionSources(supabase, [reversal])
+
+    return NextResponse.json({ data: hydratedReversal }, { status: 201 })
   } catch (error) {
     return toErrorResponse(error)
   }

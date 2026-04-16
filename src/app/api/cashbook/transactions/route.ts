@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireDistrictAction } from '@/lib/auth/server'
-import { validateDraftTransactionPayload } from '@/lib/finance/transaction-server'
+import {
+  hydrateTransactionSources,
+  validateDraftTransactionPayload,
+} from '@/lib/finance/transaction-server'
 import { ApiRouteError, toErrorResponse } from '@/lib/server/errors'
 import { createServerClient } from '@/lib/supabase/server'
 import type { Currency, TransactionKind, TransactionStatus } from '@/types'
@@ -31,7 +34,7 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from('cashbook_transactions')
       .select(
-        '*, account:accounts(id,name,type,currency,status), fund:funds(id,name), source:sources!source_id(id,name,type,title,parent_id,is_active)',
+        '*, account:accounts(id,name,type,currency,status), fund:funds(id,name)',
         { count: 'exact' },
       )
       .eq('district_id', districtId)
@@ -50,7 +53,9 @@ export async function GET(req: NextRequest) {
       throw new ApiRouteError('TRANSACTION_LIST_FAILED', error.message, 500)
     }
 
-    return NextResponse.json({ data, count })
+    const hydrated = await hydrateTransactionSources(supabase, data ?? [])
+
+    return NextResponse.json({ data: hydrated, count })
   } catch (error) {
     return toErrorResponse(error)
   }
@@ -108,7 +113,7 @@ export async function POST(req: NextRequest) {
       const { data: existing, error: existingError } = await supabase
         .from('cashbook_transactions')
         .select(
-          '*, account:accounts(id,name,type,currency,status), fund:funds(id,name), source:sources!source_id(id,name,type,title,parent_id,is_active)',
+          '*, account:accounts(id,name,type,currency,status), fund:funds(id,name)',
         )
         .eq('client_generated_id', validated.values.client_generated_id)
         .maybeSingle()
@@ -126,7 +131,8 @@ export async function POST(req: NextRequest) {
           )
         }
 
-        return NextResponse.json({ data: existing, deduplicated: true })
+        const [hydratedExisting] = await hydrateTransactionSources(supabase, [existing])
+        return NextResponse.json({ data: hydratedExisting, deduplicated: true })
       }
     }
 
@@ -138,7 +144,7 @@ export async function POST(req: NextRequest) {
         created_by: actor.user.id,
       })
       .select(
-        '*, account:accounts(id,name,type,currency,status), fund:funds(id,name), source:sources!source_id(id,name,type,title,parent_id,is_active)',
+        '*, account:accounts(id,name,type,currency,status), fund:funds(id,name)',
       )
       .single()
 
@@ -174,7 +180,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ data: txn }, { status: 201 })
+    const [hydratedTxn] = await hydrateTransactionSources(supabase, [txn])
+
+    return NextResponse.json({ data: hydratedTxn }, { status: 201 })
   } catch (error) {
     return toErrorResponse(error)
   }

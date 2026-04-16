@@ -73,6 +73,63 @@ export interface ValidatedTransactionDraft {
   }
 }
 
+type HydratableTransaction = {
+  source_id: string | null
+  assembly_snapshot_id?: string | null
+  region_snapshot_id?: string | null
+}
+
+export async function hydrateTransactionSources<T extends HydratableTransaction>(
+  supabase: ServerSupabase,
+  rows: T[],
+): Promise<Array<T & {
+  source: SourceRecord | null
+  assembly_snapshot: SourceRecord | null
+  region_snapshot: SourceRecord | null
+}>> {
+  if (rows.length === 0) return []
+
+  const sourceIds = Array.from(new Set(
+    rows.flatMap((row) => [
+      row.source_id,
+      row.assembly_snapshot_id ?? null,
+      row.region_snapshot_id ?? null,
+    ].filter((value): value is string => Boolean(value))),
+  ))
+
+  const sourceMap = new Map<string, SourceRecord>()
+
+  if (sourceIds.length > 0) {
+    const { data: sources, error } = await supabase
+      .from('sources')
+      .select('id, district_id, type, name, is_active, parent_id')
+      .in('id', sourceIds)
+
+    if (error) {
+      throw new ApiRouteError(
+        'SOURCE_HYDRATION_FAILED',
+        error.message,
+        500,
+      )
+    }
+
+    for (const source of sources ?? []) {
+      sourceMap.set(source.id, source as SourceRecord)
+    }
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    source: row.source_id ? sourceMap.get(row.source_id) ?? null : null,
+    assembly_snapshot: row.assembly_snapshot_id
+      ? sourceMap.get(row.assembly_snapshot_id) ?? null
+      : null,
+    region_snapshot: row.region_snapshot_id
+      ? sourceMap.get(row.region_snapshot_id) ?? null
+      : null,
+  }))
+}
+
 function normalizeNullableText(value: string | null | undefined) {
   const trimmed = value?.trim()
   return trimmed ? trimmed : null

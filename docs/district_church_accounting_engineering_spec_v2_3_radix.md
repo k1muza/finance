@@ -94,8 +94,10 @@ The current design should not block these features later.
 - TypeScript
 - Tailwind CSS
 - Radix UI for accessible unstyled component primitives
+- TanStack Query for server state, cached reads, and sync-aware data hydration
+- Zustand for client-side app state
 - client-side local persistence for offline support
-- query/cache layer for sync and data hydration
+- IndexedDB-backed storage for offline cache and queued writes
 
 #### Backend platform
 - Supabase Postgres
@@ -137,6 +139,36 @@ Recommended approach:
 - apply Tailwind styles through a shared design system
 
 This keeps the UI consistent, accessible, and maintainable without locking the project into a rigid component theme.
+
+### 4.4 State ownership model
+
+The frontend shall separate state ownership clearly:
+
+#### TanStack Query owns
+- server state fetched from Supabase
+- cached list/detail/report data
+- revalidation and refetching behavior
+- sync-aware hydration of backend-backed records
+
+TanStack Query is the primary owner of remote data state.
+
+#### Zustand owns
+- current district selection
+- sync banner/status UI state
+- modal and dialog state
+- report filter draft state
+- temporary app-level UI preferences
+- other non-server client state that should be shared across components
+
+Zustand is not the source of truth for backend records.
+
+#### IndexedDB/local persistence owns
+- offline cache persistence
+- queued offline draft operations
+- queued attachment uploads
+- reconnect replay metadata
+
+This separation avoids mixing server state, local UI state, and offline durability concerns into one tool.
 
 - balance-affecting actions must be validated online by protected backend logic
 
@@ -862,7 +894,16 @@ This approach reduces the risk of:
 - budget state conflicts
 - harder reconciliation after reconnect
 
-### 14.5 Local queue
+### 14.5 Offline state and sync tooling
+
+The recommended ownership for offline support is:
+
+- **TanStack Query** for server-state caching and hydration
+- **Zustand** for app-level sync UI state and district context
+- **IndexedDB** for durable offline cache and queued writes
+- custom sync logic for reconnect replay and conflict handling
+
+### 14.6 Local queue
 
 Each queued item must include:
 - local operation id
@@ -879,7 +920,7 @@ Each queued item must include:
   - `CONFLICT`
 - `created_at`
 
-### 14.6 Sync rules
+### 14.7 Sync rules
 
 When back online:
 1. process queue in order
@@ -889,7 +930,7 @@ When back online:
 5. upload attachments
 6. mark item as synced or failed
 
-### 14.7 Offline conflict policy
+### 14.8 Offline conflict policy
 
 Server remains source of truth.
 
@@ -904,7 +945,7 @@ then:
 - user must resolve manually
 - no silent auto-merge for balance-affecting operations
 
-### 14.8 District awareness offline
+### 14.9 District awareness offline
 
 Queued operations must stay bound to their original district. A user switching to another district must not cause queued records to sync into the wrong tenant.
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireDistrictAction } from '@/lib/auth/server'
 import {
   buildPostingSnapshots,
+  hydrateTransactionSources,
   validateDraftTransactionPayload,
 } from '@/lib/finance/transaction-server'
 import { canTransitionTransaction } from '@/lib/finance/transactions'
@@ -86,7 +87,7 @@ export async function POST(
       .eq('id', id)
       .eq('status', 'approved')
       .select(
-        '*, account:accounts(id,name,type,currency,status), fund:funds(id,name), source:sources!source_id(id,name,type,title,parent_id,is_active), assembly_snapshot:sources!assembly_snapshot_id(id,name,type,title), region_snapshot:sources!region_snapshot_id(id,name,type,title)',
+        '*, account:accounts(id,name,type,currency,status), fund:funds(id,name)',
       )
       .single()
 
@@ -98,7 +99,9 @@ export async function POST(
       )
     }
 
-    return NextResponse.json({ data })
+    const [hydratedData] = await hydrateTransactionSources(supabase, [data])
+
+    return NextResponse.json({ data: hydratedData })
   } catch (error) {
     return toErrorResponse(error)
   }

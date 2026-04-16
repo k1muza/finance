@@ -19,6 +19,7 @@ import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils/cn'
+import { useAppUiStore } from '@/stores/app-ui-store'
 import Link from 'next/link'
 import {
   PlusCircle,
@@ -826,11 +827,20 @@ export default function CashbookPage() {
   const defaultDateFrom = firstOfMonth()
   const defaultDateTo = toIsoDate(new Date())
 
-  const [selectedAccountId, setSelectedAccountId] = useState<string>('')
-  const [dateFrom, setDateFrom] = useState(defaultDateFrom)
-  const [dateTo, setDateTo] = useState(defaultDateTo)
-  const [kindFilter, setKindFilter] = useState<TransactionKind | ''>('')
-  const [search, setSearch] = useState('')
+  const selectedAccountId = useAppUiStore((state) =>
+    districtId ? (state.cashbookActiveAccountIds[districtId] ?? '') : '',
+  )
+  const cashbookFilterDraft = useAppUiStore((state) =>
+    districtId ? state.cashbookFilterDraftsByDistrict[districtId] : undefined,
+  )
+  const hasHydratedAppUiState = useAppUiStore((state) => state.hasHydrated)
+  const setCashbookActiveAccountId = useAppUiStore((state) => state.setCashbookActiveAccountId)
+  const setCashbookFilterDraft = useAppUiStore((state) => state.setCashbookFilterDraft)
+  const clearCashbookFilterDraft = useAppUiStore((state) => state.clearCashbookFilterDraft)
+  const dateFrom = cashbookFilterDraft?.dateFrom ?? defaultDateFrom
+  const dateTo = cashbookFilterDraft?.dateTo ?? defaultDateTo
+  const kindFilter = cashbookFilterDraft?.kindFilter ?? ''
+  const search = cashbookFilterDraft?.search ?? ''
 
   const [newTxnOpen, setNewTxnOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -840,7 +850,7 @@ export default function CashbookPage() {
   const [reverseNarration, setReverseNarration] = useState('')
   const [reverseLoading, setReverseLoading] = useState(false)
 
-  const [selectedFundId, setSelectedFundId] = useState<string | null>(null)
+  const selectedFundId = cashbookFilterDraft?.selectedFundId ?? null
 
   const { data: accounts, loading: accountsLoading } = useAccounts({ district_id: districtId })
   const { data: funds } = useFunds({ district_id: districtId })
@@ -855,13 +865,45 @@ export default function CashbookPage() {
     date_to: dateTo,
   })
 
-  // Auto-select first active account
+  const setSelectedAccountId = useCallback((accountId: string | null) => {
+    if (!districtId) return
+    setCashbookActiveAccountId(districtId, accountId)
+  }, [districtId, setCashbookActiveAccountId])
+
+  const updateCashbookFilterDraft = useCallback((patch: {
+    dateFrom?: string | null
+    dateTo?: string | null
+    kindFilter?: TransactionKind | ''
+    search?: string
+    selectedFundId?: string | null
+  }) => {
+    if (!districtId) return
+    setCashbookFilterDraft(districtId, patch)
+  }, [districtId, setCashbookFilterDraft])
+
+  // Restore or auto-select a valid account for the current district.
   useEffect(() => {
-    if (!selectedAccountId && accounts.length > 0) {
-      const first = accounts.find((a) => a.status === 'active') ?? accounts[0]
-      setSelectedAccountId(first.id)
+    if (!districtId || !hasHydratedAppUiState || accountsLoading) return
+
+    if (accounts.length === 0) {
+      setCashbookActiveAccountId(districtId, null)
+      return
     }
-  }, [accounts, selectedAccountId])
+
+    if (selectedAccountId && accounts.some((account) => account.id === selectedAccountId)) {
+      return
+    }
+
+    const first = accounts.find((account) => account.status === 'active') ?? accounts[0]
+    setCashbookActiveAccountId(districtId, first.id)
+  }, [
+    accounts,
+    accountsLoading,
+    districtId,
+    hasHydratedAppUiState,
+    selectedAccountId,
+    setCashbookActiveAccountId,
+  ])
 
   // ── balance calculations ──────────────────────────────────────────────────
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId)
@@ -908,11 +950,8 @@ export default function CashbookPage() {
     : `${filtered.length} of ${transactions.length} transactions`
 
   const resetFilters = () => {
-    setDateFrom(defaultDateFrom)
-    setDateTo(defaultDateTo)
-    setKindFilter('')
-    setSearch('')
-    setSelectedFundId(null)
+    if (!districtId) return
+    clearCashbookFilterDraft(districtId)
   }
 
   const handleReverse = async () => {
@@ -1036,7 +1075,7 @@ export default function CashbookPage() {
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => setSelectedFundId(null)}
+                  onClick={() => updateCashbookFilterDraft({ selectedFundId: null })}
                   className={cn(
                     'inline-flex items-center rounded-xl border px-3 py-2 text-sm transition-colors',
                     selectedFundId === null
@@ -1054,7 +1093,9 @@ export default function CashbookPage() {
                     <button
                       key={fund.id}
                       type="button"
-                      onClick={() => setSelectedFundId(fund.id === selectedFundId ? null : fund.id)}
+                      onClick={() => updateCashbookFilterDraft({
+                        selectedFundId: fund.id === selectedFundId ? null : fund.id,
+                      })}
                       className={cn(
                         'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors',
                         isActive
@@ -1099,12 +1140,22 @@ export default function CashbookPage() {
           placeholder={accountsLoading ? 'Loading...' : 'Select account'}
           disabled={accountsLoading || accounts.length === 0}
         />
-        <Input label="From" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-        <Input label="To" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        <Input
+          label="From"
+          type="date"
+          value={dateFrom}
+          onChange={(e) => updateCashbookFilterDraft({ dateFrom: e.target.value })}
+        />
+        <Input
+          label="To"
+          type="date"
+          value={dateTo}
+          onChange={(e) => updateCashbookFilterDraft({ dateTo: e.target.value })}
+        />
         <Select
           label="Kind"
           value={kindFilter}
-          onChange={(e) => setKindFilter(e.target.value as TransactionKind | '')}
+          onChange={(e) => updateCashbookFilterDraft({ kindFilter: e.target.value as TransactionKind | '' })}
           options={Object.entries(TRANSACTION_KIND_LABELS).map(([value, label]) => ({ value, label }))}
           placeholder="All kinds"
         />
@@ -1164,7 +1215,7 @@ export default function CashbookPage() {
                   className="w-full bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500"
                   placeholder="Search narration, counterparty, reference..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => updateCashbookFilterDraft({ search: e.target.value })}
                 />
               </div>
             </div>

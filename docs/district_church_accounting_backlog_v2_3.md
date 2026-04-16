@@ -139,6 +139,16 @@ Done when:
 - inactive memberships lose access immediately
 - membership history is retained for auditability
 
+### B1.6 `P1` âœ… Introduce Zustand app state for district context and sync UI
+
+Adopt Zustand for the shared client-side state the spec assigns to app-level UI, starting with district selection and sync status surfaces.
+
+Done when:
+- active district selection is owned by a shared Zustand store rather than isolated component state
+- cashbook workspace state can restore the active account and filter drafts per district when the user returns to the page
+- sync banner and connectivity state are exposed through the same client store
+- backend-backed records remain outside Zustand and keep their own data ownership paths
+
 ## Phase 1B: Master data and source hierarchy
 
 ### B2.1 `P1` ✅ Expand district metadata

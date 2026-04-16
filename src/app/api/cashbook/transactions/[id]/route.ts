@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireDistrictAction } from '@/lib/auth/server'
-import { validateDraftTransactionPayload } from '@/lib/finance/transaction-server'
+import {
+  hydrateTransactionSources,
+  validateDraftTransactionPayload,
+} from '@/lib/finance/transaction-server'
 import { ApiRouteError, toErrorResponse } from '@/lib/server/errors'
 import { createServerClient } from '@/lib/supabase/server'
 import type { Currency, TransactionKind } from '@/types'
@@ -32,7 +35,7 @@ export async function GET(
       supabase
         .from('cashbook_transactions')
         .select(
-          '*, account:accounts(id,name,type,currency,status), fund:funds(id,name), source:sources!source_id(*), assembly_snapshot:sources!assembly_snapshot_id(id,name,type,title), region_snapshot:sources!region_snapshot_id(id,name,type,title)',
+          '*, account:accounts(id,name,type,currency,status), fund:funds(id,name)',
         )
         .eq('id', id)
         .single(),
@@ -72,7 +75,7 @@ export async function GET(
 
     return NextResponse.json({
       data: {
-        ...txnResult.data,
+        ...(await hydrateTransactionSources(supabase, [txnResult.data]))[0],
         lines: linesResult.data ?? [],
         audit: auditResult.data ?? [],
       },
@@ -170,7 +173,7 @@ export async function PATCH(
       .eq('id', id)
       .eq('status', 'draft')
       .select(
-        '*, account:accounts(id,name,type,currency,status), fund:funds(id,name), source:sources!source_id(id,name,type,title,parent_id,is_active)',
+        '*, account:accounts(id,name,type,currency,status), fund:funds(id,name)',
       )
       .single()
 
@@ -182,7 +185,9 @@ export async function PATCH(
       )
     }
 
-    return NextResponse.json({ data })
+    const [hydratedData] = await hydrateTransactionSources(supabase, [data])
+
+    return NextResponse.json({ data: hydratedData })
   } catch (error) {
     return toErrorResponse(error)
   }
