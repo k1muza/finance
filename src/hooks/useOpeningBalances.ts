@@ -12,6 +12,7 @@ interface OpeningBalanceFilter {
 
 export function useOpeningBalances(filter: OpeningBalanceFilter = {}) {
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const [data, setData] = useState<AccountOpeningBalance[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -20,7 +21,7 @@ export function useOpeningBalances(filter: OpeningBalanceFilter = {}) {
   const fetch = useCallback(async () => {
     if (authLoading) return
 
-    if (!user) {
+    if (!userId) {
       setData([])
       setError(null)
       setLoading(false)
@@ -53,7 +54,7 @@ export function useOpeningBalances(filter: OpeningBalanceFilter = {}) {
       setData((rows ?? []) as AccountOpeningBalance[])
     }
     setLoading(false)
-  }, [authLoading, filter.account_id, filter.district_id, user]) // eslint-disable-line
+  }, [authLoading, filter.account_id, filter.district_id, userId]) // eslint-disable-line
 
   useEffect(() => {
     if (authLoading) return

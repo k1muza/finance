@@ -4,71 +4,137 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { District } from '@/types'
+import { DistrictRole, normalizeDistrictRole } from '@/lib/auth/permissions'
+
+export type { DistrictRole }
 
 const PROFILE_CACHE_KEY = 'finance_profile'
 
-interface Profile {
-  district_id: string | null
-  role: 'admin' | 'district'
+export interface DistrictMembership {
+  district: District
+  role: DistrictRole
+}
+
+interface UserProfile {
+  is_superuser: boolean
 }
 
 interface AuthContextValue {
   user: User | null
-  profile: Profile | null
+  userProfile: UserProfile | null
+  /** All districts this user is an active member of. */
+  memberships: DistrictMembership[]
+  /** The district currently being worked in (derived from districtId + memberships). */
   district: District | null
+  /** The ID of the district currently being worked in. */
   districtId: string | null
   isAdmin: boolean
   loading: boolean
   logout: () => Promise<void>
-  // Admin-only: the district currently being viewed (null = all districts)
-  activeDistrictId: string | null
   setActiveDistrictId: (id: string | null) => void
+  /** Re-fetches memberships from the server (e.g. after creating a district). */
+  refreshMemberships: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
-  profile: null,
+  userProfile: null,
+  memberships: [],
   district: null,
   districtId: null,
-  isAdmin: true,
+  isAdmin: false,
   loading: true,
   logout: async () => {},
-  activeDistrictId: null,
   setActiveDistrictId: () => {},
+  refreshMemberships: async () => {},
 })
+
+interface CachedSession {
+  userProfile: UserProfile
+  memberships: DistrictMembership[]
+  activeDistrictId: string | null
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [district, setDistrict] = useState<District | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [memberships, setMemberships] = useState<DistrictMembership[]>([])
   const [activeDistrictId, setActiveDistrictId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const supabase = createClient()
 
-  const fetchProfile = async (userId: string) => {
+  const fetchSession = async (userId: string) => {
     try {
-      const { data } = await supabase
+      // Try new schema first (user_profiles + district_users)
+      const [{ data: profile }, { data: memberRows }] = await Promise.all([
+        supabase.from('user_profiles').select('is_superuser').eq('id', userId).single(),
+        supabase.from('district_users').select('role, district:districts(*)').eq('user_id', userId).eq('is_active', true),
+      ])
+
+      // If the new tables exist and have data, use them
+      if (profile || (memberRows && memberRows.length > 0)) {
+        const up: UserProfile = { is_superuser: profile?.is_superuser ?? false }
+        const ms: DistrictMembership[] = (memberRows ?? [])
+          .filter((r) => r.district != null)
+          .flatMap((r) => {
+            const role = normalizeDistrictRole(
+              (r.role ?? null) as DistrictRole | 'preparer' | 'approver' | null,
+            )
+
+            if (!role) return []
+
+            return [{
+              district: r.district as unknown as District,
+              role,
+            }]
+          })
+
+        setUserProfile(up)
+        setMemberships(ms)
+        setActiveDistrictId((prev) => {
+          if (prev) return prev
+          return ms.length === 1 ? ms[0].district.id : null
+        })
+
+        const cached: CachedSession = { userProfile: up, memberships: ms, activeDistrictId: null }
+        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(cached))
+        return
+      }
+
+      // Fallback: legacy profiles table (pre-migration state)
+      const { data: legacyProfile } = await supabase
         .from('profiles')
         .select('district_id, role, district:districts(*)')
         .eq('id', userId)
         .single()
 
-      if (data) {
-        const profileData: Profile = { district_id: data.district_id, role: data.role as 'admin' | 'district' }
-        const districtData = (data.district as unknown as District) ?? null
-        setProfile(profileData)
-        setDistrict(districtData)
-        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({ profile: profileData, district: districtData }))
+      if (legacyProfile) {
+        const up: UserProfile = { is_superuser: legacyProfile.role === 'admin' }
+        const legacyDistrict = legacyProfile.district as unknown as District | null
+        const ms: DistrictMembership[] = legacyDistrict
+          ? [{ district: legacyDistrict, role: legacyProfile.role === 'admin' ? 'admin' : 'treasurer' }]
+          : []
+
+        setUserProfile(up)
+        setMemberships(ms)
+        setActiveDistrictId((prev) => {
+          if (prev) return prev
+          return legacyProfile.district_id ?? null
+        })
+
+        const cached: CachedSession = { userProfile: up, memberships: ms, activeDistrictId: legacyProfile.district_id ?? null }
+        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(cached))
       }
     } catch {
-      // Offline: restore from cache so the user can still access the app
+      // Offline: restore from cache
       try {
-        const cached = localStorage.getItem(PROFILE_CACHE_KEY)
-        if (cached) {
-          const { profile: p, district: d } = JSON.parse(cached)
-          setProfile(p)
-          setDistrict(d)
+        const raw = localStorage.getItem(PROFILE_CACHE_KEY)
+        if (raw) {
+          const cached: CachedSession = JSON.parse(raw)
+          setUserProfile(cached.userProfile)
+          setMemberships(cached.memberships)
+          setActiveDistrictId((prev) => prev ?? cached.activeDistrictId ?? null)
         }
       } catch { /* ignore */ }
     }
@@ -78,17 +144,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
-        fetchProfile(session.user.id).finally(() => setLoading(false))
+        fetchSession(session.user.id).finally(() => setLoading(false))
       } else if (!navigator.onLine) {
-        // Offline and no fresh session — restore from cache so the app stays usable
         try {
-          const cached = localStorage.getItem(PROFILE_CACHE_KEY)
-          if (cached) {
-            const { profile: p, district: d } = JSON.parse(cached)
-            setProfile(p)
-            setDistrict(d)
-            // Keep user non-null so guards don't redirect; real session check happens when back online
-            setUser({ id: p.district_id ?? 'offline' } as User)
+          const raw = localStorage.getItem(PROFILE_CACHE_KEY)
+          if (raw) {
+            const cached: CachedSession = JSON.parse(raw)
+            setUserProfile(cached.userProfile)
+            setMemberships(cached.memberships)
+            setActiveDistrictId(cached.activeDistrictId ?? null)
+            setUser({ id: 'offline' } as User)
           }
         } catch { /* ignore */ }
         setLoading(false)
@@ -98,15 +163,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Ignore SIGNED_OUT when offline — it's just a failed token refresh, not a real logout
       if (event === 'SIGNED_OUT' && !navigator.onLine) return
+
+      // TOKEN_REFRESHED fires on every tab focus — the user and their memberships
+      // haven't changed, so skip the full re-fetch and only keep the user object current.
+      if (event === 'TOKEN_REFRESHED') {
+        setUser((current) => {
+          const nextUser = session?.user ?? null
+          if (current?.id && nextUser?.id && current.id === nextUser.id) {
+            return current
+          }
+          return nextUser
+        })
+        return
+      }
 
       setUser(session?.user ?? null)
       if (session?.user) {
-        fetchProfile(session.user.id)
+        fetchSession(session.user.id)
       } else {
-        setProfile(null)
-        setDistrict(null)
+        setUserProfile(null)
+        setMemberships([])
+        setActiveDistrictId(null)
       }
     })
 
@@ -118,14 +196,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
-  const isAdmin = profile?.role === 'admin'
-  // For admins, districtId reflects the actively selected district (null = show all)
-  const districtId = isAdmin ? activeDistrictId : (profile?.district_id ?? null)
+  const refreshMemberships = async () => {
+    if (user) await fetchSession(user.id)
+  }
+
+  const isAdmin = userProfile?.is_superuser ?? false
+  const district = memberships.find((m) => m.district.id === activeDistrictId)?.district ?? null
 
   return (
     <AuthContext.Provider value={{
-      user, profile, district, districtId, isAdmin, loading, logout,
-      activeDistrictId, setActiveDistrictId,
+      user,
+      userProfile,
+      memberships,
+      district,
+      districtId: activeDistrictId,
+      isAdmin,
+      loading,
+      logout,
+      setActiveDistrictId,
+      refreshMemberships,
     }}>
       {children}
     </AuthContext.Provider>

@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { DistrictFinanceBreakdown, OverviewStats } from '@/types'
+import { DistrictFinanceBreakdown, FinanceCategoryBreakdown, OverviewStats } from '@/types'
+
+const IN_KINDS = new Set(['receipt', 'opening_balance', 'adjustment'])
 
 export function useOverview(districtId?: string | null) {
   const [data, setData] = useState<OverviewStats | null>(null)
@@ -15,24 +17,33 @@ export function useOverview(districtId?: string | null) {
 
       const [
         { data: districtsData },
-        { data: incomeData },
-        { data: expensesData },
+        { data: txnData },
       ] = await Promise.all([
         supabase.from('districts').select('id, name').order('name'),
-        supabase.from('income').select('district_id, amount, category'),
-        supabase.from('expenses').select('district_id, amount, category'),
+        supabase
+          .from('cashbook_transactions')
+          .select('district_id, total_amount, currency, kind, fund:funds(name)')
+          .eq('status', 'posted'),
       ])
 
-      const scopedIncome = districtId
-        ? (incomeData ?? []).filter((row) => row.district_id === districtId)
-        : (incomeData ?? [])
-      const scopedExpenses = districtId
-        ? (expensesData ?? []).filter((row) => row.district_id === districtId)
-        : (expensesData ?? [])
+      type TxnRow = {
+        district_id: string
+        total_amount: number
+        currency: string
+        kind: string
+        fund: { name: string } | { name: string }[] | null
+      }
+
+      const allTxns = (txnData ?? []) as TxnRow[]
+      const scopedTxns = districtId
+        ? allTxns.filter((t) => t.district_id === districtId)
+        : allTxns
+
       const visibleDistricts = districtId
-        ? (districtsData ?? []).filter((district) => district.id === districtId)
+        ? (districtsData ?? []).filter((d) => d.id === districtId)
         : (districtsData ?? [])
 
+      // Per-district totals
       const totalsByDistrict = new Map<string, DistrictFinanceBreakdown>()
       for (const district of visibleDistricts) {
         totalsByDistrict.set(district.id, {
@@ -46,38 +57,40 @@ export function useOverview(districtId?: string | null) {
         })
       }
 
-      for (const row of scopedIncome) {
-        const entry = totalsByDistrict.get(row.district_id)
+      for (const t of allTxns) {
+        const entry = totalsByDistrict.get(t.district_id)
         if (!entry) continue
-        entry.income_total += row.amount ?? 0
-        entry.income_count += 1
-      }
-
-      for (const row of scopedExpenses) {
-        const entry = totalsByDistrict.get(row.district_id)
-        if (!entry) continue
-        entry.expense_total += row.amount ?? 0
-        entry.expense_count += 1
+        const amount = Number(t.total_amount)
+        if (IN_KINDS.has(t.kind)) {
+          entry.income_total += amount
+          entry.income_count += 1
+        } else {
+          entry.expense_total += amount
+          entry.expense_count += 1
+        }
       }
 
       const districtBreakdown = [...totalsByDistrict.values()]
-        .map((entry) => ({
-          ...entry,
-          net_balance: entry.income_total - entry.expense_total,
-        }))
+        .map((entry) => ({ ...entry, net_balance: entry.income_total - entry.expense_total }))
         .sort((a, b) => b.net_balance - a.net_balance || a.district_name.localeCompare(b.district_name))
 
-      const totalIncome = scopedIncome.reduce((sum, row) => sum + (row.amount ?? 0), 0)
-      const totalExpenses = scopedExpenses.reduce((sum, row) => sum + (row.amount ?? 0), 0)
+      // Scoped totals (USD only for the headline stats — multi-currency is handled in Reports)
+      const totalIncome = scopedTxns
+        .filter((t) => IN_KINDS.has(t.kind))
+        .reduce((sum, t) => sum + Number(t.total_amount), 0)
+
+      const totalExpenses = scopedTxns
+        .filter((t) => !IN_KINDS.has(t.kind))
+        .reduce((sum, t) => sum + Number(t.total_amount), 0)
 
       setData({
         totalIncome,
         totalExpenses,
         netBalance: totalIncome - totalExpenses,
-        incomeCount: scopedIncome.length,
-        expenseCount: scopedExpenses.length,
-        topIncomeCategories: groupByCategory(scopedIncome),
-        topExpenseCategories: groupByCategory(scopedExpenses),
+        incomeCount: scopedTxns.filter((t) => IN_KINDS.has(t.kind)).length,
+        expenseCount: scopedTxns.filter((t) => !IN_KINDS.has(t.kind)).length,
+        topIncomeCategories: groupByFund(scopedTxns.filter((t) => IN_KINDS.has(t.kind))),
+        topExpenseCategories: groupByFund(scopedTxns.filter((t) => !IN_KINDS.has(t.kind))),
         districtBreakdown,
       })
 
@@ -90,22 +103,22 @@ export function useOverview(districtId?: string | null) {
   return { data, loading }
 }
 
-function groupByCategory(rows: { category: string | null; amount: number | null }[]) {
+function groupByFund(
+  rows: { fund: { name: string } | { name: string }[] | null; total_amount: number }[]
+): FinanceCategoryBreakdown[] {
   const grouped = rows.reduce<Map<string, { amount: number; count: number }>>((map, row) => {
-    const category = row.category?.trim() || 'Uncategorised'
+    const category = Array.isArray(row.fund)
+      ? row.fund[0]?.name ?? 'Unassigned'
+      : row.fund?.name ?? 'Unassigned'
     const current = map.get(category) ?? { amount: 0, count: 0 }
-    current.amount += row.amount ?? 0
+    current.amount += Number(row.total_amount)
     current.count += 1
     map.set(category, current)
     return map
   }, new Map())
 
   return [...grouped.entries()]
-    .map(([category, value]) => ({
-      category,
-      amount: value.amount,
-      count: value.count,
-    }))
+    .map(([category, value]) => ({ category, amount: value.amount, count: value.count }))
     .sort((a, b) => b.amount - a.amount || a.category.localeCompare(b.category))
     .slice(0, 5)
 }

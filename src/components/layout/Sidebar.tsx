@@ -3,22 +3,23 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { useTheme } from 'next-themes'
 import { useAuth } from '@/contexts/AuthContext'
+import { UiSettingsButton } from '@/components/layout/UiSettingsButton'
 import {
   BarChart3,
   Settings2,
   Menu,
   X,
   Landmark,
-  Sun,
-  Moon,
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
   LogOut,
   FileText,
   BookOpen,
+  Wallet,
+  Users,
+  UsersRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
@@ -26,40 +27,24 @@ const baseNav = [
   { href: '/dashboard/overview', icon: BarChart3, label: 'Overview' },
   { href: '/dashboard/finance/cashbook', icon: BookOpen, label: 'Cashbook' },
   { href: '/dashboard/finance/accounts', icon: Landmark, label: 'Accounts' },
+  { href: '/dashboard/finance/funds', icon: Wallet, label: 'Funds' },
+  { href: '/dashboard/finance/members', icon: Users, label: 'Members' },
+  { href: '/dashboard/finance/sources', icon: UsersRound, label: 'Sources' },
   { href: '/dashboard/finance/reports', icon: FileText, label: 'Reports' },
   { href: '/dashboard/settings', icon: Settings2, label: 'Settings' },
 ]
 
 const adminNav: typeof baseNav = []
 
-function ThemeToggle({ collapsed }: { collapsed: boolean }) {
-  const { theme, setTheme } = useTheme()
-  const isDark = theme === 'dark'
-  return (
-    <button
-      type="button"
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      className={cn(
-        'flex items-center rounded-lg text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-colors w-full',
-        collapsed ? 'justify-center px-0 py-2' : 'gap-2 px-3 py-2'
-      )}
-    >
-      {isDark ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
-      {!collapsed && <span>{isDark ? 'Light mode' : 'Dark mode'}</span>}
-    </button>
-  )
-}
-
 function DistrictBadge({ collapsed }: { collapsed: boolean }) {
-  const { district, isAdmin, activeDistrictId } = useAuth()
+  const { district, isAdmin, districtId } = useAuth()
   if (collapsed) return null
   if (isAdmin) {
     return (
       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
         <ShieldCheck className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
         <span className="text-xs text-cyan-400 font-medium truncate">
-          {activeDistrictId ? 'Admin · District view' : 'Admin · All districts'}
+          {districtId ? 'Admin · District view' : 'Admin · All districts'}
         </span>
       </div>
     )
@@ -153,13 +138,16 @@ export function Sidebar() {
           <Landmark className="h-6 w-6" />
           <span className="text-slate-100">Finance</span>
         </div>
-        <button
-          type="button"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="text-slate-400 hover:text-slate-100"
-        >
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <UiSettingsButton className="h-9 w-9" />
+          <button
+            type="button"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-100"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       {mobileOpen && (
@@ -175,7 +163,6 @@ export function Sidebar() {
             </div>
             {mobileLinks}
             <div className="mt-auto pt-4 border-t border-slate-700 space-y-1">
-              <ThemeToggle collapsed={false} />
               {user?.email && (
                 <p className="px-3 py-1 text-xs text-slate-500 truncate">{user.email}</p>
               )}
@@ -213,7 +200,6 @@ export function Sidebar() {
         {desktopLinks}
 
         <div className="mt-auto pt-4 border-t border-slate-700 space-y-1">
-          <ThemeToggle collapsed={collapsed} />
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}

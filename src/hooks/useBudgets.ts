@@ -11,6 +11,7 @@ interface BudgetFilter {
 
 export function useBudgets(filter: BudgetFilter = {}) {
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const [data, setData] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +20,7 @@ export function useBudgets(filter: BudgetFilter = {}) {
   const fetch = useCallback(async () => {
     if (authLoading) return
 
-    if (!user) {
+    if (!userId) {
       setData([])
       setError(null)
       setLoading(false)
@@ -45,7 +46,7 @@ export function useBudgets(filter: BudgetFilter = {}) {
       setData((rows ?? []) as Budget[])
     }
     setLoading(false)
-  }, [authLoading, filter.district_id, user]) // eslint-disable-line
+  }, [authLoading, filter.district_id, userId]) // eslint-disable-line
 
   useEffect(() => {
     if (authLoading) return

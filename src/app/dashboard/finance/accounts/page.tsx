@@ -104,7 +104,7 @@ function AccountBalanceCards({ districtId }: { districtId: string }) {
                   <TrendingUp className="h-3 w-3" />
                   <span>{formatCurrency(bal.totalIn, currency)}</span>
                 </div>
-                <div className="flex items-center gap-1 text-red-400">
+                <div className="flex items-center justify-end gap-1 text-red-400">
                   <TrendingDown className="h-3 w-3" />
                   <span>{formatCurrency(bal.totalOut, currency)}</span>
                 </div>

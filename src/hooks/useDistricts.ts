@@ -9,6 +9,7 @@ const DISTRICTS_CACHE_KEY = 'finance_districts'
 
 export function useDistricts() {
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const [data, setData] = useState<District[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -17,7 +18,7 @@ export function useDistricts() {
   const fetch = useCallback(async () => {
     if (authLoading) return
 
-    if (!user) {
+    if (!userId) {
       setData([])
       setError(null)
       setLoading(false)
@@ -51,7 +52,7 @@ export function useDistricts() {
       } catch { /* ignore */ }
     }
     setLoading(false)
-  }, [authLoading, user]) // eslint-disable-line
+  }, [authLoading, userId]) // eslint-disable-line
 
   useEffect(() => {
     if (authLoading) return
@@ -64,8 +65,19 @@ export function useDistricts() {
   }, [authLoading, fetch])
 
   const create = async (values: Omit<District, 'id' | 'created_at' | 'updated_at'>) => {
-    const { error: err } = await supabase.from('districts').insert(values)
-    if (err) throw new Error(err.message)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Not authenticated')
+
+    const res = await window.fetch('/api/districts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(values),
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error ?? 'Failed to create district')
     await fetch()
   }
 

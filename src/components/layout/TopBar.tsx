@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useDistricts } from '@/hooks/useDistricts'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
+import { UiSettingsButton } from '@/components/layout/UiSettingsButton'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { ShieldCheck, MapPin, ChevronDown, Check, Plus, User, LogOut, Landmark } from 'lucide-react'
@@ -23,20 +24,15 @@ function useDistrictStats() {
   const supabase = createClient()
 
   const load = useCallback(async () => {
-    const [{ data: income }, { data: expenses }, { data: allDistricts }] = await Promise.all([
-      supabase.from('income').select('district_id'),
-      supabase.from('expenses').select('district_id'),
+    const [{ data: txns }, { data: allDistricts }] = await Promise.all([
+      supabase.from('cashbook_transactions').select('district_id').eq('status', 'posted'),
       supabase.from('districts').select('id, name').order('name'),
     ])
 
     if (!allDistricts) return
 
     const countMap: Record<string, number> = {}
-    for (const row of income ?? []) {
-      if (!row.district_id) continue
-      countMap[row.district_id] = (countMap[row.district_id] ?? 0) + 1
-    }
-    for (const row of expenses ?? []) {
+    for (const row of txns ?? []) {
       if (!row.district_id) continue
       countMap[row.district_id] = (countMap[row.district_id] ?? 0) + 1
     }
@@ -57,7 +53,7 @@ function useDistrictStats() {
 }
 
 function AdminDistrictDropdown() {
-  const { activeDistrictId, setActiveDistrictId } = useAuth()
+  const { districtId: activeDistrictId, setActiveDistrictId } = useAuth()
   const { districts, reload } = useDistrictStats()
   const { create: createDistrict } = useDistricts()
   const toast = useToast()
@@ -268,6 +264,8 @@ export function TopBar() {
             <div className="w-px h-4 bg-slate-700" />
             <AdminDistrictDropdown />
             <div className="w-px h-4 bg-slate-700" />
+            <UiSettingsButton />
+            <div className="w-px h-4 bg-slate-700" />
             <UserMenu />
           </div>
         </div>
@@ -292,6 +290,8 @@ export function TopBar() {
               {stat && <span className="text-xs text-slate-500 ml-0.5">{stat.transaction_count}</span>}
             </div>
             <div className="w-px h-4 bg-slate-700" />
+            <UiSettingsButton />
+            <div className="w-px h-4 bg-slate-700" />
             <UserMenu />
           </div>
         </div>
@@ -299,5 +299,20 @@ export function TopBar() {
     )
   }
 
-  return null
+  return (
+    <header className="hidden md:block border-b border-slate-800 bg-slate-950">
+      <div className="p-4 xl:p-6 max-w-6xl mx-auto flex items-center gap-4">
+        <div>
+          <p className="text-sm font-semibold text-slate-100">District Finance Dashboard</p>
+          <p className="text-xs text-slate-500 mt-1">Choose a district to continue working.</p>
+        </div>
+        <div className="flex-1" />
+        <div className="flex items-center gap-3 shrink-0">
+          <UiSettingsButton />
+          <div className="w-px h-4 bg-slate-700" />
+          <UserMenu />
+        </div>
+      </div>
+    </header>
+  )
 }

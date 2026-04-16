@@ -1,4 +1,5 @@
 @import "tailwindcss";
+
 @theme {
   --font-sans: ui-sans-serif, system-ui, sans-serif;
 }
@@ -9,30 +10,83 @@ body {
   font-family: var(--font-sans);
 }
 
-/*
- * Light mode — remap the slate scale so every existing dark-first
- * component works correctly in both themes without component changes.
- *
- * Tailwind v4 exposes colors as CSS custom properties, so overriding
- * them here causes all slate utilities (bg-slate-*, text-slate-*,
- * border-slate-*) to pick up the light-mode values automatically.
- */
-:root:not(.dark) {
-  --color-slate-950: #f8fafc;   /* page background  → near-white      */
-  --color-slate-900: #f1f5f9;   /* sidebar / nav    → light gray       */
-  --color-slate-800: #ffffff;   /* cards / inputs   → white            */
-  --color-slate-700: #e2e8f0;   /* inner borders    → light gray       */
-  --color-slate-600: #cbd5e1;   /* subtle borders   → lighter gray     */
-  --color-slate-500: #94a3b8;   /* placeholder text → mid gray         */
-  --color-slate-400: #64748b;   /* secondary text   → medium           */
-  --color-slate-300: #475569;   /* lighter labels   → dark-medium      */
-  --color-slate-200: #334155;   /* labels           → dark             */
-  --color-slate-100: #1e293b;   /* primary text     → near-black       */
-  --color-slate-50:  #0f172a;   /* deepest          → darkest          */
+:root.dark {
+  color-scheme: dark;
 }
 
-/* Rich-text editor: fix prose colours in light mode */
-:root:not(.dark) .prose-invert {
+:root.light {
+  color-scheme: light;
+  --color-slate-950: #f8fafc;
+  --color-slate-900: #f1f5f9;
+  --color-slate-800: #ffffff;
+  --color-slate-700: #e2e8f0;
+  --color-slate-600: #cbd5e1;
+  --color-slate-500: #94a3b8;
+  --color-slate-400: #64748b;
+  --color-slate-300: #475569;
+  --color-slate-200: #334155;
+  --color-slate-100: #1e293b;
+  --color-slate-50: #0f172a;
+}
+
+:root.ocean {
+  color-scheme: dark;
+  --color-slate-950: #06141f;
+  --color-slate-900: #0b1f2d;
+  --color-slate-800: #10293b;
+  --color-slate-700: #1c3b52;
+  --color-slate-600: #33556f;
+  --color-slate-500: #5d7890;
+  --color-slate-400: #86a0b5;
+  --color-slate-300: #b2c3d0;
+  --color-slate-200: #d7e1e8;
+  --color-slate-100: #edf4f8;
+  --color-slate-50: #f8fbfd;
+  --color-cyan-300: #7dd3fc;
+  --color-cyan-400: #38bdf8;
+  --color-cyan-500: #0ea5e9;
+  --color-cyan-600: #0284c7;
+}
+
+:root.forest {
+  color-scheme: dark;
+  --color-slate-950: #0d1713;
+  --color-slate-900: #16211c;
+  --color-slate-800: #1e2d27;
+  --color-slate-700: #30433a;
+  --color-slate-600: #4b6256;
+  --color-slate-500: #719082;
+  --color-slate-400: #9bb6a8;
+  --color-slate-300: #c3d4cb;
+  --color-slate-200: #dfe8e2;
+  --color-slate-100: #f2f7f4;
+  --color-slate-50: #fbfdfc;
+  --color-cyan-300: #86efac;
+  --color-cyan-400: #4ade80;
+  --color-cyan-500: #22c55e;
+  --color-cyan-600: #16a34a;
+}
+
+:root.ember {
+  color-scheme: dark;
+  --color-slate-950: #1a120d;
+  --color-slate-900: #241913;
+  --color-slate-800: #32231b;
+  --color-slate-700: #4a362a;
+  --color-slate-600: #6a5140;
+  --color-slate-500: #8d6f5c;
+  --color-slate-400: #b89a84;
+  --color-slate-300: #d8c0ad;
+  --color-slate-200: #ece0d3;
+  --color-slate-100: #f8f1ea;
+  --color-slate-50: #fdfaf7;
+  --color-cyan-300: #fcd34d;
+  --color-cyan-400: #fbbf24;
+  --color-cyan-500: #f59e0b;
+  --color-cyan-600: #d97706;
+}
+
+:root.light .prose-invert {
   --tw-prose-body: #1e293b;
   --tw-prose-headings: #0f172a;
   --tw-prose-bold: #0f172a;
@@ -41,7 +95,6 @@ body {
   color: #1e293b;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--color-slate-900); }
 ::-webkit-scrollbar-thumb { background: var(--color-slate-700); border-radius: 3px; }
