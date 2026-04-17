@@ -1,0 +1,51 @@
+'use client'
+
+import * as React from 'react'
+import * as TabsPrimitive from '@radix-ui/react-tabs'
+import { cn } from '@/lib/utils/cn'
+
+const Tabs = TabsPrimitive.Root
+
+const TabsList = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.List
+    ref={ref}
+    className={cn(
+      'inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border bg-[var(--tabs-list-bg)] p-1 text-[var(--tabs-trigger-text)] [border-color:var(--tabs-list-border)]',
+      className,
+    )}
+    {...props}
+  />
+))
+TabsList.displayName = TabsPrimitive.List.displayName
+
+const TabsTrigger = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.Trigger
+    ref={ref}
+    className={cn(
+      'inline-flex items-center justify-center whitespace-nowrap rounded-[calc(var(--radius-sm)-2px)] px-4 py-1.5 text-sm font-medium text-[var(--tabs-trigger-text)] ring-offset-[var(--tabs-ring-offset)] transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-[var(--tabs-trigger-hover-bg)] data-[state=active]:bg-[var(--tabs-trigger-active-bg)] data-[state=active]:text-[var(--tabs-trigger-active-text)] data-[state=active]:shadow-[var(--tabs-trigger-active-shadow)]',
+      className,
+    )}
+    {...props}
+  />
+))
+TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
+
+const TabsContent = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.Content
+    ref={ref}
+    className={cn('mt-6 focus-visible:outline-none', className)}
+    {...props}
+  />
+))
+TabsContent.displayName = TabsPrimitive.Content.displayName
+
+export { Tabs, TabsList, TabsTrigger, TabsContent }

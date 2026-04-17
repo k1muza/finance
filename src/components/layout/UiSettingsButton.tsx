@@ -26,7 +26,7 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
         title="UI settings"
         onClick={() => setOpen(true)}
         className={cn(
-          'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-100',
+          'inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border bg-[var(--surface-panel)] text-[var(--text-tertiary)] shadow-[var(--shadow-soft)] transition-[background-color,border-color,color,box-shadow] [border-color:var(--border-strong)] hover:bg-[var(--button-secondary-hover)] hover:text-[var(--text-primary)]',
           className,
         )}
       >
@@ -35,14 +35,14 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
 
       <Modal open={open} onClose={() => setOpen(false)} title="UI Settings" size="lg">
         <div className="space-y-6">
-          <section className="rounded-2xl border border-slate-700 bg-slate-800/70 p-4">
+          <section className="rounded-[var(--radius-xl)] border bg-[var(--surface-panel-muted)] p-4 shadow-[var(--shadow-soft)] [border-color:var(--border-subtle)]">
             <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-cyan-500/10 p-2 text-cyan-400">
+              <div className="rounded-[var(--radius-md)] bg-[var(--accent-soft)] p-2 text-[var(--accent-solid-hover)]">
                 <Palette className="h-5 w-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-slate-100">Appearance</h3>
-                <p className="text-sm text-slate-400">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Appearance</h3>
+                <p className="text-sm text-[var(--text-tertiary)]">
                   Choose how the finance workspace should look in this browser. Changes apply immediately.
                 </p>
               </div>
@@ -51,8 +51,8 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
 
           <section className="space-y-3">
             <div>
-              <p className="text-sm font-medium text-slate-200">Theme</p>
-              <p className="text-sm text-slate-500">Choose from several workspace themes. Changes apply immediately.</p>
+              <p className="text-sm font-medium text-[var(--text-secondary)]">Theme</p>
+              <p className="text-sm text-[var(--text-muted)]">Choose from several workspace themes. Changes apply immediately.</p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -65,33 +65,35 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
                     type="button"
                     onClick={() => setTheme(value)}
                     className={cn(
-                      'rounded-2xl border p-4 text-left transition-colors',
+                      'rounded-[var(--radius-xl)] border p-4 text-left transition-[background-color,border-color,box-shadow,transform] hover:-translate-y-0.5',
                       isActive
-                        ? 'border-cyan-500 bg-cyan-500/10 shadow-[0_0_0_1px_rgba(6,182,212,0.15)]'
-                        : 'border-slate-700 bg-slate-900/70 hover:border-slate-600 hover:bg-slate-800/80',
+                        ? 'bg-[var(--accent-soft)] shadow-[var(--shadow-card)] [border-color:var(--accent-border)]'
+                        : 'bg-[var(--surface-panel)] shadow-[var(--shadow-soft)] [border-color:var(--border-strong)] hover:bg-[var(--surface-panel-muted)]',
                     )}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <div
                           className={cn(
-                            'rounded-xl p-2',
-                            isActive ? 'bg-cyan-500/15 text-cyan-400' : 'bg-slate-800 text-slate-400',
+                            'rounded-[var(--radius-md)] p-2',
+                            isActive
+                              ? 'bg-[var(--accent-soft-strong)] text-[var(--accent-solid-hover)]'
+                              : 'bg-[var(--surface-panel-muted)] text-[var(--text-tertiary)]',
                           )}
                         >
                           <Icon className="h-4 w-4" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-slate-100">{label}</p>
-                          <p className="mt-1 text-xs text-slate-500">{description}</p>
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">{label}</p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">{description}</p>
                         </div>
                       </div>
                       <span
                         className={cn(
                           'shrink-0 rounded-full border px-2 py-1 text-[11px] font-medium uppercase tracking-wide',
                           isActive
-                            ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-400'
-                            : 'border-slate-700 text-slate-500',
+                            ? 'bg-[var(--accent-soft)] text-[var(--accent-solid-hover)] [border-color:var(--accent-border)]'
+                            : 'text-[var(--text-muted)] [border-color:var(--border-subtle)]',
                         )}
                       >
                         {isActive ? 'Active' : 'Select'}
@@ -99,7 +101,7 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
                     </div>
 
                     <div
-                      className="mt-4 overflow-hidden rounded-xl border border-slate-700/70"
+                      className="mt-4 overflow-hidden rounded-[var(--radius-lg)] border [border-color:var(--border-subtle)]"
                       aria-hidden="true"
                     >
                       <div
@@ -111,16 +113,16 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
                         style={{ backgroundColor: preview.shell }}
                       >
                         <div
-                          className="rounded-lg border border-black/10"
+                          className="rounded-[calc(var(--radius-md)-2px)] border border-black/10"
                           style={{ backgroundColor: preview.panel, height: 44 }}
                         />
                         <div className="flex flex-col gap-2">
                           <div
-                            className="rounded-lg"
+                            className="rounded-[calc(var(--radius-md)-2px)]"
                             style={{ backgroundColor: preview.accent, height: 18 }}
                           />
                           <div
-                            className="rounded-lg border border-black/10"
+                            className="rounded-[calc(var(--radius-md)-2px)] border border-black/10"
                             style={{ backgroundColor: preview.panel, height: 18 }}
                           />
                         </div>

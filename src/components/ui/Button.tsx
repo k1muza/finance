@@ -16,11 +16,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed',
+          'inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border font-medium transition-[background-color,border-color,color,box-shadow,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] disabled:opacity-50 disabled:cursor-not-allowed',
           {
-            'bg-cyan-500 text-slate-950 hover:bg-cyan-400': variant === 'primary',
-            'bg-slate-700 text-slate-100 hover:bg-slate-600': variant === 'secondary',
-            'text-slate-300 hover:bg-slate-700 hover:text-slate-100': variant === 'ghost',
+            'bg-[var(--accent-solid)] text-[var(--accent-contrast)] [border-color:var(--button-primary-border)] shadow-[var(--shadow-button)] hover:bg-[var(--accent-solid-hover)]': variant === 'primary',
+            'bg-[var(--button-secondary-bg)] text-[var(--text-primary)] [border-color:var(--border-strong)] shadow-[var(--shadow-soft)] hover:bg-[var(--button-secondary-hover)]': variant === 'secondary',
+            'bg-transparent text-[var(--text-secondary)] border-transparent hover:bg-[var(--button-ghost-hover)] hover:text-[var(--text-primary)]': variant === 'ghost',
             'bg-red-600 text-white hover:bg-red-500': variant === 'danger',
           },
           {

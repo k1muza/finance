@@ -26,10 +26,13 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-[var(--surface-overlay)] backdrop-blur-[var(--overlay-blur)]"
+        onClick={onClose}
+      />
       <div
         className={cn(
-          'relative bg-slate-900 rounded-xl border border-slate-700 shadow-2xl w-full flex flex-col max-h-[90vh]',
+          'relative flex max-h-[90vh] w-full flex-col rounded-[var(--radius-xl)] border bg-[var(--surface-elevated)] shadow-[var(--shadow-popover)] backdrop-blur-[var(--panel-blur)] [border-color:var(--border-strong)]',
           {
             'max-w-sm': size === 'sm',
             'max-w-lg': size === 'md',
@@ -38,13 +41,13 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
           }
         )}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700 shrink-0">
-          <h2 className="text-base font-semibold text-slate-100">{title}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-100 transition">
+        <div className="flex shrink-0 items-center justify-between border-b px-6 py-4 [border-color:var(--border-subtle)]">
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">{title}</h2>
+          <button onClick={onClose} className="text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)]">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="overflow-y-auto flex-1 px-6 py-4">{children}</div>
+        <div className="flex-1 overflow-y-auto px-6 py-4 text-[var(--text-secondary)]">{children}</div>
       </div>
     </div>
   )

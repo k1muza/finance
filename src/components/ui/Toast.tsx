@@ -47,11 +47,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             className={cn(
-              'flex items-start gap-3 rounded-lg px-4 py-3 shadow-lg border text-sm animate-in slide-in-from-right',
+              'animate-in slide-in-from-right flex items-start gap-3 rounded-[var(--radius-md)] border px-4 py-3 text-sm shadow-[var(--shadow-card)] backdrop-blur-[var(--panel-blur)]',
               {
                 'bg-green-900/90 border-green-700 text-green-100': toast.type === 'success',
                 'bg-red-900/90 border-red-700 text-red-100': toast.type === 'error',
-                'bg-slate-800 border-slate-600 text-slate-100': toast.type === 'info',
+                'bg-[var(--surface-elevated)] text-[var(--text-primary)] [border-color:var(--border-strong)]': toast.type === 'info',
               }
             )}
           >

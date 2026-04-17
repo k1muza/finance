@@ -4,14 +4,68 @@
   --font-sans: ui-sans-serif, system-ui, sans-serif;
 }
 
+:root {
+  color-scheme: dark;
+  --surface-app: #020617;
+  --surface-canvas: #0f172a;
+  --surface-panel: #1e293b;
+  --surface-panel-muted: #0f172a;
+  --surface-elevated: rgb(15 23 42 / 0.88);
+  --surface-overlay: rgb(2 6 23 / 0.62);
+  --text-primary: var(--color-slate-100);
+  --text-secondary: var(--color-slate-300);
+  --text-tertiary: var(--color-slate-400);
+  --text-muted: var(--color-slate-500);
+  --border-subtle: color-mix(in srgb, var(--color-slate-600) 32%, transparent);
+  --border-strong: color-mix(in srgb, var(--color-slate-500) 42%, transparent);
+  --accent-solid: var(--color-cyan-500, #06b6d4);
+  --accent-solid-hover: var(--color-cyan-400, #22d3ee);
+  --accent-contrast: #020617;
+  --accent-soft: color-mix(in srgb, var(--accent-solid) 14%, transparent);
+  --accent-soft-strong: color-mix(in srgb, var(--accent-solid) 20%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent-solid) 34%, transparent);
+  --accent-ring: color-mix(in srgb, var(--accent-solid) 42%, transparent);
+  --button-primary-border: color-mix(in srgb, var(--accent-solid) 64%, transparent);
+  --button-secondary-bg: color-mix(in srgb, var(--surface-panel) 88%, white 12%);
+  --button-secondary-hover: color-mix(in srgb, var(--surface-panel) 72%, white 28%);
+  --button-ghost-hover: color-mix(in srgb, var(--surface-panel) 68%, white 12%);
+  --tabs-list-bg: color-mix(in srgb, var(--surface-panel) 24%, var(--surface-canvas) 76%);
+  --tabs-list-border: color-mix(in srgb, var(--color-slate-600) 24%, transparent);
+  --tabs-trigger-text: var(--text-tertiary);
+  --tabs-trigger-hover-bg: color-mix(in srgb, var(--surface-panel) 52%, transparent);
+  --tabs-trigger-active-bg: var(--surface-panel);
+  --tabs-trigger-active-text: var(--text-primary);
+  --tabs-trigger-active-shadow: 0 1px 2px rgb(2 6 23 / 0.16);
+  --tabs-ring-offset: var(--surface-app);
+  --field-bg: color-mix(in srgb, var(--surface-panel) 82%, black 18%);
+  --field-border: color-mix(in srgb, var(--color-slate-600) 58%, transparent);
+  --field-border-hover: color-mix(in srgb, var(--color-slate-500) 70%, transparent);
+  --field-placeholder: var(--color-slate-500);
+  --field-shadow: inset 0 1px 0 rgb(255 255 255 / 0.02);
+  --radius-sm: 0.625rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --shadow-soft: 0 10px 24px rgb(2 6 23 / 0.16);
+  --shadow-card: 0 18px 42px rgb(2 6 23 / 0.22);
+  --shadow-button: 0 12px 30px color-mix(in srgb, var(--accent-solid) 18%, transparent);
+  --shadow-popover: 0 30px 80px rgb(2 6 23 / 0.34);
+  --panel-blur: 18px;
+  --overlay-blur: 10px;
+  --page-background-image:
+    radial-gradient(circle at top, color-mix(in srgb, var(--accent-solid) 12%, transparent), transparent 34%),
+    linear-gradient(180deg, var(--surface-app) 0%, color-mix(in srgb, var(--surface-app) 86%, black) 100%);
+}
+
 body {
-  background-color: var(--color-slate-950);
-  color: var(--color-slate-100);
+  background-color: var(--surface-app);
+  background-image: var(--page-background-image);
+  color: var(--text-primary);
   font-family: var(--font-sans);
 }
 
-:root.dark {
-  color-scheme: dark;
+html {
+  background-color: var(--surface-app);
 }
 
 :root.light {
@@ -27,6 +81,60 @@ body {
   --color-slate-200: #334155;
   --color-slate-100: #1e293b;
   --color-slate-50: #0f172a;
+  --surface-app: #f8fafc;
+  --surface-canvas: #eff5fb;
+  --surface-panel: #ffffff;
+  --surface-panel-muted: #f8fbff;
+  --surface-elevated: rgb(255 255 255 / 0.82);
+  --surface-overlay: rgb(148 163 184 / 0.22);
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-tertiary: #475569;
+  --text-muted: #64748b;
+  --border-subtle: rgb(148 163 184 / 0.22);
+  --border-strong: rgb(148 163 184 / 0.38);
+  --accent-solid: #0891b2;
+  --accent-solid-hover: #0e7490;
+  --accent-contrast: #f8fafc;
+  --button-primary-border: rgb(8 145 178 / 0.36);
+  --button-secondary-bg: rgb(248 250 252 / 0.84);
+  --button-secondary-hover: rgb(241 245 249 / 0.96);
+  --button-ghost-hover: rgb(226 232 240 / 0.68);
+  --tabs-list-bg: #dbe2ea;
+  --tabs-list-border: rgb(148 163 184 / 0.2);
+  --tabs-trigger-text: #64748b;
+  --tabs-trigger-hover-bg: rgb(255 255 255 / 0.58);
+  --tabs-trigger-active-bg: #ffffff;
+  --tabs-trigger-active-text: #0f172a;
+  --tabs-trigger-active-shadow:
+    0 1px 2px rgb(15 23 42 / 0.08),
+    0 1px 1px rgb(15 23 42 / 0.05);
+  --tabs-ring-offset: #f8fafc;
+  --field-bg: rgb(248 250 252 / 0.9);
+  --field-border: rgb(148 163 184 / 0.44);
+  --field-border-hover: rgb(100 116 139 / 0.6);
+  --field-placeholder: #94a3b8;
+  --field-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.8),
+    0 1px 2px rgb(15 23 42 / 0.04);
+  --radius-md: 0.95rem;
+  --radius-lg: 1.125rem;
+  --radius-xl: 1.5rem;
+  --shadow-soft:
+    0 8px 22px rgb(15 23 42 / 0.07),
+    0 1px 3px rgb(15 23 42 / 0.05);
+  --shadow-card:
+    0 20px 48px rgb(15 23 42 / 0.08),
+    0 4px 14px rgb(15 23 42 / 0.05);
+  --shadow-button: 0 16px 30px rgb(8 145 178 / 0.18);
+  --shadow-popover:
+    0 34px 90px rgb(15 23 42 / 0.12),
+    0 10px 28px rgb(15 23 42 / 0.08);
+  --panel-blur: 22px;
+  --overlay-blur: 14px;
+  --page-background-image:
+    radial-gradient(circle at top, rgb(8 145 178 / 0.1), transparent 34%),
+    linear-gradient(180deg, #ffffff 0%, #f6f9fc 100%);
 }
 
 :root.ocean {
@@ -96,6 +204,6 @@ body {
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--color-slate-900); }
-::-webkit-scrollbar-thumb { background: var(--color-slate-700); border-radius: 3px; }
+::-webkit-scrollbar-track { background: var(--surface-canvas); }
+::-webkit-scrollbar-thumb { background: var(--color-slate-700); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-slate-600); }
