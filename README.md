@@ -94,7 +94,7 @@ erDiagram
     }
 
     user_profiles {
-        uuid user_id PK_FK
+        uuid user_id PK
         text full_name
         boolean is_superuser
         timestamptz created_at
