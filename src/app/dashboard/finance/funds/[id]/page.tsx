@@ -61,7 +61,7 @@ export default function FundDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { districtId } = useAuth()
   const { data: funds, loading: fundsLoading } = useFunds({ district_id: districtId })
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
 
   const [transactions, setTransactions] = useState<CashbookTransaction[]>([])
   const [txnLoading, setTxnLoading] = useState(true)
@@ -72,21 +72,31 @@ export default function FundDetailPage() {
 
   useEffect(() => {
     if (!id) return
-    setTxnLoading(true)
 
-    supabase
-      .from('cashbook_transactions')
-      .select('*, account:accounts(id,name,currency)')
-      .eq('fund_id', id)
-      .gte('transaction_date', dateFrom)
-      .lte('transaction_date', dateTo)
-      .order('transaction_date', { ascending: false })
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setTransactions((data ?? []) as CashbookTransaction[])
-        setTxnLoading(false)
-      })
-  }, [id, dateFrom, dateTo]) // eslint-disable-line
+    let cancelled = false
+    const timeout = setTimeout(() => {
+      setTxnLoading(true)
+
+      supabase
+        .from('cashbook_transactions')
+        .select('*, account:accounts(id,name,currency)')
+        .eq('fund_id', id)
+        .gte('transaction_date', dateFrom)
+        .lte('transaction_date', dateTo)
+        .order('transaction_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .then(({ data }) => {
+          if (cancelled) return
+          setTransactions((data ?? []) as CashbookTransaction[])
+          setTxnLoading(false)
+        })
+    }, 0)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+    }
+  }, [dateFrom, dateTo, id, supabase])
 
   // Balance from ALL time posted transactions (not filtered by date)
   const [allTime, setAllTime] = useState<{ totalIn: number; totalOut: number; currency: string } | null>(null)
@@ -107,7 +117,7 @@ export default function FundDetailPage() {
         }
         setAllTime({ totalIn, totalOut, currency })
       })
-  }, [id]) // eslint-disable-line
+  }, [id, supabase])
 
   const balance = allTime ? allTime.totalIn - allTime.totalOut : 0
   const currency = (allTime?.currency ?? 'USD') as Currency

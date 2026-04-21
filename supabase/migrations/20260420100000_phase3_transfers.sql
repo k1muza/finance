@@ -126,6 +126,9 @@ ALTER TABLE public.cashbook_transactions
   ADD COLUMN IF NOT EXISTS effect_direction public.cashbook_effect_direction,
   ADD COLUMN IF NOT EXISTS transfer_id UUID REFERENCES public.transfers(id) ON DELETE RESTRICT;
 
+ALTER TABLE public.cashbook_transactions
+  DISABLE TRIGGER trg_cashbook_immutability;
+
 UPDATE public.cashbook_transactions
 SET effect_direction = 'in'
 WHERE effect_direction IS NULL
@@ -149,6 +152,9 @@ WHERE txn.effect_direction IS NULL
 UPDATE public.cashbook_transactions
 SET effect_direction = 'out'
 WHERE effect_direction IS NULL;
+
+ALTER TABLE public.cashbook_transactions
+  ENABLE TRIGGER trg_cashbook_immutability;
 
 ALTER TABLE public.cashbook_transactions
   ALTER COLUMN effect_direction SET NOT NULL;

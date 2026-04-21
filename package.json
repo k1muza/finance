@@ -11,6 +11,7 @@
     "migrate:baseline": "node --env-file=.env.local scripts/migrate.mjs --baseline",
     "seed:admin": "node --env-file=.env.local scripts/seed-admin.mjs",
     "test": "vitest run",
+    "test:ci": "vitest run --coverage",
     "test:watch": "vitest"
   },
   "dependencies": {

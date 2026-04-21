@@ -9,14 +9,21 @@ export function useCurrencies() {
   const { user, loading: authLoading } = useAuth()
   const [data, setData] = useState<CurrencyRow[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
 
   useEffect(() => {
-    if (authLoading || !user) {
-      if (!authLoading) setLoading(false)
-      return
+    if (authLoading) return
+
+    if (!user) {
+      const timeout = setTimeout(() => {
+        setData([])
+        setLoading(false)
+      }, 0)
+
+      return () => clearTimeout(timeout)
     }
 
+    let cancelled = false
     const timeout = setTimeout(async () => {
       setLoading(true)
       const { data: rows } = await supabase
@@ -24,12 +31,18 @@ export function useCurrencies() {
         .select('*')
         .eq('is_active', true)
         .order('code')
+
+      if (cancelled) return
+
       setData((rows ?? []) as CurrencyRow[])
       setLoading(false)
     }, 0)
 
-    return () => clearTimeout(timeout)
-  }, [authLoading, user]) // eslint-disable-line
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+    }
+  }, [authLoading, user, supabase])
 
   return { data, loading }
 }

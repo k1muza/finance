@@ -18,7 +18,7 @@ export function useTransfers(filter: TransferFilter = {}) {
   const [data, setData] = useState<Transfer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
 
   const refetch = useCallback(async () => {
     if (authLoading) return
@@ -66,8 +66,9 @@ export function useTransfers(filter: TransferFilter = {}) {
     filter.date_to,
     filter.district_id,
     filter.status,
+    supabase,
     userId,
-  ]) // eslint-disable-line
+  ])
 
   useEffect(() => {
     if (authLoading) return
