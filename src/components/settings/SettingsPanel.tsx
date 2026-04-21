@@ -1060,17 +1060,17 @@ export function FundsSection({ districtId }: { districtId: string }) {
 
 function DangerZone() {
   return (
-    <div className="bg-red-950/30 border border-red-800/50 rounded-xl p-5 space-y-4">
-      <h2 className="font-semibold text-red-400 flex items-center gap-2">
+    <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-5 space-y-4">
+      <h2 className="flex items-center gap-2 font-semibold text-red-500">
         <Trash2 className="h-5 w-5" />
         Danger Zone
       </h2>
 
       <div className="flex items-start gap-3">
-        <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-amber-400" />
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
         <div>
-          <p className="text-sm text-slate-300 font-medium">District deletion is disabled</p>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-sm font-medium text-[var(--text-primary)]">District deletion is disabled</p>
+          <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">
             Once a district holds financial records it cannot be deleted. To retire a district, contact a platform administrator to deactivate it.
           </p>
         </div>

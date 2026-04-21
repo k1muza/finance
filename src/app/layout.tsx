@@ -50,7 +50,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
-      <body className="h-full overflow-hidden bg-slate-950 text-slate-100 antialiased">
+      <body className="h-full overflow-hidden antialiased">
         {process.env.NODE_ENV !== 'production' && (
           <Script id="dev-sw-cleanup" strategy="beforeInteractive">
             {devServiceWorkerCleanupScript}

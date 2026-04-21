@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Landmark } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Card, CardContent } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
 import { createClient } from '@/lib/supabase/client'
 import { Select } from '@/components/ui/Select'
 
@@ -116,23 +119,25 @@ export default function RegisterForm() {
 
   if (!registrationEnabled) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--surface-app)] p-4">
         <div className="w-full max-w-sm space-y-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 mb-4">
-            <Landmark className="h-8 w-8 text-cyan-400" />
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-[var(--radius-2xl)] border bg-[var(--accent-soft)] [border-color:var(--accent-border)]">
+            <Landmark className="h-8 w-8 text-[var(--theme-accent-400)]" />
           </div>
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-4">
-            <p className="text-base font-semibold text-slate-100">Registration closed</p>
-            <p className="text-sm text-slate-400">
-              New account registration is currently disabled. Contact your finance administrator to get access.
-            </p>
-            <Link
-              href="/login"
-              className="block w-full text-center bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2.5 rounded-lg text-sm transition"
-            >
-              Back to sign in
-            </Link>
-          </div>
+          <Card>
+            <CardContent className="space-y-4 p-6">
+              <p className="text-base font-semibold text-[var(--text-primary)]">Registration closed</p>
+              <p className="text-sm text-[var(--text-tertiary)]">
+                New account registration is currently disabled. Contact your finance administrator to get access.
+              </p>
+              <Link
+                href="/login"
+                className="inline-flex w-full items-center justify-center rounded-[var(--radius-sm)] border bg-[var(--button-secondary-bg)] px-4 py-2.5 text-sm font-medium text-[var(--text-primary)] transition-colors [border-color:var(--border-strong)] hover:bg-[var(--button-secondary-hover)]"
+              >
+                Back to sign in
+              </Link>
+            </CardContent>
+          </Card>
         </div>
       </div>
     )
@@ -140,23 +145,25 @@ export default function RegisterForm() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--surface-app)] p-4">
         <div className="w-full max-w-sm space-y-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 mb-4">
-            <Landmark className="h-8 w-8 text-cyan-400" />
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-[var(--radius-2xl)] border bg-[var(--accent-soft)] [border-color:var(--accent-border)]">
+            <Landmark className="h-8 w-8 text-[var(--theme-accent-400)]" />
           </div>
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-4">
-            <p className="text-base font-semibold text-slate-100">Account created</p>
-            <p className="text-sm text-slate-400">
-              Your district account{selectedDistrictName ? ` for ${selectedDistrictName}` : ''} has been created successfully. You can now sign in.
-            </p>
-            <Link
-              href="/login"
-              className="block w-full text-center bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold py-2.5 rounded-lg text-sm transition"
-            >
-              Sign in
-            </Link>
-          </div>
+          <Card>
+            <CardContent className="space-y-4 p-6">
+              <p className="text-base font-semibold text-[var(--text-primary)]">Account created</p>
+              <p className="text-sm text-[var(--text-tertiary)]">
+                Your district account{selectedDistrictName ? ` for ${selectedDistrictName}` : ''} has been created successfully. You can now sign in.
+              </p>
+              <Link
+                href="/login"
+                className="inline-flex w-full items-center justify-center rounded-[var(--radius-sm)] border bg-[var(--accent-solid)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-contrast)] shadow-[var(--shadow-button)] transition-colors [border-color:var(--button-primary-border)] hover:bg-[var(--accent-solid-hover)]"
+              >
+                Sign in
+              </Link>
+            </CardContent>
+          </Card>
         </div>
       </div>
     )
@@ -165,115 +172,97 @@ export default function RegisterForm() {
   const noDistrictsAvailable = !districtsLoading && districts.length === 0
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--surface-app)] p-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 mb-4">
-            <Landmark className="h-8 w-8 text-cyan-400" />
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-[var(--radius-2xl)] border bg-[var(--accent-soft)] [border-color:var(--accent-border)]">
+            <Landmark className="h-8 w-8 text-[var(--theme-accent-400)]" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-100">District Finance Dashboard</h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">District Finance Dashboard</h1>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">
             Create a district finance account
           </p>
         </div>
 
-        <form onSubmit={handleRegister} className="bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-5">
-          <div>
-            <p className="text-base font-semibold text-slate-100 mb-1">Create account</p>
-            <p className="text-sm text-slate-400">Register a district user account and link it to an existing district</p>
-          </div>
-
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-sm text-red-400">
-              {error}
+        <Card>
+          <CardContent className="space-y-5 p-6">
+            <div>
+              <p className="mb-1 text-base font-semibold text-[var(--text-primary)]">Create account</p>
+              <p className="text-sm text-[var(--text-tertiary)]">Register a district user account and link it to an existing district</p>
             </div>
-          )}
 
-          {noDistrictsAvailable && (
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-4 py-3 text-sm text-amber-300">
-              No districts are available for self-registration yet. Contact an administrator to create the first district.
-            </div>
-          )}
+            {error && (
+              <div className="rounded-[var(--radius-sm)] border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                {error}
+              </div>
+            )}
 
-          <div className="space-y-4">
-            <Select
-              id="district"
-              label="District *"
-              value={districtId}
-              onChange={(e) => setDistrictId(e.target.value)}
-              options={districts.map((district) => ({ value: district.id, label: district.name }))}
-              placeholder={districtsLoading ? 'Loading districts...' : 'Select a district'}
-              disabled={districtsLoading || noDistrictsAvailable}
-              required
-            />
+            {noDistrictsAvailable && (
+              <div className="rounded-[var(--radius-sm)] border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+                No districts are available for self-registration yet. Contact an administrator to create the first district.
+              </div>
+            )}
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-slate-300" htmlFor="email">
-                Email address
-              </label>
-              <input
+            <form onSubmit={handleRegister} className="space-y-4">
+              <Select
+                id="district"
+                label="District *"
+                value={districtId}
+                onChange={(e) => setDistrictId(e.target.value)}
+                options={districts.map((district) => ({ value: district.id, label: district.name }))}
+                placeholder={districtsLoading ? 'Loading districts...' : 'Select a district'}
+                disabled={districtsLoading || noDistrictsAvailable}
+                required
+              />
+
+              <Input
                 id="email"
                 type="email"
                 autoComplete="email"
                 required
+                label="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
               />
-            </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-slate-300" htmlFor="password">
-                Password
-              </label>
-              <input
+              <Input
                 id="password"
                 type="password"
                 autoComplete="new-password"
                 required
+                label="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Min. 8 characters"
-                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
               />
-            </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-slate-300" htmlFor="confirm-password">
-                Confirm password
-              </label>
-              <input
+              <Input
                 id="confirm-password"
                 type="password"
                 autoComplete="new-password"
                 required
+                label="Confirm password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm password"
-                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
               />
-            </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading || districtsLoading || noDistrictsAvailable}
-            className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-semibold py-2.5 rounded-lg text-sm transition flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-              </svg>
-            ) : null}
-            {loading ? 'Creating account...' : 'Create account'}
-          </button>
-        </form>
+              <Button
+                type="submit"
+                disabled={loading || districtsLoading || noDistrictsAvailable}
+                loading={loading}
+                className="w-full"
+              >
+                {loading ? 'Creating account...' : 'Create account'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-        <p className="text-center text-sm text-slate-500">
+        <p className="text-center text-sm text-[var(--text-muted)]">
           Already have an account?{' '}
-          <Link href="/login" className="text-cyan-400 hover:text-cyan-300 transition">
+          <Link href="/login" className="text-[var(--theme-accent-400)] transition-colors hover:text-[var(--theme-accent-300)]">
             Sign in
           </Link>
         </p>

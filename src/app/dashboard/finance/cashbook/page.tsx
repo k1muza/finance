@@ -819,28 +819,24 @@ function CashbookMetricCard({
 }: CashbookMetricCardProps) {
   const tones = {
     default: {
-      panel: 'border-slate-700 bg-slate-800/80',
-      icon: 'bg-slate-700/70 text-slate-300',
-      value: 'text-slate-100',
-      caption: 'text-slate-500',
+      panel: 'bg-[var(--surface-panel)] [border-color:var(--border-strong)]',
+      icon: 'bg-[var(--surface-panel-muted)] text-[var(--text-secondary)]',
+      value: 'text-[var(--text-primary)]',
     },
     positive: {
       panel: 'border-emerald-500/20 bg-emerald-500/5',
       icon: 'bg-emerald-500/10 text-emerald-400',
       value: 'text-emerald-400',
-      caption: 'text-emerald-200/70',
     },
     negative: {
       panel: 'border-red-500/20 bg-red-500/5',
       icon: 'bg-red-500/10 text-red-400',
       value: 'text-red-400',
-      caption: 'text-red-200/70',
     },
     accent: {
-      panel: 'border-cyan-500/30 bg-cyan-500/10',
-      icon: 'bg-cyan-500/10 text-cyan-400',
-      value: 'text-cyan-300',
-      caption: 'text-cyan-100/70',
+      panel: 'bg-[var(--accent-soft)] [border-color:var(--accent-border)]',
+      icon: 'bg-[var(--accent-soft-strong)] text-[var(--theme-accent-400)]',
+      value: 'text-[var(--theme-accent-400)]',
     },
   } as const
 
@@ -850,9 +846,9 @@ function CashbookMetricCard({
     <div className={cn('rounded-xl border p-4', palette.panel)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-2">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">{label}</p>
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">{label}</p>
           <p className={cn('text-2xl font-semibold tracking-tight', palette.value)}>{value}</p>
-          <p className={cn('text-xs', palette.caption)}>{caption}</p>
+          <p className="text-xs text-[var(--text-tertiary)]">{caption}</p>
         </div>
         <div className={cn('rounded-xl p-2 shrink-0', palette.icon)}>
           <Icon className="h-4 w-4" />

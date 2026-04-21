@@ -586,7 +586,7 @@ export default function TransfersPage() {
         />
         <div className="xl:col-span-2">
           <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">Search</label>
-          <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-slate-700 bg-[var(--field-bg)] px-3 py-2">
+          <div className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-slate-700 bg-[var(--field-bg)] px-3 py-2">
             <Search className="h-4 w-4 shrink-0 text-slate-500" />
             <input
               className="w-full bg-transparent text-sm text-[var(--text-primary)] outline-none placeholder:text-slate-500"

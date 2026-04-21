@@ -6,7 +6,7 @@ import { APP_THEMES } from '@/components/layout/themeCatalog'
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
     <NextThemesProvider
-      attribute="class"
+      attribute="data-theme"
       defaultTheme="dark"
       enableSystem={false}
       disableTransitionOnChange

@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { Landmark } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
 
 const LoginForm = dynamic(() => import('./LoginForm'), {
@@ -15,29 +16,31 @@ export default function LoginPage() {
 
 function LoginPageLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--surface-app)] p-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 mb-4">
-            <Landmark className="h-8 w-8 text-cyan-400" />
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-[var(--radius-2xl)] border bg-[var(--accent-soft)] [border-color:var(--accent-border)]">
+            <Landmark className="h-8 w-8 text-[var(--theme-accent-400)]" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-100">District Finance Dashboard</h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">District Finance Dashboard</h1>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">
             Secure district income and expenditure tracking
           </p>
         </div>
 
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <Spinner className="h-6 w-6" />
-            <div className="space-y-1">
-              <p className="text-base font-semibold text-slate-100">Loading sign in</p>
-              <p className="text-sm text-slate-400">
-                Preparing the secure sign-in form in your browser.
-              </p>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <Spinner className="h-6 w-6" />
+              <div className="space-y-1">
+                <p className="text-base font-semibold text-[var(--text-primary)]">Loading sign in</p>
+                <p className="text-sm text-[var(--text-tertiary)]">
+                  Preparing the secure sign-in form in your browser.
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

@@ -9,8 +9,8 @@ interface StatCardProps {
 
 export function StatCard({ label, value, icon, sub }: StatCardProps) {
   return (
-    <div className="flex items-start gap-4 rounded-[var(--radius-lg)] border bg-[var(--surface-panel)] p-5 shadow-[var(--shadow-card)] [border-color:var(--border-strong)]">
-      <div className="rounded-[calc(var(--radius-md)-2px)] bg-[var(--accent-soft)] p-3 text-[var(--accent-solid-hover)]">
+    <div className="flex items-start gap-4 rounded-[var(--radius-sm)] border bg-[var(--surface-panel)] p-5 shadow-[var(--shadow-card)] [border-color:var(--border-strong)]">
+      <div className="rounded-[calc(var(--radius-sm)-2px)] bg-[var(--accent-soft)] p-3 text-[var(--accent-solid-hover)]">
         {icon}
       </div>
       <div>
