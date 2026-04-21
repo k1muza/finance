@@ -5,7 +5,7 @@ import type {
   CashbookEffectDirection,
   CashbookTransaction,
   FundNature,
-  SourceType,
+  MemberType,
   TransactionKind,
   TransactionStatus,
 } from '@/types'
@@ -33,7 +33,7 @@ export function transactionKindRequiresFund(kind: TransactionKind) {
   return kind === 'receipt' || kind === 'payment'
 }
 
-export function transactionKindNeedsCounterpartyOrSource(kind: TransactionKind) {
+export function transactionKindNeedsPartyDetails(kind: TransactionKind) {
   return kind === 'receipt' || kind === 'payment'
 }
 
@@ -110,66 +110,66 @@ export function transactionDisplayLabel(txn: DirectionalTransaction) {
   return TRANSACTION_KIND_LABELS[txn.kind]
 }
 
-export interface SourceSnapshotChainNode {
+export interface MemberSnapshotChainNode {
   id: string
   name: string
-  type: SourceType
+  type: MemberType
 }
 
-export interface SourceSnapshotChain {
-  source: SourceSnapshotChainNode
-  parent: SourceSnapshotChainNode | null
-  grandparent: SourceSnapshotChainNode | null
+export interface MemberSnapshotChain {
+  member: MemberSnapshotChainNode
+  parent: MemberSnapshotChainNode | null
+  grandparent: MemberSnapshotChainNode | null
 }
 
-export interface DerivedSourceSnapshots {
-  sourceNameSnapshot: string | null
-  sourceTypeSnapshot: string | null
-  sourceParentNameSnapshot: string | null
-  assemblySnapshotId: string | null
-  regionSnapshotId: string | null
+export interface DerivedMemberSnapshots {
+  memberNameSnapshot: string | null
+  memberTypeSnapshot: string | null
+  memberParentNameSnapshot: string | null
+  assemblyMemberSnapshotId: string | null
+  regionMemberSnapshotId: string | null
 }
 
-export function deriveSourceSnapshotsFromChain(
-  chain: SourceSnapshotChain | null,
+export function deriveMemberSnapshotsFromChain(
+  chain: MemberSnapshotChain | null,
 ):
-  | { ok: true; snapshots: DerivedSourceSnapshots }
+  | { ok: true; snapshots: DerivedMemberSnapshots }
   | { ok: false; code: string; message: string } {
   if (!chain) {
     return {
       ok: true,
       snapshots: {
-        sourceNameSnapshot: null,
-        sourceTypeSnapshot: null,
-        sourceParentNameSnapshot: null,
-        assemblySnapshotId: null,
-        regionSnapshotId: null,
+        memberNameSnapshot: null,
+        memberTypeSnapshot: null,
+        memberParentNameSnapshot: null,
+        assemblyMemberSnapshotId: null,
+        regionMemberSnapshotId: null,
       },
     }
   }
 
-  const baseSnapshots: DerivedSourceSnapshots = {
-    sourceNameSnapshot: chain.source.name,
-    sourceTypeSnapshot: chain.source.type,
-    sourceParentNameSnapshot: chain.parent?.name ?? null,
-    assemblySnapshotId: null,
-    regionSnapshotId: null,
+  const baseSnapshots: DerivedMemberSnapshots = {
+    memberNameSnapshot: chain.member.name,
+    memberTypeSnapshot: chain.member.type,
+    memberParentNameSnapshot: chain.parent?.name ?? null,
+    assemblyMemberSnapshotId: null,
+    regionMemberSnapshotId: null,
   }
 
-  switch (chain.source.type) {
+  switch (chain.member.type) {
     case 'individual': {
       if (!chain.parent || chain.parent.type !== 'assembly') {
         return {
           ok: false,
-          code: 'SOURCE_HIERARCHY_INVALID',
-          message: 'Individual sources must belong to an assembly before posting.',
+          code: 'MEMBER_HIERARCHY_INVALID',
+          message: 'Individual members must belong to an assembly before posting.',
         }
       }
       if (!chain.grandparent || chain.grandparent.type !== 'region') {
         return {
           ok: false,
-          code: 'SOURCE_HIERARCHY_INVALID',
-          message: 'Individual sources must roll up to a region before posting.',
+          code: 'MEMBER_HIERARCHY_INVALID',
+          message: 'Individual members must roll up to a region before posting.',
         }
       }
 
@@ -177,8 +177,8 @@ export function deriveSourceSnapshotsFromChain(
         ok: true,
         snapshots: {
           ...baseSnapshots,
-          assemblySnapshotId: chain.parent.id,
-          regionSnapshotId: chain.grandparent.id,
+          assemblyMemberSnapshotId: chain.parent.id,
+          regionMemberSnapshotId: chain.grandparent.id,
         },
       }
     }
@@ -187,8 +187,8 @@ export function deriveSourceSnapshotsFromChain(
       if (!chain.parent || chain.parent.type !== 'region') {
         return {
           ok: false,
-          code: 'SOURCE_HIERARCHY_INVALID',
-          message: 'Assembly sources must belong to a region before posting.',
+          code: 'MEMBER_HIERARCHY_INVALID',
+          message: 'Assembly members must belong to a region before posting.',
         }
       }
 
@@ -196,8 +196,8 @@ export function deriveSourceSnapshotsFromChain(
         ok: true,
         snapshots: {
           ...baseSnapshots,
-          assemblySnapshotId: chain.source.id,
-          regionSnapshotId: chain.parent.id,
+          assemblyMemberSnapshotId: chain.member.id,
+          regionMemberSnapshotId: chain.parent.id,
         },
       }
     }
@@ -207,7 +207,7 @@ export function deriveSourceSnapshotsFromChain(
         ok: true,
         snapshots: {
           ...baseSnapshots,
-          regionSnapshotId: chain.source.id,
+          regionMemberSnapshotId: chain.member.id,
         },
       }
 

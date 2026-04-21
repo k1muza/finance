@@ -20,17 +20,17 @@ function buildFinanceSupabase() {
         district_id: 'district-1',
         nature: 'mixed',
         is_active: true,
-        requires_individual_source: false,
+        requires_individual_member: false,
       },
       {
         id: 'fund-tithes',
         district_id: 'district-1',
         nature: 'income_only',
         is_active: true,
-        requires_individual_source: true,
+        requires_individual_member: true,
       },
     ],
-    sources: [
+    members: [
       {
         id: 'region-1',
         district_id: 'district-1',
@@ -54,14 +54,7 @@ function buildFinanceSupabase() {
         name: 'John Example',
         is_active: true,
         parent_id: 'assembly-1',
-      },
-      {
-        id: 'supplier-1',
-        district_id: 'district-1',
-        type: 'supplier',
-        name: 'Stationery Shop',
-        is_active: true,
-        parent_id: null,
+        title: 'saint',
       },
       {
         id: 'assembly-x',
@@ -72,18 +65,27 @@ function buildFinanceSupabase() {
         parent_id: null,
       },
     ],
+    counterparties: [
+      {
+        id: 'supplier-1',
+        district_id: 'district-1',
+        type: 'supplier',
+        name: 'Stationery Shop',
+        is_active: true,
+      },
+    ],
   })
 }
 
 describe('validateDraftTransactionPayload', () => {
-  it('accepts a tithe receipt with an individual source and derives an incoming effect', async () => {
+  it('accepts a tithe receipt with an individual member and derives an incoming effect', async () => {
     const supabase = buildFinanceSupabase()
 
     const result = await validateDraftTransactionPayload(supabase as never, {
       district_id: 'district-1',
       account_id: 'account-1',
       fund_id: 'fund-tithes',
-      source_id: 'individual-1',
+      member_id: 'individual-1',
       kind: 'receipt',
       transaction_date: '2026-04-21',
       counterparty: '   ',
@@ -96,7 +98,7 @@ describe('validateDraftTransactionPayload', () => {
       district_id: 'district-1',
       account_id: 'account-1',
       fund_id: 'fund-tithes',
-      source_id: 'individual-1',
+      member_id: 'individual-1',
       kind: 'receipt',
       effect_direction: 'in',
       transaction_date: '2026-04-21',
@@ -125,7 +127,7 @@ describe('validateDraftTransactionPayload', () => {
     expect(result.values.effect_direction).toBe('out')
   })
 
-  it('requires either a payee source or fallback counterparty for payments', async () => {
+  it('requires either a payee member, registered counterparty, or fallback counterparty for payments', async () => {
     const supabase = buildFinanceSupabase()
 
     await expect(
@@ -139,11 +141,11 @@ describe('validateDraftTransactionPayload', () => {
       total_amount: 25,
       }),
     ).rejects.toMatchObject({
-      code: 'SOURCE_OR_COUNTERPARTY_REQUIRED',
+      code: 'PARTY_REQUIRED',
     })
   })
 
-  it('requires an individual source for funds that enforce it', async () => {
+  it('requires an individual member for funds that enforce it', async () => {
     const supabase = buildFinanceSupabase()
 
     await expect(
@@ -151,14 +153,14 @@ describe('validateDraftTransactionPayload', () => {
         district_id: 'district-1',
         account_id: 'account-1',
         fund_id: 'fund-tithes',
-        source_id: 'supplier-1',
+        member_id: 'assembly-1',
         kind: 'receipt',
         transaction_date: '2026-04-21',
         currency: 'USD',
         total_amount: 100,
       }),
     ).rejects.toMatchObject({
-      code: 'INDIVIDUAL_SOURCE_REQUIRED',
+      code: 'INDIVIDUAL_MEMBER_REQUIRED',
     })
   })
 
@@ -198,7 +200,7 @@ describe('validateDraftTransactionPayload', () => {
 })
 
 describe('buildPostingSnapshots', () => {
-  it('derives assembly and region snapshots for an individual source', async () => {
+  it('derives assembly and region snapshots for an individual member', async () => {
     const supabase = buildFinanceSupabase()
 
     const snapshots = await buildPostingSnapshots(
@@ -208,18 +210,18 @@ describe('buildPostingSnapshots', () => {
     )
 
     expect(snapshots).toMatchObject({
-      sourceNameSnapshot: 'John Example',
-      sourceTypeSnapshot: 'individual',
-      sourceParentNameSnapshot: 'Central Assembly',
-      assemblySnapshotId: 'assembly-1',
-      regionSnapshotId: 'region-1',
+      memberNameSnapshot: 'John Example',
+      memberTypeSnapshot: 'individual',
+      memberParentNameSnapshot: 'Central Assembly',
+      assemblyMemberSnapshotId: 'assembly-1',
+      regionMemberSnapshotId: 'region-1',
     })
   })
 
   it('rejects cross-district hierarchy links during posting snapshot derivation', async () => {
     const supabase = createMockSupabase({
       districts: [{ id: 'district-1', is_active: true }],
-      sources: [
+      members: [
         {
           id: 'individual-1',
           district_id: 'district-1',
@@ -242,7 +244,7 @@ describe('buildPostingSnapshots', () => {
     await expect(
       buildPostingSnapshots(supabase as never, 'district-1', 'individual-1'),
     ).rejects.toMatchObject({
-      code: 'SOURCE_HIERARCHY_INVALID',
+      code: 'MEMBER_HIERARCHY_INVALID',
     })
   })
 })

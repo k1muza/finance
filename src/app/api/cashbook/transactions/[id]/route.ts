@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireDistrictAction } from '@/lib/auth/server'
 import {
-  hydrateTransactionSources,
+  hydrateTransactionParties,
   validateDraftTransactionPayload,
 } from '@/lib/finance/transaction-server'
 import { ApiRouteError, toErrorResponse } from '@/lib/server/errors'
@@ -75,7 +75,7 @@ export async function GET(
 
     return NextResponse.json({
       data: {
-        ...(await hydrateTransactionSources(supabase, [txnResult.data]))[0],
+        ...(await hydrateTransactionParties(supabase, [txnResult.data]))[0],
         lines: linesResult.data ?? [],
         audit: auditResult.data ?? [],
       },
@@ -98,7 +98,8 @@ export async function PATCH(
   let body: {
     account_id?: string
     fund_id?: string | null
-    source_id?: string | null
+    member_id?: string | null
+    counterparty_id?: string | null
     kind?: TransactionKind
     effect_direction?: 'in' | 'out' | null
     transaction_date?: string
@@ -121,7 +122,7 @@ export async function PATCH(
     const { data: txn, error: txnError } = await supabase
       .from('cashbook_transactions')
       .select(
-        'id, status, district_id, account_id, fund_id, source_id, kind, effect_direction, transaction_date, counterparty, narration, currency, total_amount',
+        'id, status, district_id, account_id, fund_id, member_id, counterparty_id, kind, effect_direction, transaction_date, counterparty, narration, currency, total_amount',
       )
       .eq('id', id)
       .maybeSingle()
@@ -144,7 +145,8 @@ export async function PATCH(
       district_id: txn.district_id,
       account_id: body.account_id ?? txn.account_id,
       fund_id: body.fund_id !== undefined ? body.fund_id : txn.fund_id,
-      source_id: body.source_id !== undefined ? body.source_id : txn.source_id,
+      member_id: body.member_id !== undefined ? body.member_id : txn.member_id,
+      counterparty_id: body.counterparty_id !== undefined ? body.counterparty_id : txn.counterparty_id,
       kind: body.kind ?? txn.kind,
       effect_direction: body.effect_direction ?? txn.effect_direction,
       transaction_date: body.transaction_date ?? txn.transaction_date,
@@ -159,7 +161,8 @@ export async function PATCH(
     const patch: Record<string, unknown> = {}
     if (validated.values.account_id !== txn.account_id) patch.account_id = validated.values.account_id
     if (validated.values.fund_id !== txn.fund_id) patch.fund_id = validated.values.fund_id
-    if (validated.values.source_id !== txn.source_id) patch.source_id = validated.values.source_id
+    if (validated.values.member_id !== txn.member_id) patch.member_id = validated.values.member_id
+    if (validated.values.counterparty_id !== txn.counterparty_id) patch.counterparty_id = validated.values.counterparty_id
     if (validated.values.kind !== txn.kind) patch.kind = validated.values.kind
     if (validated.values.effect_direction !== txn.effect_direction) patch.effect_direction = validated.values.effect_direction
     if (validated.values.transaction_date !== txn.transaction_date) patch.transaction_date = validated.values.transaction_date
@@ -190,7 +193,7 @@ export async function PATCH(
       )
     }
 
-    const [hydratedData] = await hydrateTransactionSources(supabase, [data])
+    const [hydratedData] = await hydrateTransactionParties(supabase, [data])
 
     return NextResponse.json({ data: hydratedData })
   } catch (error) {

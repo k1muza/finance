@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireDistrictAction } from '@/lib/auth/server'
 import { canTransitionTransaction } from '@/lib/finance/transactions'
-import { hydrateTransactionSources } from '@/lib/finance/transaction-server'
+import { hydrateTransactionParties } from '@/lib/finance/transaction-server'
 import { reverseEffectDirection } from '@/lib/finance/transactions'
 import { ApiRouteError, toErrorResponse } from '@/lib/server/errors'
 import { createServerClient } from '@/lib/supabase/server'
@@ -83,7 +83,8 @@ export async function POST(
         district_id: original.district_id,
         account_id: original.account_id,
         fund_id: original.fund_id,
-        source_id: original.source_id,
+        member_id: original.member_id,
+        counterparty_id: original.counterparty_id ?? null,
         kind: 'reversal',
         status: 'posted',
         transaction_date: new Date().toISOString().split('T')[0],
@@ -94,11 +95,11 @@ export async function POST(
         total_amount: original.total_amount,
         effect_direction: reverseEffectDirection(original.effect_direction),
         source_transaction_id: original.id,
-        assembly_snapshot_id: original.assembly_snapshot_id ?? null,
-        region_snapshot_id: original.region_snapshot_id ?? null,
-        source_name_snapshot: original.source_name_snapshot ?? null,
-        source_type_snapshot: original.source_type_snapshot ?? null,
-        source_parent_name_snapshot: original.source_parent_name_snapshot ?? null,
+        assembly_member_snapshot_id: original.assembly_member_snapshot_id ?? null,
+        region_member_snapshot_id: original.region_member_snapshot_id ?? null,
+        member_name_snapshot: original.member_name_snapshot ?? null,
+        member_type_snapshot: original.member_type_snapshot ?? null,
+        member_parent_name_snapshot: original.member_parent_name_snapshot ?? null,
         created_by: actor.user.id,
         submitted_by: actor.user.id,
         approved_by: actor.user.id,
@@ -167,7 +168,7 @@ export async function POST(
       )
     }
 
-    const [hydratedReversal] = await hydrateTransactionSources(supabase, [reversal])
+    const [hydratedReversal] = await hydrateTransactionParties(supabase, [reversal])
 
     return NextResponse.json({ data: hydratedReversal }, { status: 201 })
   } catch (error) {

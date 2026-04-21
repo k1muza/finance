@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireDistrictAction } from '@/lib/auth/server'
 import {
-  hydrateTransactionSources,
+  hydrateTransactionParties,
   validateDraftTransactionPayload,
 } from '@/lib/finance/transaction-server'
 import { ApiRouteError, toErrorResponse } from '@/lib/server/errors'
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
       throw new ApiRouteError('TRANSACTION_LIST_FAILED', error.message, 500)
     }
 
-    const hydrated = await hydrateTransactionSources(supabase, data ?? [])
+    const hydrated = await hydrateTransactionParties(supabase, data ?? [])
 
     return NextResponse.json({ data: hydrated, count })
   } catch (error) {
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/cashbook/transactions
-// Body: { district_id, account_id, fund_id?, source_id?, kind, transaction_date, counterparty?, narration?, currency, total_amount, lines[] }
+// Body: { district_id, account_id, fund_id?, member_id?, counterparty_id?, kind, transaction_date, counterparty?, narration?, currency, total_amount, lines[] }
 export async function POST(req: NextRequest) {
   const supabase = createServerClient()
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
@@ -71,7 +71,8 @@ export async function POST(req: NextRequest) {
     district_id: string
     account_id: string
     fund_id?: string | null
-    source_id?: string | null
+    member_id?: string | null
+    counterparty_id?: string | null
     kind: TransactionKind
     effect_direction?: 'in' | 'out' | null
     transaction_date: string
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
           )
         }
 
-        const [hydratedExisting] = await hydrateTransactionSources(supabase, [existing])
+        const [hydratedExisting] = await hydrateTransactionParties(supabase, [existing])
         return NextResponse.json({ data: hydratedExisting, deduplicated: true })
       }
     }
@@ -181,7 +182,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const [hydratedTxn] = await hydrateTransactionSources(supabase, [txn])
+    const [hydratedTxn] = await hydrateTransactionParties(supabase, [txn])
 
     return NextResponse.json({ data: hydratedTxn }, { status: 201 })
   } catch (error) {

@@ -84,21 +84,25 @@ export interface Fund {
   is_restricted: boolean
   nature: FundNature
   is_active: boolean
-  requires_individual_source: boolean
+  requires_individual_member: boolean
   created_at: string
   updated_at: string
   district?: District | null
 }
 
-export type SourceType = 'district' | 'region' | 'assembly' | 'individual' | 'supplier' | 'department' | 'other'
+export type MemberType = 'district' | 'region' | 'assembly' | 'individual' | 'department'
+export type CounterpartyType = 'supplier' | 'other'
 
-export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
+export const MEMBER_TYPE_LABELS: Record<MemberType, string> = {
   district: 'District',
   region: 'Region',
   assembly: 'Assembly',
   individual: 'Individual',
-  supplier: 'Supplier',
   department: 'Department',
+}
+
+export const COUNTERPARTY_TYPE_LABELS: Record<CounterpartyType, string> = {
+  supplier: 'Supplier',
   other: 'Other',
 }
 
@@ -110,11 +114,11 @@ export const INDIVIDUAL_TITLE_LABELS: Record<IndividualTitle, string> = {
   saint:  'Saint',
 }
 
-export interface Source {
+export interface Member {
   id: string
   district_id: string
   parent_id: string | null
-  type: SourceType
+  type: MemberType
   name: string
   code: string | null
   title: IndividualTitle
@@ -125,8 +129,23 @@ export interface Source {
   is_active: boolean
   created_at: string
   updated_at: string
-  parent?: Source | null
-  children?: Source[]
+  parent?: Member | null
+  children?: Member[]
+}
+
+export interface Counterparty {
+  id: string
+  district_id: string
+  type: CounterpartyType
+  name: string
+  code: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  notes: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export type BudgetType = 'income' | 'expense'
@@ -229,10 +248,11 @@ export interface CashbookTransaction {
   district_id: string
   account_id: string
   fund_id: string | null
-  source_id: string | null
+  member_id: string | null
+  counterparty_id: string | null
   transfer_id: string | null
-  assembly_snapshot_id: string | null
-  region_snapshot_id: string | null
+  assembly_member_snapshot_id: string | null
+  region_member_snapshot_id: string | null
   kind: TransactionKind
   effect_direction: CashbookEffectDirection
   status: TransactionStatus
@@ -243,9 +263,9 @@ export interface CashbookTransaction {
   currency: Currency
   total_amount: number
   source_transaction_id: string | null
-  source_name_snapshot: string | null
-  source_type_snapshot: string | null
-  source_parent_name_snapshot: string | null
+  member_name_snapshot: string | null
+  member_type_snapshot: string | null
+  member_parent_name_snapshot: string | null
   client_generated_id: string | null
   device_id: string | null
   created_by: string
@@ -261,9 +281,10 @@ export interface CashbookTransaction {
   updated_at: string
   account?: Account | null
   fund?: Fund | null
-  source?: Source | null
-  assembly_snapshot?: Source | null
-  region_snapshot?: Source | null
+  member?: Member | null
+  counterparty_record?: Counterparty | null
+  assembly_member_snapshot?: Member | null
+  region_member_snapshot?: Member | null
   lines?: CashbookTransactionLine[]
 }
 

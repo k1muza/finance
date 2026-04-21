@@ -3,16 +3,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { Source, SourceType, IndividualTitle } from '@/types'
+import { Member, MemberType, IndividualTitle } from '@/types'
 
-interface SourceFilter {
+interface MemberFilter {
   district_id?: string | null
 }
 
-export function useSources(filter: SourceFilter = {}) {
+export function useMembers(filter: MemberFilter = {}) {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
-  const [data, setData] = useState<Source[]>([])
+  const [data, setData] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
@@ -20,14 +20,7 @@ export function useSources(filter: SourceFilter = {}) {
   const fetch = useCallback(async () => {
     if (authLoading) return
 
-    if (!userId) {
-      setData([])
-      setError(null)
-      setLoading(false)
-      return
-    }
-
-    if (filter.district_id === null) {
+    if (!userId || filter.district_id === null) {
       setData([])
       setError(null)
       setLoading(false)
@@ -38,7 +31,7 @@ export function useSources(filter: SourceFilter = {}) {
     setError(null)
 
     let query = supabase
-      .from('sources')
+      .from('members')
       .select('*')
       .order('name')
 
@@ -49,7 +42,7 @@ export function useSources(filter: SourceFilter = {}) {
       setError(err.message)
       setData([])
     } else {
-      setData((rows ?? []) as Source[])
+      setData((rows ?? []) as Member[])
     }
     setLoading(false)
   }, [authLoading, filter.district_id, userId]) // eslint-disable-line
@@ -67,7 +60,7 @@ export function useSources(filter: SourceFilter = {}) {
   const add = async (values: {
     district_id: string
     parent_id?: string | null
-    type: SourceType
+    type: MemberType
     name: string
     code?: string | null
     title?: IndividualTitle
@@ -77,7 +70,7 @@ export function useSources(filter: SourceFilter = {}) {
     notes?: string | null
     is_active?: boolean
   }) => {
-    const { error: err } = await supabase.from('sources').insert({
+    const { error: err } = await supabase.from('members').insert({
       district_id: values.district_id,
       parent_id: values.parent_id ?? null,
       type: values.type,
@@ -98,7 +91,7 @@ export function useSources(filter: SourceFilter = {}) {
     id: string,
     values: Partial<{
       parent_id: string | null
-      type: SourceType
+      type: MemberType
       name: string
       code: string | null
       title: IndividualTitle
@@ -107,7 +100,7 @@ export function useSources(filter: SourceFilter = {}) {
       address: string | null
       notes: string | null
       is_active: boolean
-    }>
+    }>,
   ) => {
     const payload: Record<string, unknown> = {}
     if (values.parent_id !== undefined) payload.parent_id = values.parent_id
@@ -121,13 +114,13 @@ export function useSources(filter: SourceFilter = {}) {
     if (values.notes !== undefined) payload.notes = values.notes?.trim() || null
     if (values.is_active !== undefined) payload.is_active = values.is_active
 
-    const { error: err } = await supabase.from('sources').update(payload).eq('id', id)
+    const { error: err } = await supabase.from('members').update(payload).eq('id', id)
     if (err) throw new Error(err.message)
     await fetch()
   }
 
   const remove = async (id: string) => {
-    const { error: err } = await supabase.from('sources').delete().eq('id', id)
+    const { error: err } = await supabase.from('members').delete().eq('id', id)
     if (err) throw new Error(err.message)
     await fetch()
   }

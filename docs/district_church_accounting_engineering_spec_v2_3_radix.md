@@ -28,7 +28,7 @@ This version reflects the following product and architecture decisions:
 
 - multi-tenant by district
 - stack changed to Supabase + Next.js + Tailwind
-- `entities` renamed to `sources`
+- `entities` split into `members` and `counterparties`
 - `audit_events` removed from current scope
 - budgets added
 - offline functionality included
@@ -44,7 +44,7 @@ The system must allow each district to:
 
 - manage its own accounts
 - manage its own funds
-- manage its own sources and hierarchy
+- manage its own members, counterparties, and hierarchy
 - record receipts
 - record payments
 - record transfers
@@ -114,7 +114,7 @@ The current design should not block these features later.
 - balances are derived from posted transactions
 - transfers are modeled explicitly
 - currency is bound to account
-- source hierarchy is first-class
+- member hierarchy is first-class
 - budgets are structured by fund and period
 - offline capture must preserve integrity on sync
 
@@ -184,7 +184,8 @@ Each district has its own isolated workspace containing:
 
 - accounts
 - funds
-- sources
+- members
+- counterparties
 - transactions
 - transfers
 - budgets
@@ -221,7 +222,7 @@ A district secretary should be able to:
 2. create a district
 3. automatically become the first district admin or district secretary for that district
 4. enter the district workspace
-5. configure accounts, funds, and sources
+5. configure accounts, funds, members, and counterparties
 
 ### 6.2 District creation flow
 
@@ -249,7 +250,7 @@ The main domain objects are:
 - Currency
 - Account
 - Fund
-- Source
+- Member
 - Transaction
 - Transfer
 - Budget
@@ -276,7 +277,8 @@ These must include `district_id`:
 
 - accounts
 - funds
-- sources
+- members
+- counterparties
 - transactions
 - transfers
 - budgets
@@ -291,9 +293,10 @@ Examples:
 
 - `transaction.account_id` must point to an account in the same district
 - `transaction.fund_id` must point to a fund in the same district
-- `transaction.source_id` must point to a source in the same district
+- `transaction.member_id` must point to a member in the same district
+- `transaction.counterparty_id` must point to a counterparty in the same district
 - `budget_line.fund_id` must point to a fund in the same district
-- `source.parent_source_id` must point to a source in the same district
+- `member.parent_member_id` must point to a member in the same district
 
 ---
 
@@ -429,7 +432,7 @@ Examples:
 - `name`
 - `code`
 - `fund_nature`
-- `requires_individual_source`
+- `requires_individual_member`
 - `is_active`
 - `description`
 - `created_at`
@@ -453,16 +456,16 @@ Examples:
 
 ---
 
-### 9.7 `sources`
+### 9.7 `members`
 
-**Purpose:** Stores contributors, church units, and other counterparties in a single hierarchy.
+**Purpose:** Stores the internal district hierarchy used for tithes, remittances, and reporting.
 
 **Fields:**
 - `id`
 - `district_id`
 - `name`
-- `source_type`
-- `parent_source_id`
+- `member_type`
+- `parent_member_id`
 - `code`
 - `phone_number`
 - `email`
@@ -471,31 +474,55 @@ Examples:
 - `created_at`
 - `updated_at`
 
-**Allowed `source_type`:**
+**Allowed `member_type`:**
 - `DISTRICT`
 - `REGION`
 - `ASSEMBLY`
 - `INDIVIDUAL`
 - `DEPARTMENT`
-- `SUPPLIER`
-- `OTHER`
 
 **Hierarchy rules:**
-- DISTRICT source must have no parent
-- REGION parent must be DISTRICT source
-- ASSEMBLY parent must be REGION source
-- INDIVIDUAL parent should be ASSEMBLY source
+- DISTRICT member must have no parent
+- REGION parent, if present, must be DISTRICT member
+- ASSEMBLY parent must be REGION member
+- INDIVIDUAL parent should be ASSEMBLY member
 - DEPARTMENT may belong to DISTRICT, REGION, or ASSEMBLY depending on business choice
-- SUPPLIER and OTHER may have no parent
 
 **Constraints:**
 - parent must belong to same district
 - no cyclic hierarchy
-- unique `(district_id, source_type, name, parent_source_id)` is recommended
+- unique `(district_id, member_type, name, parent_member_id)` is recommended
 
 ---
 
-### 9.8 `transactions`
+### 9.8 `counterparties`
+
+**Purpose:** Stores external suppliers and other non-member payees or payers.
+
+**Fields:**
+- `id`
+- `district_id`
+- `name`
+- `counterparty_type`
+- `code`
+- `phone_number`
+- `email`
+- `is_active`
+- `metadata`
+- `created_at`
+- `updated_at`
+
+**Allowed `counterparty_type`:**
+- `SUPPLIER`
+- `OTHER`
+
+**Constraints:**
+- counterparty must belong to one district
+- unique `(district_id, counterparty_type, name)` is recommended
+
+---
+
+### 9.9 `transactions`
 
 **Purpose:** Stores receipt, payment, adjustment, and transfer effect rows.
 
@@ -510,13 +537,14 @@ Examples:
 - `reference_no`
 - `account_id`
 - `fund_id`, nullable for transfer effect rows if desired
-- `source_id`, nullable where allowed
+- `member_id`, nullable where allowed
+- `counterparty_id`, nullable where allowed
 - `amount`
 - `description`
 - `source_transaction_id`, nullable
 - `transfer_group_id`, nullable
-- `assembly_snapshot_id`, nullable
-- `region_snapshot_id`, nullable
+- `assembly_member_snapshot_id`, nullable
+- `region_member_snapshot_id`, nullable
 - `captured_by_user_id`
 - `posted_by_user_id`, nullable
 - `posted_at`, nullable
@@ -544,6 +572,7 @@ Examples:
 - `district_id` required
 - amount > 0
 - all referenced district-owned rows must belong to same district
+- at most one of `member_id` or `counterparty_id` may be set
 - posted transactions cannot be edited in balance-affecting ways
 - `client_generated_id` must be globally unique when present
 
@@ -553,7 +582,7 @@ Examples:
 
 ---
 
-### 9.9 `transfers`
+### 9.10 `transfers`
 
 **Purpose:** Represents a user-facing transfer object that generates two transaction effects on posting.
 
@@ -592,7 +621,7 @@ Examples:
 
 ---
 
-### 9.10 `budgets`
+### 9.11 `budgets`
 
 **Purpose:** Represents a budget period or budget container for a district.
 
@@ -622,9 +651,9 @@ Examples:
 
 ---
 
-### 9.11 `budget_lines`
+### 9.12 `budget_lines`
 
-**Purpose:** Represents a budget target for a specific fund and currency, optionally scoped to a source.
+**Purpose:** Represents a budget target for a specific fund and currency, optionally scoped to a member.
 
 **Fields:**
 - `id`
@@ -634,7 +663,7 @@ Examples:
 - `currency_id`
 - `budget_kind`
 - `amount`
-- `source_id`, nullable
+- `scope_member_id`, nullable
 - `notes`
 - `created_at`
 - `updated_at`
@@ -645,18 +674,18 @@ Examples:
 
 **Constraints:**
 - `district_id` required
-- budget, fund, and source must belong to same district where applicable
+- budget, fund, and scoped member must belong to same district where applicable
 - amount > 0
 - recommended uniqueness on:
   - `budget_id`
   - `fund_id`
   - `currency_id`
   - `budget_kind`
-  - `source_id`
+  - `scope_member_id`
 
 ---
 
-### 9.12 `attachments`
+### 9.13 `attachments`
 
 **Purpose:** Stores files associated with transactions or budgets.
 
@@ -676,7 +705,7 @@ Examples:
 
 ---
 
-## 10. Source Hierarchy and Reporting Snapshots
+## 10. Member Hierarchy and Reporting Snapshots
 
 ### 10.1 Why snapshots are needed
 
@@ -686,24 +715,24 @@ Individuals may move between assemblies or assemblies may change regions over ti
 
 When a transaction is posted:
 
-- if `source_id` is `INDIVIDUAL`:
+- if `member_id` is `INDIVIDUAL`:
   - derive assembly and region from hierarchy
-  - store `assembly_snapshot_id`
-  - store `region_snapshot_id`
+  - store `assembly_member_snapshot_id`
+  - store `region_member_snapshot_id`
 
-- if `source_id` is `ASSEMBLY`:
-  - set `assembly_snapshot_id = source_id`
+- if `member_id` is `ASSEMBLY`:
+  - set `assembly_member_snapshot_id = member_id`
   - derive and store region
 
-- if `source_id` is `REGION`:
-  - set `region_snapshot_id = source_id`
+- if `member_id` is `REGION`:
+  - set `region_member_snapshot_id = member_id`
 
-- if `source_id` is `SUPPLIER`, `OTHER`, or null:
-  - snapshots may remain null unless a future use case requires otherwise
+- if `counterparty_id` is present, or no member is selected:
+  - member hierarchy snapshots may remain null unless a future use case requires otherwise
 
 ### 10.3 Integrity rule
 
-Snapshot IDs must point to sources in the same district as the transaction.
+Snapshot IDs must point to members in the same district as the transaction.
 
 ---
 
@@ -718,7 +747,7 @@ Typical fields:
 - date
 - account
 - fund
-- source
+- member or counterparty
 - amount
 - reference
 - description
@@ -737,7 +766,7 @@ Typical fields:
 - date
 - account
 - fund
-- source used as payee/counterparty
+- member or counterparty used as payee
 - amount
 - reference
 - description
@@ -821,21 +850,21 @@ Sum all posted effective transaction effects for the account in that district.
 - draft transactions may be voided
 
 ### 13.2 Tithes rules
-- if fund = Tithes, `source_id` must be `INDIVIDUAL`
+- if fund = Tithes, `member_id` must be `INDIVIDUAL`
 - individual must belong to an assembly
 - assembly must belong to a region
 - snapshots must be populated on posting
 - tithe reports by region must aggregate from individual transactions via region snapshot
 
 ### 13.3 Payment rules
-- payments should normally have a payee/counterparty source
+- payments should normally have either a payee member or a registered counterparty
 - payment must belong to one fund
 - payment decreases one account only in this phase
 
 ### 13.4 Receipt rules
-- receipts should normally have a source
+- receipts should normally have a member
 - receipt must belong to one fund
-- miscellaneous or anonymous receipts may use a placeholder source if allowed by business process
+- miscellaneous or anonymous receipts may use a placeholder member or fallback counterparty name if allowed by business process
 
 ### 13.5 Transfer rules
 - source and destination accounts must differ
@@ -847,7 +876,7 @@ Sum all posted effective transaction effects for the account in that district.
 - every budget belongs to one district
 - budget lines target specific funds
 - budget lines are currency-specific
-- budget lines may optionally be scoped to a source
+- budget lines may optionally be scoped to a member
 - actuals must be computed only from transactions in same district and date range
 
 ---
@@ -935,7 +964,7 @@ When back online:
 Server remains source of truth.
 
 If sync fails because:
-- source is inactive
+- member is inactive
 - fund was removed
 - transaction already posted/reversed
 - hierarchy changed and rules no longer pass
@@ -1026,7 +1055,8 @@ Limited read-only access.
 - `district_users.manage`
 - `accounts.manage`
 - `funds.manage`
-- `sources.manage`
+- `members.manage`
+- `counterparties.manage`
 - `transactions.create`
 - `transactions.post`
 - `transactions.reverse`
@@ -1053,7 +1083,7 @@ A superuser may access all districts.
 Tenant isolation must not depend on frontend filtering. It must be enforced by backend policies and protected server-side logic.
 
 ### 17.4 Hierarchy rule
-Source hierarchy cannot cross district boundaries.
+Member hierarchy cannot cross district boundaries.
 
 ### 17.5 Export rule
 Exports must only include rows from the selected district.
@@ -1097,7 +1127,7 @@ Columns:
 - reference no
 - transaction type
 - description
-- source/payee
+- member / payee
 - fund
 - amount in
 - amount out
@@ -1106,13 +1136,13 @@ Columns:
 - posted at
 
 ### 19.2 Tithes by individual
-Group tithe receipts by individual source.
+Group tithe receipts by individual member.
 
 ### 19.3 Tithes by assembly
-Group tithe receipts by `assembly_snapshot_id`.
+Group tithe receipts by `assembly_member_snapshot_id`.
 
 ### 19.4 Tithes by region
-Group tithe receipts by `region_snapshot_id`.
+Group tithe receipts by `region_member_snapshot_id`.
 
 ### 19.5 Fund summary
 Show receipt and payment totals by fund, excluding transfers.
@@ -1151,7 +1181,7 @@ The system must export a monthly cashbook spreadsheet for a selected district ac
 - Reference No
 - Transaction Type
 - Description
-- Source / Payee
+- Member / Payee
 - Fund
 - Amount In
 - Amount Out
@@ -1200,13 +1230,16 @@ Logical operations should be district-scoped.
 - update fund
 - deactivate fund
 
-### 21.5 Sources
-- list district sources
-- create source
-- update source
-- reparent source
-- list children
-- view hierarchy
+### 21.5 Members and counterparties
+- list district members
+- create member
+- update member
+- reparent member
+- list member hierarchy
+- list district counterparties
+- create counterparty
+- update counterparty
+- deactivate counterparty
 
 ### 21.6 Transactions
 - create draft transaction
@@ -1249,7 +1282,7 @@ For every district-scoped write:
 - user must belong to district or be superuser
 - all referenced district-owned rows must belong to that district
 
-### 22.2 Source validation
+### 22.2 Member validation
 - valid parent-child type pairing
 - no cyclic hierarchy
 - parent must belong to same district
@@ -1257,10 +1290,11 @@ For every district-scoped write:
 ### 22.3 Transaction validation
 - account active and same district
 - fund active and same district
-- source same district where supplied
+- member same district where supplied
+- counterparty same district where supplied
 - amount > 0
 - valid transaction type
-- if fund requires individual source, source must be `INDIVIDUAL`
+- if fund requires individual member, member must be `INDIVIDUAL`
 - snapshots derivable where required
 
 ### 22.4 Transfer validation
@@ -1273,7 +1307,7 @@ For every district-scoped write:
 ### 22.5 Budget validation
 - start date <= end date
 - fund active and same district
-- source same district where supplied
+- scoped member same district where supplied
 - amount > 0
 
 ---
@@ -1339,17 +1373,21 @@ Recommended indexes on:
 ### `transactions`
 - `(district_id, account_id, transaction_date, id)`
 - `(district_id, fund_id, transaction_date)`
-- `(district_id, source_id, transaction_date)`
-- `(district_id, region_snapshot_id, transaction_date)`
-- `(district_id, assembly_snapshot_id, transaction_date)`
+- `(district_id, member_id, transaction_date)`
+- `(district_id, counterparty_id, transaction_date)`
+- `(district_id, region_member_snapshot_id, transaction_date)`
+- `(district_id, assembly_member_snapshot_id, transaction_date)`
 - `(district_id, status, transaction_type, transaction_date)`
 - `(transfer_group_id)`
 - `(source_transaction_id)`
 - `(client_generated_id)` unique where not null
 
-### `sources`
-- `(district_id, parent_source_id)`
-- `(district_id, source_type, is_active)`
+### `members`
+- `(district_id, parent_member_id)`
+- `(district_id, member_type, is_active)`
+
+### `counterparties`
+- `(district_id, counterparty_type, is_active)`
 
 ### `accounts`
 - `(district_id, currency_id, is_active)`
@@ -1368,9 +1406,9 @@ Common errors include:
 
 - invalid district access
 - cross-district reference attempt
-- invalid source hierarchy
-- tithe without individual source
-- inactive fund/account/source
+- invalid member hierarchy
+- tithe without individual member
+- inactive fund/account/member/counterparty
 - duplicate post/reversal attempt
 - sync conflict due to stale offline data
 
@@ -1383,8 +1421,8 @@ Suggested response codes:
 
 Example domain errors:
 - `CROSS_DISTRICT_REFERENCE`
-- `INVALID_TITHE_SOURCE`
-- `SOURCE_HIERARCHY_INVALID`
+- `INVALID_TITHE_MEMBER`
+- `MEMBER_HIERARCHY_INVALID`
 - `TRANSFER_CURRENCY_MISMATCH`
 - `DISTRICT_ACCESS_DENIED`
 - `SYNC_CONFLICT`
@@ -1398,10 +1436,10 @@ If importing from manual books or spreadsheets:
 1. create district
 2. create accounts
 3. create funds
-4. create sources hierarchy
+4. create member hierarchy and counterparties
 5. import opening balances
 6. import historical transactions where possible
-7. map unknown historical contributors to placeholder sources if needed
+7. map unknown historical contributors to placeholder members or fallback names if needed
 
 All imported records must be attached to the correct district.
 
@@ -1412,7 +1450,7 @@ All imported records must be attached to the correct district.
 ### 28.1 Unit tests
 Cover:
 - tenant scoping rules
-- source hierarchy validation
+- member hierarchy validation
 - transaction validation
 - transfer posting
 - reversal logic
@@ -1431,7 +1469,7 @@ Cover:
 - offline posting attempt is rejected while offline or deferred until online
 
 ### 28.3 Critical test cases
-- create district -> create account/fund/source -> create tithe -> report by region
+- create district -> create account/fund/member -> create tithe -> report by region
 - attempt cross-district transaction reference -> reject
 - switch district with pending offline queue -> queued items still sync to original district
 - generate export for District A -> no District B rows present
@@ -1469,7 +1507,7 @@ Show:
 ### 30.4 Forms
 Transaction forms should:
 - auto-filter records to current district
-- show source hierarchy preview where relevant
+- show member hierarchy preview where relevant
 - show derived assembly/region before posting for tithe entries
 - clearly distinguish `Save Draft` from `Post`
 
@@ -1494,9 +1532,9 @@ These still need explicit decision:
 
 1. Can one user belong to multiple districts from day one, or only later?
 2. Should district creation auto-seed default funds?
-3. Should every district automatically get a DISTRICT source record in its source tree?
+3. Should every district automatically get a DISTRICT member record in its hierarchy?
 4. Are anonymous receipts allowed?
-5. Should budgets support region- or assembly-specific source scoping from first release?
+5. Should budgets support region- or assembly-specific member scoping from first release?
 6. Should superuser be able to impersonate district context for support?
 
 **Resolved in this version:**
@@ -1514,7 +1552,8 @@ These still need explicit decision:
 - district context selection
 - accounts
 - funds
-- sources
+- members
+- counterparties
 
 ### Phase 1B
 - transactions
@@ -1545,7 +1584,7 @@ The key engineering decisions are:
 
 - district is the tenant
 - all district-owned tables carry `district_id`
-- source hierarchy is district-scoped
+- member hierarchy is district-scoped
 - transactions, transfers, budgets, and exports are district-scoped
 - users only access districts they belong to unless they are superusers
 - tithes are captured by individual and reported upward through snapshots

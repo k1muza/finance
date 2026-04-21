@@ -46,7 +46,9 @@ export function useCashbook(filter: CashbookFilter = {}) {
 
     let query = supabase
       .from('cashbook_transactions')
-      .select('*, account:accounts(id,name,type,currency,status), fund:funds(id,name)')
+      .select(
+        '*, account:accounts(id,name,type,currency,status), fund:funds(id,name), member:members!cashbook_transactions_member_id_fkey(id,name,type,title,parent_id), counterparty_record:counterparties(id,name,type)',
+      )
       .order('transaction_date', { ascending: false })
       .order('created_at', { ascending: false })
 
@@ -134,7 +136,8 @@ export function useCashbook(filter: CashbookFilter = {}) {
   const updateDraft = async (id: string, payload: Partial<{
     account_id: string
     fund_id: string | null
-    source_id: string | null
+    member_id: string | null
+    counterparty_id: string | null
     kind: TransactionKind
     effect_direction: 'in' | 'out'
     transaction_date: string
@@ -165,7 +168,8 @@ export function useCashbook(filter: CashbookFilter = {}) {
     district_id: string
     account_id: string
     fund_id?: string | null
-    source_id?: string | null
+    member_id?: string | null
+    counterparty_id?: string | null
     kind: TransactionKind
     effect_direction?: 'in' | 'out'
     transaction_date: string

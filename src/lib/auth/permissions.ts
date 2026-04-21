@@ -38,7 +38,8 @@ export type DistrictAction =
   // Master data
   | 'accounts.manage'   // create, update, deactivate
   | 'funds.manage'      // create, update, deactivate
-  | 'sources.manage'    // create, update, reparent, deactivate
+  | 'members.manage'        // create, update, reparent, deactivate
+  | 'counterparties.manage' // create, update, deactivate
   // Transactions
   | 'transactions.view'
   | 'transactions.draft'    // create / edit own drafts
@@ -75,7 +76,8 @@ const MATRIX: Record<DistrictRole, ReadonlyArray<DistrictAction>> = {
     'district.users.manage',
     'accounts.manage',
     'funds.manage',
-    'sources.manage',
+    'members.manage',
+    'counterparties.manage',
     'transactions.view',
     'transactions.draft',
     'transactions.approve',
@@ -96,7 +98,8 @@ const MATRIX: Record<DistrictRole, ReadonlyArray<DistrictAction>> = {
 
   secretary: [
     'district.settings.view',
-    'sources.manage',
+    'members.manage',
+    'counterparties.manage',
     'transactions.view',
     'transactions.draft',
     'transactions.approve',
@@ -205,7 +208,7 @@ export const ROLE_LABELS: Record<DistrictRole, string> = {
 
 export const ROLE_DESCRIPTIONS: Record<DistrictRole, string> = {
   admin:     'Full operational ownership of the district — settings, users, all finance actions.',
-  secretary: 'Coordination and finance operations — drafting, posting, sources, budgets, exports.',
+  secretary: 'Coordination and finance operations — drafting, posting, members, counterparties, budgets, exports.',
   treasurer: 'Financial control — posting, reversals, transfer reversals, budget activation/closure.',
   clerk:     'Safe data-entry — drafts only. Cannot post, reverse, or activate.',
   auditor:   'Read-only oversight — reports and exports, no mutations.',

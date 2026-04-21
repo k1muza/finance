@@ -52,12 +52,12 @@ Expected result:
 - In `/dashboard/settings`, create at least two funds.
 - Example:
   - `General Fund`, nature `mixed`
-  - `Tithes`, nature `income_only`, `requires_individual_source = true`
+  - `Tithes`, nature `income_only`, `requires_individual_member = true`
 - Edit one fund after saving it.
 
 Expected result:
 - Funds save and remain visible after refresh.
-- Fund nature and individual-source requirement persist.
+- Fund nature and individual-member requirement persist.
 
 ## 5. Members
 
@@ -80,12 +80,12 @@ Expected result:
 - Open `/dashboard/finance/cashbook`.
 - Create a draft `receipt` into one account using:
   - fund `Tithes`
-  - source `John Example`
+  - member `John Example`
   - amount `100`
 - Create a draft `payment` from the same account using:
   - fund `General Fund`
   - amount `25`
-  - either a source/payee or fallback counterparty
+  - either a member/payee or fallback counterparty
 - Create a draft `adjustment` and test one direction.
 - If your role allows it, move one draft through:
   - `Submit`
@@ -95,7 +95,7 @@ Expected result:
 
 Expected result:
 - Drafts save successfully.
-- Tithe-style receipts accept the individual source.
+- Tithe-style receipts accept the individual member.
 - Workflow actions appear only when your role permits them.
 - A posted transaction receives a reference number.
 

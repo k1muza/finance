@@ -11,9 +11,9 @@ This backlog translates the v2.3 engineering spec into implementation work for t
 These assumptions unblock backlog sequencing. If any of them change, the affected items should be re-scoped before implementation starts.
 
 1. A user can belong to multiple districts from the first release of the new model.
-2. District creation should auto-seed one default fund and one root `DISTRICT` source.
-3. Anonymous receipts are allowed, but only through an explicit placeholder source or flagged workflow.
-4. Budget source-scoping is deferred for the first release; fund and currency scoping come first.
+2. District creation should auto-seed one default fund and one root `DISTRICT` member.
+3. Anonymous receipts are allowed, but only through an explicit placeholder member or flagged workflow.
+4. Budget member-scoping is deferred for the first release; fund and currency scoping come first.
 5. Superuser district-context switching is allowed, but it must be clearly indicated in UI and logged server-side.
 
 ## Current baseline
@@ -31,7 +31,7 @@ Main gaps or mismatches against the v2.3 spec:
 
 - Access control still uses `profiles` with `admin` or `district`; the spec requires `user_profiles` plus `district_users`
 - The create transaction API currently auto-posts new transactions instead of preserving a safe draft-first workflow
-- `sources`, `transfers`, `budget_lines`, `attachments`, and district membership management are missing
+- `members`, `counterparties`, `transfers`, `budget_lines`, `attachments`, and district membership management are missing
 - Budgets are still modeled as flat category rows, not budget headers with lifecycle and lines
 - Reports and exports are still centered on legacy `income` and `expenses` rather than posted cashbook transactions
 - Offline support is cache-oriented today; there is no durable draft queue, sync engine, or conflict handling
@@ -119,7 +119,7 @@ Create a safe self-service flow that creates the district, seeds defaults, creat
 Done when:
 - district creation creates the district and the first `district_users` record
 - the creator receives the intended district role
-- default fund and root district source are seeded automatically
+- default fund and root district member are seeded automatically
 
 ### B1.4 `P1` ✅ Replace current role checks in RLS helpers
 
@@ -149,7 +149,7 @@ Done when:
 - sync banner and connectivity state are exposed through the same client store
 - backend-backed records remain outside Zustand and keep their own data ownership paths
 
-## Phase 1B: Master data and source hierarchy
+## Phase 1B: Master data and member hierarchy
 
 ### B2.1 `P1` ✅ Expand district metadata
 
@@ -180,40 +180,49 @@ Done when:
 
 ### B2.4 `P1` ✅ Align funds to the new model
 
-Add fund code, nature, active status, and `requires_individual_source`.
+Add fund code, nature, active status, and `requires_individual_member`.
 
 Done when:
 - funds can distinguish income-only, expense-only, and mixed use
-- tithe-like funds can enforce individual source requirements
+- tithe-like funds can enforce individual member requirements
 - inactive funds cannot be used in new drafts or posting
 
-### B2.5 `P1` ✅ Build the `sources` hierarchy
+### B2.5 `P1` ✅ Build the `members` hierarchy
 
-Implement the unified source tree for district, region, assembly, individual, supplier, department, and other counterparties.
+Implement the internal member tree for district, region, assembly, individual, and department records.
 
 Done when:
-- a district can create and browse a source tree
+- a district can create and browse a member tree
 - parent-child type rules are enforced
 - cycles and cross-district parent links are rejected
 
-### B2.6 `P1` ✅ Add source reparenting and hierarchy views
+### B2.6 `P1` ✅ Add member reparenting and hierarchy views
 
-Support practical maintenance of the source tree after initial setup.
+Support practical maintenance of the member tree after initial setup.
 
 Done when:
-- users can move sources within valid hierarchy rules
+- users can move members within valid hierarchy rules
 - hierarchy views show children and breadcrumbs clearly
 - reparenting preserves district isolation
+
+### B2.7 `P1` ✅ Add district counterparties
+
+Introduce a dedicated registry for suppliers and other non-member payees or payers.
+
+Done when:
+- a district can create and browse counterparties separately from members
+- counterparties remain district-scoped and active/inactive aware
+- payment flows can use counterparties without overloading the member hierarchy
 
 ## Phase 2: Transaction engine completion
 
 ### B3.1 `P0` ✅ Align transaction schema to spec fields
 
-Add missing fields such as `client_generated_id`, `device_id`, `source_id`, and reporting snapshots where required.
+Add missing fields such as `client_generated_id`, `device_id`, `member_id`, `counterparty_id`, and reporting snapshots where required.
 
 Done when:
 - transaction rows can support offline idempotency
-- transaction rows can reference sources
+- transaction rows can reference members or counterparties
 - reporting snapshots can be populated on posting
 
 ### B3.2 `P1` ✅ Clarify and simplify the transaction lifecycle
@@ -234,16 +243,17 @@ Done when:
 - draft-only delete or void behavior is supported
 - posted records remain immutable except by reversal
 
-### B3.4 `P1` ✅ Add source-aware receipt and payment forms
+### B3.4 `P1` ✅ Add member- and counterparty-aware receipt and payment forms
 
-Capture the correct source or payee, fund, and district-scoped master data at entry time.
+Capture the correct member or payee, fund, and district-scoped master data at entry time.
 
 Done when:
-- receipt and payment forms can select valid sources
-- tithe flows can require `INDIVIDUAL` sources
-- invalid source-district or source-type combinations are blocked
+- receipt and payment forms can select valid members
+- payment flows can select registered counterparties
+- tithe flows can require `INDIVIDUAL` members
+- invalid district or party-type combinations are blocked
 
-### B3.5 `P1` ✅ Populate source snapshots on posting
+### B3.5 `P1` ✅ Populate member snapshots on posting
 
 Store region and assembly snapshots for hierarchy-based reporting at the moment of posting.
 
@@ -263,7 +273,7 @@ Done when:
 
 ### B3.7 `P1` ✅ Enforce transaction validation server-side
 
-Consolidate validation for active account, active fund, district ownership, amount, source rules, and posting constraints.
+Consolidate validation for active account, active fund, district ownership, amount, member/counterparty rules, and posting constraints.
 
 Done when:
 - protected routes reject invalid or stale data consistently
@@ -325,7 +335,7 @@ Move from the current flat budget table to `budgets` plus `budget_lines`.
 
 Done when:
 - budget headers hold district, period, and lifecycle state
-- budget lines hold fund, currency, optional source scope, and amount
+- budget lines hold fund, currency, optional member scope, and amount
 - the old budget UI is migrated or retired cleanly
 
 ### B5.2 `P1` Add budget lifecycle states
@@ -346,13 +356,13 @@ Done when:
 - variance is computed consistently
 - report results can be viewed per budget and line
 
-### B5.4 `P2` Add budget source scoping if still needed
+### B5.4 `P2` Add budget member scoping if still needed
 
-Support optional source-level budgeting after the basic model is stable.
+Support optional member-level budgeting after the basic model is stable.
 
 Done when:
-- source-scoped budget lines remain district-safe
-- actual aggregation respects the source scope
+- member-scoped budget lines remain district-safe
+- actual aggregation respects the member scope
 - UI keeps the optionality understandable
 
 ## Phase 5: Reporting and exports
@@ -368,7 +378,7 @@ Done when:
 
 ### B6.2 `P1` Build tithe reports by individual, assembly, and region
 
-Use source snapshots captured on posting for historical consistency.
+Use member snapshots captured on posting for historical consistency.
 
 Done when:
 - individual tithe totals can be listed
@@ -465,8 +475,8 @@ Done when:
 Prepare real district data without compromising integrity.
 
 Done when:
-- opening balances, funds, sources, and historical transactions follow the selected migration strategy
-- placeholder sources are used deliberately for unknown contributors
+- opening balances, funds, members, counterparties, and historical transactions follow the selected migration strategy
+- placeholder members are used deliberately for unknown contributors
 - imported data is attached to the correct district
 
 ### B8.3 `P1` Add automated tests for core accounting invariants
@@ -506,8 +516,8 @@ If the goal is to create momentum quickly without rework, start here:
 4. B0.4 Lock the role and permission matrix.
 5. B1.1 Introduce `user_profiles` and `district_users`.
 6. B1.2 Refactor auth context to membership-based district access.
-7. B2.5 Build the root `sources` model and seeding rules.
-8. B3.1 Align transaction schema to include source and offline-id fields.
+7. B2.5 Build the root `members` model and seeding rules.
+8. B3.1 Align transaction schema to include member/counterparty and offline-id fields.
 
 ## Deferred or out of scope for this backlog
 

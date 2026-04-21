@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest'
 import type { TransactionStatus, TransactionKind } from '@/types'
 import {
   canTransitionTransaction,
-  deriveSourceSnapshotsFromChain,
+  deriveMemberSnapshotsFromChain,
   isIncomingTransactionEffect,
   isOutgoingTransactionEffect,
   reverseEffectDirection,
@@ -146,31 +146,31 @@ describe('signed effect helpers', () => {
   })
 })
 
-describe('source snapshot derivation', () => {
-  it('derives assembly and region snapshots for individual sources', () => {
-    const result = deriveSourceSnapshotsFromChain({
-      source: { id: 'individual-1', name: 'Member A', type: 'individual' },
+describe('member snapshot derivation', () => {
+  it('derives assembly and region snapshots for individual members', () => {
+    const result = deriveMemberSnapshotsFromChain({
+      member: { id: 'individual-1', name: 'Member A', type: 'individual' },
       parent: { id: 'assembly-1', name: 'Assembly A', type: 'assembly' },
       grandparent: { id: 'region-1', name: 'Region A', type: 'region' },
     })
 
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.snapshots.assemblySnapshotId).toBe('assembly-1')
-      expect(result.snapshots.regionSnapshotId).toBe('region-1')
+      expect(result.snapshots.assemblyMemberSnapshotId).toBe('assembly-1')
+      expect(result.snapshots.regionMemberSnapshotId).toBe('region-1')
     }
   })
 
   it('rejects incomplete individual hierarchy chains', () => {
-    const result = deriveSourceSnapshotsFromChain({
-      source: { id: 'individual-1', name: 'Member A', type: 'individual' },
+    const result = deriveMemberSnapshotsFromChain({
+      member: { id: 'individual-1', name: 'Member A', type: 'individual' },
       parent: null,
       grandparent: null,
     })
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.code).toBe('SOURCE_HIERARCHY_INVALID')
+      expect(result.code).toBe('MEMBER_HIERARCHY_INVALID')
     }
   })
 })

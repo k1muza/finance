@@ -3,16 +3,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { Fund, FundNature } from '@/types'
+import { Counterparty, CounterpartyType } from '@/types'
 
-interface FundFilter {
+interface CounterpartyFilter {
   district_id?: string | null
 }
 
-export function useFunds(filter: FundFilter = {}) {
+export function useCounterparties(filter: CounterpartyFilter = {}) {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
-  const [data, setData] = useState<Fund[]>([])
+  const [data, setData] = useState<Counterparty[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
@@ -20,14 +20,7 @@ export function useFunds(filter: FundFilter = {}) {
   const fetch = useCallback(async () => {
     if (authLoading) return
 
-    if (!userId) {
-      setData([])
-      setError(null)
-      setLoading(false)
-      return
-    }
-
-    if (filter.district_id === null) {
+    if (!userId || filter.district_id === null) {
       setData([])
       setError(null)
       setLoading(false)
@@ -38,8 +31,8 @@ export function useFunds(filter: FundFilter = {}) {
     setError(null)
 
     let query = supabase
-      .from('funds')
-      .select('*, district:districts(id,name)')
+      .from('counterparties')
+      .select('*')
       .order('name')
 
     if (filter.district_id) query = query.eq('district_id', filter.district_id)
@@ -49,7 +42,7 @@ export function useFunds(filter: FundFilter = {}) {
       setError(err.message)
       setData([])
     } else {
-      setData((rows ?? []) as Fund[])
+      setData((rows ?? []) as Counterparty[])
     }
     setLoading(false)
   }, [authLoading, filter.district_id, userId]) // eslint-disable-line
@@ -66,23 +59,25 @@ export function useFunds(filter: FundFilter = {}) {
 
   const add = async (values: {
     district_id: string
+    type: CounterpartyType
     name: string
     code?: string | null
-    description?: string | null
-    is_restricted?: boolean
-    nature?: FundNature
+    phone?: string | null
+    email?: string | null
+    address?: string | null
+    notes?: string | null
     is_active?: boolean
-    requires_individual_member?: boolean
   }) => {
-    const { error: err } = await supabase.from('funds').insert({
+    const { error: err } = await supabase.from('counterparties').insert({
       district_id: values.district_id,
+      type: values.type,
       name: values.name.trim(),
       code: values.code?.trim() || null,
-      description: values.description?.trim() || null,
-      is_restricted: values.is_restricted ?? false,
-      nature: values.nature ?? 'mixed',
+      phone: values.phone?.trim() || null,
+      email: values.email?.trim() || null,
+      address: values.address?.trim() || null,
+      notes: values.notes?.trim() || null,
       is_active: values.is_active ?? true,
-      requires_individual_member: values.requires_individual_member ?? false,
     })
     if (err) throw new Error(err.message)
     await fetch()
@@ -91,31 +86,33 @@ export function useFunds(filter: FundFilter = {}) {
   const update = async (
     id: string,
     values: Partial<{
+      type: CounterpartyType
       name: string
       code: string | null
-      description: string | null
-      is_restricted: boolean
-      nature: FundNature
+      phone: string | null
+      email: string | null
+      address: string | null
+      notes: string | null
       is_active: boolean
-      requires_individual_member: boolean
-    }>
+    }>,
   ) => {
     const payload: Record<string, unknown> = {}
+    if (values.type !== undefined) payload.type = values.type
     if (values.name !== undefined) payload.name = values.name.trim()
     if (values.code !== undefined) payload.code = values.code?.trim() || null
-    if (values.description !== undefined) payload.description = values.description?.trim() || null
-    if (values.is_restricted !== undefined) payload.is_restricted = values.is_restricted
-    if (values.nature !== undefined) payload.nature = values.nature
+    if (values.phone !== undefined) payload.phone = values.phone?.trim() || null
+    if (values.email !== undefined) payload.email = values.email?.trim() || null
+    if (values.address !== undefined) payload.address = values.address?.trim() || null
+    if (values.notes !== undefined) payload.notes = values.notes?.trim() || null
     if (values.is_active !== undefined) payload.is_active = values.is_active
-    if (values.requires_individual_member !== undefined) payload.requires_individual_member = values.requires_individual_member
 
-    const { error: err } = await supabase.from('funds').update(payload).eq('id', id)
+    const { error: err } = await supabase.from('counterparties').update(payload).eq('id', id)
     if (err) throw new Error(err.message)
     await fetch()
   }
 
   const remove = async (id: string) => {
-    const { error: err } = await supabase.from('funds').delete().eq('id', id)
+    const { error: err } = await supabase.from('counterparties').delete().eq('id', id)
     if (err) throw new Error(err.message)
     await fetch()
   }

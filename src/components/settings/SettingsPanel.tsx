@@ -50,7 +50,7 @@ interface FundFormState {
   is_restricted: boolean
   nature: FundNature
   is_active: boolean
-  requires_individual_source: boolean
+  requires_individual_member: boolean
 }
 
 interface AccountFormState {
@@ -72,7 +72,7 @@ const emptyFundForm: FundFormState = {
   is_restricted: false,
   nature: 'mixed',
   is_active: true,
-  requires_individual_source: false,
+  requires_individual_member: false,
 }
 
 const emptyAccountForm: AccountFormState = {
@@ -774,7 +774,7 @@ export function FundsSection({ districtId }: { districtId: string }) {
         is_restricted: newFund.is_restricted,
         nature: newFund.nature,
         is_active: newFund.is_active,
-        requires_individual_source: newFund.requires_individual_source,
+        requires_individual_member: newFund.requires_individual_member,
       })
       setNewFund(emptyFundForm)
       setAdding(false)
@@ -795,7 +795,7 @@ export function FundsSection({ districtId }: { districtId: string }) {
       is_restricted: fund.is_restricted,
       nature: fund.nature ?? 'mixed',
       is_active: fund.is_active ?? true,
-      requires_individual_source: fund.requires_individual_source ?? false,
+      requires_individual_member: fund.requires_individual_member ?? false,
     })
   }
 
@@ -814,7 +814,7 @@ export function FundsSection({ districtId }: { districtId: string }) {
         is_restricted: draftFund.is_restricted,
         nature: draftFund.nature,
         is_active: draftFund.is_active,
-        requires_individual_source: draftFund.requires_individual_source,
+        requires_individual_member: draftFund.requires_individual_member,
       })
       setEditingId(null)
       toast.success('Fund updated')
@@ -900,11 +900,11 @@ export function FundsSection({ districtId }: { districtId: string }) {
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={newFund.requires_individual_source}
-                    onChange={(e) => setNewFund((current) => ({ ...current, requires_individual_source: e.target.checked }))}
+                    checked={newFund.requires_individual_member}
+                    onChange={(e) => setNewFund((current) => ({ ...current, requires_individual_member: e.target.checked }))}
                     className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
                   />
-                  <span className="text-sm text-slate-200">Requires individual source</span>
+                  <span className="text-sm text-slate-200">Requires individual member</span>
                 </label>
               </div>
             </div>
@@ -996,11 +996,11 @@ export function FundsSection({ districtId }: { districtId: string }) {
                             <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={draftFund.requires_individual_source}
-                                onChange={(e) => setDraftFund((current) => ({ ...current, requires_individual_source: e.target.checked }))}
+                                checked={draftFund.requires_individual_member}
+                                onChange={(e) => setDraftFund((current) => ({ ...current, requires_individual_member: e.target.checked }))}
                                 className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
                               />
-                              Indiv. source required
+                              Indiv. member required
                             </label>
                           </div>
                         ) : (

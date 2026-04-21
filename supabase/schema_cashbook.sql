@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS public.cashbook_transactions (
   district_id            UUID NOT NULL REFERENCES public.districts(id) ON DELETE RESTRICT,
   account_id             UUID NOT NULL REFERENCES public.accounts(id) ON DELETE RESTRICT,
   fund_id                UUID REFERENCES public.funds(id) ON DELETE SET NULL,
+  member_id              UUID REFERENCES public.members(id) ON DELETE SET NULL,
+  counterparty_id        UUID REFERENCES public.counterparties(id) ON DELETE SET NULL,
   kind                   public.transaction_kind NOT NULL,
   status                 public.transaction_status NOT NULL DEFAULT 'draft',
   transaction_date       DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -62,6 +64,11 @@ CREATE TABLE IF NOT EXISTS public.cashbook_transactions (
   currency               public.currency_code NOT NULL,
   total_amount           NUMERIC(12, 2) NOT NULL CHECK (total_amount > 0),
   source_transaction_id  UUID REFERENCES public.cashbook_transactions(id) ON DELETE RESTRICT,
+  assembly_member_snapshot_id UUID REFERENCES public.members(id) ON DELETE RESTRICT,
+  region_member_snapshot_id   UUID REFERENCES public.members(id) ON DELETE RESTRICT,
+  member_name_snapshot        TEXT,
+  member_type_snapshot        TEXT,
+  member_parent_name_snapshot TEXT,
   created_by             UUID NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   submitted_by           UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   approved_by            UUID REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -72,7 +79,8 @@ CREATE TABLE IF NOT EXISTS public.cashbook_transactions (
   posted_at              TIMESTAMPTZ,
   reversed_at            TIMESTAMPTZ,
   created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (member_id IS NULL OR counterparty_id IS NULL)
 );
 
 CREATE INDEX IF NOT EXISTS idx_cashbook_txn_district         ON public.cashbook_transactions(district_id);
@@ -81,6 +89,12 @@ CREATE INDEX IF NOT EXISTS idx_cashbook_txn_district_status  ON public.cashbook_
 CREATE INDEX IF NOT EXISTS idx_cashbook_txn_district_date    ON public.cashbook_transactions(district_id, transaction_date DESC);
 CREATE INDEX IF NOT EXISTS idx_cashbook_txn_account_status   ON public.cashbook_transactions(account_id, status);
 CREATE INDEX IF NOT EXISTS idx_cashbook_txn_source           ON public.cashbook_transactions(source_transaction_id) WHERE source_transaction_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_cashbook_txn_member_id        ON public.cashbook_transactions(member_id) WHERE member_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_cashbook_txn_counterparty_id  ON public.cashbook_transactions(counterparty_id) WHERE counterparty_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_cashbook_txn_district_member  ON public.cashbook_transactions(district_id, member_id) WHERE member_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_cashbook_txn_district_counterparty ON public.cashbook_transactions(district_id, counterparty_id) WHERE counterparty_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_cashbook_txn_district_assembly_member_snapshot ON public.cashbook_transactions(district_id, assembly_member_snapshot_id) WHERE assembly_member_snapshot_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_cashbook_txn_district_region_member_snapshot   ON public.cashbook_transactions(district_id, region_member_snapshot_id) WHERE region_member_snapshot_id IS NOT NULL;
 
 DROP TRIGGER IF EXISTS trg_cashbook_txn_updated_at ON public.cashbook_transactions;
 CREATE TRIGGER trg_cashbook_txn_updated_at

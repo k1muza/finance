@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, type ElementType } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useFunds } from '@/hooks/useFunds'
-import { useSources } from '@/hooks/useSources'
+import { useMembers } from '@/hooks/useMembers'
+import { useCounterparties } from '@/hooks/useCounterparties'
 import { useCashbook } from '@/hooks/useCashbook'
 import { useOpeningBalances } from '@/hooks/useOpeningBalances'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -53,10 +54,11 @@ import {
   CashbookTransaction,
   CashbookAuditLog,
   CashbookTransactionLine,
+  Counterparty,
   Currency,
   Fund,
-  Source,
-  SOURCE_TYPE_LABELS,
+  Member,
+  MEMBER_TYPE_LABELS,
   TransactionKind,
   TRANSACTION_KIND_LABELS,
   TRANSACTION_STATUS_LABELS,
@@ -85,22 +87,22 @@ const STATUS_BADGE_VARIANT: Record<string, 'default' | 'green' | 'yellow' | 'tea
   voided: 'red',
 }
 
-function sourceLabel(s: Source) {
-  const prefix = s.type === 'individual' && s.title !== 'saint'
-    ? `${INDIVIDUAL_TITLE_LABELS[s.title]} `
+function memberLabel(member: Member) {
+  const prefix = member.type === 'individual' && member.title !== 'saint'
+    ? `${INDIVIDUAL_TITLE_LABELS[member.title]} `
     : ''
-  return `${prefix}${s.name} (${SOURCE_TYPE_LABELS[s.type]})`
+  return `${prefix}${member.name} (${MEMBER_TYPE_LABELS[member.type]})`
 }
 
-function buildSourceSnapshotPreview(sources: Source[], sourceId: string) {
-  if (!sourceId) return null
+function buildMemberSnapshotPreview(members: Member[], memberId: string) {
+  if (!memberId) return null
 
-  const byId = new Map(sources.map((source) => [source.id, source]))
-  const source = byId.get(sourceId)
-  if (!source) return null
+  const byId = new Map(members.map((member) => [member.id, member]))
+  const member = byId.get(memberId)
+  if (!member) return null
 
-  if (source.type === 'individual') {
-    const assembly = source.parent_id ? byId.get(source.parent_id) : null
+  if (member.type === 'individual') {
+    const assembly = member.parent_id ? byId.get(member.parent_id) : null
     const region = assembly?.parent_id ? byId.get(assembly.parent_id) : null
 
     if (assembly?.type === 'assembly' && region?.type === 'region') {
@@ -112,30 +114,30 @@ function buildSourceSnapshotPreview(sources: Source[], sourceId: string) {
 
     return {
       tone: 'warning' as const,
-      message: 'This individual is missing an assembly/region hierarchy. Posting will fail until the source tree is fixed.',
+      message: 'This individual is missing an assembly/region hierarchy. Posting will fail until the member tree is fixed.',
     }
   }
 
-  if (source.type === 'assembly') {
-    const region = source.parent_id ? byId.get(source.parent_id) : null
+  if (member.type === 'assembly') {
+    const region = member.parent_id ? byId.get(member.parent_id) : null
 
     if (region?.type === 'region') {
       return {
         tone: 'info' as const,
-        message: `Posting snapshot: ${source.name} / ${region.name}`,
+        message: `Posting snapshot: ${member.name} / ${region.name}`,
       }
     }
 
     return {
       tone: 'warning' as const,
-      message: 'This assembly is missing its region parent. Posting will fail until the source tree is fixed.',
+      message: 'This assembly is missing its region parent. Posting will fail until the member tree is fixed.',
     }
   }
 
-  if (source.type === 'region') {
+  if (member.type === 'region') {
     return {
       tone: 'info' as const,
-      message: `Posting snapshot: ${source.name}`,
+      message: `Posting snapshot: ${member.name}`,
     }
   }
 
@@ -147,14 +149,24 @@ function buildSourceSnapshotPreview(sources: Source[], sourceId: string) {
 interface NewTransactionFormProps {
   accounts: Account[]
   funds: Fund[]
-  sources: Source[]
+  members: Member[]
+  counterparties: Counterparty[]
   districtId: string
   defaultAccountId: string
   onSaved: () => void
   onClose: () => void
 }
 
-function NewTransactionForm({ accounts, funds, sources, districtId, defaultAccountId, onSaved, onClose }: NewTransactionFormProps) {
+function NewTransactionForm({
+  accounts,
+  funds,
+  members,
+  counterparties,
+  districtId,
+  defaultAccountId,
+  onSaved,
+  onClose,
+}: NewTransactionFormProps) {
   const toast = useToast()
   const supabase = createClient()
 
@@ -163,7 +175,8 @@ function NewTransactionForm({ accounts, funds, sources, districtId, defaultAccou
     kind: 'receipt' as TransactionKind,
     effect_direction: 'in' as CashbookEffectDirection,
     transaction_date: toIsoDate(new Date()),
-    source_id: '',
+    member_id: '',
+    counterparty_id: '',
     counterparty: '',
     narration: '',
     fund_id: '',
@@ -174,9 +187,8 @@ function NewTransactionForm({ accounts, funds, sources, districtId, defaultAccou
 
   const selectedAccount = accounts.find((a) => a.id === form.account_id)
   const selectedFund = funds.find((fund) => fund.id === form.fund_id) ?? null
-  const selectedSource = sources.find((source) => source.id === form.source_id) ?? null
-  const sourcePreview = buildSourceSnapshotPreview(sources, form.source_id)
-  const sourceFieldLabel = form.kind === 'payment' ? 'Payee Source' : 'Source'
+  const selectedMember = members.find((member) => member.id === form.member_id) ?? null
+  const memberPreview = buildMemberSnapshotPreview(members, form.member_id)
   const counterpartyLabel = form.kind === 'payment' ? 'Fallback Payee Name' : 'Fallback Counterparty Name'
 
   const handleSave = async () => {
@@ -187,12 +199,12 @@ function NewTransactionForm({ accounts, funds, sources, districtId, defaultAccou
       setError('Select a fund for receipts and payments')
       return
     }
-    if ((form.kind === 'receipt' || form.kind === 'payment') && !form.source_id && !form.counterparty.trim()) {
-      setError('Provide either a district source or a fallback counterparty name')
+    if ((form.kind === 'receipt' || form.kind === 'payment') && !form.member_id && !form.counterparty_id && !form.counterparty.trim()) {
+      setError('Provide a district member, a registered counterparty, or a fallback counterparty name')
       return
     }
-    if (selectedFund?.requires_individual_source && selectedSource?.type !== 'individual') {
-      setError('This fund requires an individual source')
+    if (selectedFund?.requires_individual_member && selectedMember?.type !== 'individual') {
+      setError('This fund requires an individual member')
       return
     }
     const amount = parseFloat(form.amount)
@@ -210,7 +222,8 @@ function NewTransactionForm({ accounts, funds, sources, districtId, defaultAccou
           district_id: districtId,
           account_id: form.account_id,
           fund_id: form.fund_id || null,
-          source_id: form.source_id || null,
+          member_id: form.member_id || null,
+          counterparty_id: form.counterparty_id || null,
           kind: form.kind,
           effect_direction: form.kind === 'adjustment' ? form.effect_direction : undefined,
           transaction_date: form.transaction_date,
@@ -253,6 +266,7 @@ function NewTransactionForm({ accounts, funds, sources, districtId, defaultAccou
               ...f,
               kind,
               effect_direction: defaultEffectDirectionForTransactionKind(kind) ?? f.effect_direction,
+              counterparty_id: kind === 'payment' ? f.counterparty_id : '',
             }
           })}
           options={(['receipt', 'payment', 'adjustment'] as TransactionKind[]).map((k) => ({
@@ -279,36 +293,61 @@ function NewTransactionForm({ accounts, funds, sources, districtId, defaultAccou
         />
         <div className="space-y-1">
           <Select
-            label={`${sourceFieldLabel}${selectedFund?.requires_individual_source ? ' *' : ''}`}
-            value={form.source_id}
-            onChange={(e) => setForm((f) => ({ ...f, source_id: e.target.value }))}
-            options={sources.filter((s) => s.is_active).map((s) => ({
-              value: s.id,
-              label: sourceLabel(s),
+            label={`Member${selectedFund?.requires_individual_member ? ' *' : ''}`}
+            value={form.member_id}
+            onChange={(e) => setForm((f) => ({
+              ...f,
+              member_id: e.target.value,
+              counterparty_id: e.target.value ? '' : f.counterparty_id,
             }))}
-            placeholder="No source"
+            options={members.filter((member) => member.is_active).map((member) => ({
+              value: member.id,
+              label: memberLabel(member),
+            }))}
+            placeholder="No member"
           />
           <p className="text-xs text-slate-500">
-            {selectedFund?.requires_individual_source
-              ? 'This fund can only be posted with an individual source.'
+            {selectedFund?.requires_individual_member
+              ? 'This fund can only be posted with an individual member.'
               : form.kind === 'payment'
-                ? 'Choose the district source to record as payee when available.'
-                : 'Choose the district source to keep reporting tied to the source hierarchy.'}
+                ? 'Choose the district member to record as payee when the payment is internal.'
+                : 'Choose the district member to keep reporting tied to the member hierarchy.'}
           </p>
-          {sourcePreview && (
+          {memberPreview && (
             <p className={cn(
               'text-xs',
-              sourcePreview.tone === 'warning' ? 'text-amber-300' : 'text-cyan-300',
+              memberPreview.tone === 'warning' ? 'text-amber-300' : 'text-cyan-300',
             )}>
-              {sourcePreview.message}
+              {memberPreview.message}
             </p>
           )}
         </div>
+        {form.kind === 'payment' && (
+          <div className="space-y-1">
+            <Select
+              label="Registered Counterparty"
+              value={form.counterparty_id}
+              onChange={(e) => setForm((f) => ({
+                ...f,
+                counterparty_id: e.target.value,
+                member_id: e.target.value ? '' : f.member_id,
+              }))}
+              options={counterparties.filter((counterparty) => counterparty.is_active).map((counterparty) => ({
+                value: counterparty.id,
+                label: counterparty.name,
+              }))}
+              placeholder="No registered counterparty"
+            />
+            <p className="text-xs text-slate-500">
+              Choose a saved supplier or external payee when available.
+            </p>
+          </div>
+        )}
         <Input
           label={counterpartyLabel}
           value={form.counterparty}
           onChange={(e) => setForm((f) => ({ ...f, counterparty: e.target.value }))}
-          placeholder="Use when the payer or payee is not in district sources"
+          placeholder="Use when the payer or payee is not in the saved directory"
         />
         <Input
           label="Narration"
@@ -357,12 +396,21 @@ interface EditDraftFormProps {
   txn: CashbookTransaction
   accounts: Account[]
   funds: Fund[]
-  sources: Source[]
+  members: Member[]
+  counterparties: Counterparty[]
   onSaved: () => void
   onClose: () => void
 }
 
-function EditDraftForm({ txn, accounts, funds, sources, onSaved, onClose }: EditDraftFormProps) {
+function EditDraftForm({
+  txn,
+  accounts,
+  funds,
+  members,
+  counterparties,
+  onSaved,
+  onClose,
+}: EditDraftFormProps) {
   const toast = useToast()
   const supabase = createClient()
 
@@ -371,7 +419,8 @@ function EditDraftForm({ txn, accounts, funds, sources, onSaved, onClose }: Edit
     kind: txn.kind,
     effect_direction: txn.effect_direction,
     transaction_date: txn.transaction_date,
-    source_id: txn.source_id ?? '',
+    member_id: txn.member_id ?? '',
+    counterparty_id: txn.counterparty_id ?? '',
     counterparty: txn.counterparty ?? '',
     narration: txn.narration ?? '',
     fund_id: txn.fund_id ?? '',
@@ -382,9 +431,8 @@ function EditDraftForm({ txn, accounts, funds, sources, onSaved, onClose }: Edit
 
   const selectedAccount = accounts.find((a) => a.id === form.account_id)
   const selectedFund = funds.find((fund) => fund.id === form.fund_id) ?? null
-  const selectedSource = sources.find((source) => source.id === form.source_id) ?? null
-  const sourcePreview = buildSourceSnapshotPreview(sources, form.source_id)
-  const sourceFieldLabel = form.kind === 'payment' ? 'Payee Source' : 'Source'
+  const selectedMember = members.find((member) => member.id === form.member_id) ?? null
+  const memberPreview = buildMemberSnapshotPreview(members, form.member_id)
   const counterpartyLabel = form.kind === 'payment' ? 'Fallback Payee Name' : 'Fallback Counterparty Name'
 
   const handleSave = async () => {
@@ -393,12 +441,12 @@ function EditDraftForm({ txn, accounts, funds, sources, onSaved, onClose }: Edit
       setError('Select a fund for receipts and payments')
       return
     }
-    if ((form.kind === 'receipt' || form.kind === 'payment') && !form.source_id && !form.counterparty.trim()) {
-      setError('Provide either a district source or a fallback counterparty name')
+    if ((form.kind === 'receipt' || form.kind === 'payment') && !form.member_id && !form.counterparty_id && !form.counterparty.trim()) {
+      setError('Provide a district member, a registered counterparty, or a fallback counterparty name')
       return
     }
-    if (selectedFund?.requires_individual_source && selectedSource?.type !== 'individual') {
-      setError('This fund requires an individual source')
+    if (selectedFund?.requires_individual_member && selectedMember?.type !== 'individual') {
+      setError('This fund requires an individual member')
       return
     }
     const amount = parseFloat(form.amount)
@@ -415,7 +463,8 @@ function EditDraftForm({ txn, accounts, funds, sources, onSaved, onClose }: Edit
         body: JSON.stringify({
           account_id: form.account_id,
           fund_id: form.fund_id || null,
-          source_id: form.source_id || null,
+          member_id: form.member_id || null,
+          counterparty_id: form.counterparty_id || null,
           kind: form.kind,
           effect_direction: form.kind === 'adjustment' ? form.effect_direction : undefined,
           transaction_date: form.transaction_date,
@@ -457,6 +506,7 @@ function EditDraftForm({ txn, accounts, funds, sources, onSaved, onClose }: Edit
               ...f,
               kind,
               effect_direction: defaultEffectDirectionForTransactionKind(kind) ?? f.effect_direction,
+              counterparty_id: kind === 'payment' ? f.counterparty_id : '',
             }
           })}
           options={(['receipt', 'payment', 'adjustment'] as TransactionKind[]).map((k) => ({
@@ -483,36 +533,61 @@ function EditDraftForm({ txn, accounts, funds, sources, onSaved, onClose }: Edit
         />
         <div className="space-y-1">
           <Select
-            label={`${sourceFieldLabel}${selectedFund?.requires_individual_source ? ' *' : ''}`}
-            value={form.source_id}
-            onChange={(e) => setForm((f) => ({ ...f, source_id: e.target.value }))}
-            options={sources.filter((s) => s.is_active).map((s) => ({
-              value: s.id,
-              label: sourceLabel(s),
+            label={`Member${selectedFund?.requires_individual_member ? ' *' : ''}`}
+            value={form.member_id}
+            onChange={(e) => setForm((f) => ({
+              ...f,
+              member_id: e.target.value,
+              counterparty_id: e.target.value ? '' : f.counterparty_id,
             }))}
-            placeholder="No source"
+            options={members.filter((member) => member.is_active).map((member) => ({
+              value: member.id,
+              label: memberLabel(member),
+            }))}
+            placeholder="No member"
           />
           <p className="text-xs text-slate-500">
-            {selectedFund?.requires_individual_source
-              ? 'This fund can only be posted with an individual source.'
+            {selectedFund?.requires_individual_member
+              ? 'This fund can only be posted with an individual member.'
               : form.kind === 'payment'
-                ? 'Choose the district source to record as payee when available.'
-                : 'Choose the district source to keep reporting tied to the source hierarchy.'}
+                ? 'Choose the district member to record as payee when the payment is internal.'
+                : 'Choose the district member to keep reporting tied to the member hierarchy.'}
           </p>
-          {sourcePreview && (
+          {memberPreview && (
             <p className={cn(
               'text-xs',
-              sourcePreview.tone === 'warning' ? 'text-amber-300' : 'text-cyan-300',
+              memberPreview.tone === 'warning' ? 'text-amber-300' : 'text-cyan-300',
             )}>
-              {sourcePreview.message}
+              {memberPreview.message}
             </p>
           )}
         </div>
+        {form.kind === 'payment' && (
+          <div className="space-y-1">
+            <Select
+              label="Registered Counterparty"
+              value={form.counterparty_id}
+              onChange={(e) => setForm((f) => ({
+                ...f,
+                counterparty_id: e.target.value,
+                member_id: e.target.value ? '' : f.member_id,
+              }))}
+              options={counterparties.filter((counterparty) => counterparty.is_active).map((counterparty) => ({
+                value: counterparty.id,
+                label: counterparty.name,
+              }))}
+              placeholder="No registered counterparty"
+            />
+            <p className="text-xs text-slate-500">
+              Choose a saved supplier or external payee when available.
+            </p>
+          </div>
+        )}
         <Input
           label={counterpartyLabel}
           value={form.counterparty}
           onChange={(e) => setForm((f) => ({ ...f, counterparty: e.target.value }))}
-          placeholder="Use when the payer or payee is not in district sources"
+          placeholder="Use when the payer or payee is not in the saved directory"
         />
         <Input
           label="Narration"
@@ -653,30 +728,36 @@ function TransactionDetail({ txnId, userId, onTableRefresh, onReverseRequest }: 
           <dt className="text-slate-400">Kind</dt><dd className="text-slate-100">{transactionDisplayLabel(data)}</dd>
           <dt className="text-slate-400">Date</dt><dd className="text-slate-100">{formatDate(data.transaction_date)}</dd>
           <dt className="text-slate-400">Amount</dt><dd className="text-slate-100 font-medium">{formatCurrency(data.total_amount, data.currency)}</dd>
-          {(data.source || data.source_name_snapshot) && (
+          {(data.member || data.member_name_snapshot) && (
             <>
-              <dt className="text-slate-400">Source</dt>
+              <dt className="text-slate-400">Member</dt>
               <dd className="text-slate-100">
-                {data.source ? sourceLabel(data.source as Source) : data.source_name_snapshot}
+                {data.member ? memberLabel(data.member as Member) : data.member_name_snapshot}
               </dd>
             </>
           )}
-          {(data.assembly_snapshot as Source | null)?.name && (
+          {(data.assembly_member_snapshot as Member | null)?.name && (
             <>
               <dt className="text-slate-400">Assembly Snapshot</dt>
-              <dd className="text-slate-100">{(data.assembly_snapshot as Source).name}</dd>
+              <dd className="text-slate-100">{(data.assembly_member_snapshot as Member).name}</dd>
             </>
           )}
-          {(data.region_snapshot as Source | null)?.name && (
+          {(data.region_member_snapshot as Member | null)?.name && (
             <>
               <dt className="text-slate-400">Region Snapshot</dt>
-              <dd className="text-slate-100">{(data.region_snapshot as Source).name}</dd>
+              <dd className="text-slate-100">{(data.region_member_snapshot as Member).name}</dd>
             </>
           )}
-          {!data.assembly_snapshot && data.source_parent_name_snapshot && (
+          {!data.assembly_member_snapshot && data.member_parent_name_snapshot && (
             <>
               <dt className="text-slate-400">Parent Snapshot</dt>
-              <dd className="text-slate-100">{data.source_parent_name_snapshot}</dd>
+              <dd className="text-slate-100">{data.member_parent_name_snapshot}</dd>
+            </>
+          )}
+          {data.counterparty_record?.name && (
+            <>
+              <dt className="text-slate-400">Registered Counterparty</dt>
+              <dd className="text-slate-100">{data.counterparty_record.name}</dd>
             </>
           )}
           {data.counterparty && <><dt className="text-slate-400">Counterparty</dt><dd className="text-slate-100">{data.counterparty}</dd></>}
@@ -892,7 +973,8 @@ export default function CashbookPage() {
 
   const { data: accounts, loading: accountsLoading } = useAccounts({ district_id: districtId })
   const { data: funds } = useFunds({ district_id: districtId })
-  const { data: sources } = useSources({ district_id: districtId })
+  const { data: members } = useMembers({ district_id: districtId })
+  const { data: counterparties } = useCounterparties({ district_id: districtId })
   const { data: openingBalances } = useOpeningBalances({ account_id: selectedAccountId || null, district_id: districtId })
 
   const { data: transactions, loading: txnLoading, reverse, refresh } = useCashbook({
@@ -970,7 +1052,9 @@ export default function CashbookPage() {
     return (
       t.narration?.toLowerCase().includes(q) ||
       t.counterparty?.toLowerCase().includes(q) ||
-      t.source_name_snapshot?.toLowerCase().includes(q) ||
+      t.counterparty_record?.name?.toLowerCase().includes(q) ||
+      t.member?.name?.toLowerCase().includes(q) ||
+      t.member_name_snapshot?.toLowerCase().includes(q) ||
       t.reference_number?.toLowerCase().includes(q)
     )
   })
@@ -1301,11 +1385,13 @@ export default function CashbookPage() {
                         </Badge>
                       </td>
                       <td className="max-w-[280px] px-4 py-3.5">
-                        {(txn.source_name_snapshot || txn.counterparty) && (
-                          <p className="truncate text-slate-200">{txn.source_name_snapshot ?? txn.counterparty}</p>
+                        {(txn.member_name_snapshot || txn.member?.name || txn.counterparty_record?.name || txn.counterparty) && (
+                          <p className="truncate text-slate-200">
+                            {txn.member_name_snapshot ?? txn.member?.name ?? txn.counterparty_record?.name ?? txn.counterparty}
+                          </p>
                         )}
                         {txn.narration && <p className="truncate text-xs text-slate-500">{txn.narration}</p>}
-                        {!txn.source_name_snapshot && !txn.counterparty && !txn.narration && <span className="text-slate-700">—</span>}
+                        {!txn.member_name_snapshot && !txn.member?.name && !txn.counterparty_record?.name && !txn.counterparty && !txn.narration && <span className="text-slate-700">—</span>}
                       </td>
                       <td className="px-4 py-3.5 text-right font-mono">
                         {isIn ? <span className="text-emerald-400">{formatCurrency(txn.total_amount, currency)}</span> : <span className="text-slate-700">—</span>}
@@ -1350,7 +1436,8 @@ export default function CashbookPage() {
         <NewTransactionForm
           accounts={accounts}
           funds={funds}
-          sources={sources}
+          members={members}
+          counterparties={counterparties}
           districtId={districtId}
           defaultAccountId={selectedAccountId}
           onSaved={() => { setNewTxnOpen(false); void refresh() }}
@@ -1365,7 +1452,8 @@ export default function CashbookPage() {
             txn={editTarget}
             accounts={accounts}
             funds={funds}
-            sources={sources}
+            members={members}
+            counterparties={counterparties}
             onSaved={() => { setEditTarget(null); void refresh() }}
             onClose={() => setEditTarget(null)}
           />

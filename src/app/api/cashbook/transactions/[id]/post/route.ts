@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireDistrictAction } from '@/lib/auth/server'
 import {
   buildPostingSnapshots,
-  hydrateTransactionSources,
+  hydrateTransactionParties,
   validateDraftTransactionPayload,
 } from '@/lib/finance/transaction-server'
 import { canTransitionTransaction } from '@/lib/finance/transactions'
@@ -24,7 +24,7 @@ export async function POST(
     const { data: txn, error: txnError } = await supabase
       .from('cashbook_transactions')
       .select(
-        'id, status, district_id, account_id, fund_id, source_id, kind, effect_direction, transaction_date, counterparty, narration, currency, total_amount',
+        'id, status, district_id, account_id, fund_id, member_id, counterparty_id, kind, effect_direction, transaction_date, counterparty, narration, currency, total_amount',
       )
       .eq('id', id)
       .maybeSingle()
@@ -47,7 +47,8 @@ export async function POST(
       district_id: txn.district_id,
       account_id: txn.account_id,
       fund_id: txn.fund_id,
-      source_id: txn.source_id,
+      member_id: txn.member_id,
+      counterparty_id: txn.counterparty_id,
       kind: txn.kind,
       effect_direction: txn.effect_direction,
       transaction_date: txn.transaction_date,
@@ -59,7 +60,7 @@ export async function POST(
       allowStandaloneTransfer: txn.kind === 'transfer',
     })
 
-    const snapshots = await buildPostingSnapshots(supabase, txn.district_id, txn.source_id)
+    const snapshots = await buildPostingSnapshots(supabase, txn.district_id, txn.member_id)
 
     const { data: refData, error: refError } = await supabase
       .rpc('next_transaction_number', { p_district_id: txn.district_id })
@@ -81,11 +82,11 @@ export async function POST(
         reference_number: refData as string,
         posted_by: actor.user.id,
         posted_at: now,
-        source_name_snapshot: snapshots.sourceNameSnapshot,
-        source_type_snapshot: snapshots.sourceTypeSnapshot,
-        source_parent_name_snapshot: snapshots.sourceParentNameSnapshot,
-        assembly_snapshot_id: snapshots.assemblySnapshotId,
-        region_snapshot_id: snapshots.regionSnapshotId,
+        member_name_snapshot: snapshots.memberNameSnapshot,
+        member_type_snapshot: snapshots.memberTypeSnapshot,
+        member_parent_name_snapshot: snapshots.memberParentNameSnapshot,
+        assembly_member_snapshot_id: snapshots.assemblyMemberSnapshotId,
+        region_member_snapshot_id: snapshots.regionMemberSnapshotId,
       })
       .eq('id', id)
       .eq('status', 'approved')
@@ -102,7 +103,7 @@ export async function POST(
       )
     }
 
-    const [hydratedData] = await hydrateTransactionSources(supabase, [data])
+    const [hydratedData] = await hydrateTransactionParties(supabase, [data])
 
     return NextResponse.json({ data: hydratedData })
   } catch (error) {
