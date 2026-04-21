@@ -83,16 +83,295 @@ Open `http://localhost:3000`.
 - `GET /api/reports/ie-pdf`
 - `GET /api/routes`
 
-## Database Scope
+## Database Schema
 
-The finance app is built around these core tables:
+### Entity Relationship Diagram
 
-- `districts`
-- `profiles`
-- `income`
-- `expenses`
-- `income_categories`
-- `expense_categories`
+```mermaid
+erDiagram
+    users {
+        uuid id PK
+    }
+
+    user_profiles {
+        uuid user_id PK_FK
+        text full_name
+        boolean is_superuser
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    districts {
+        uuid id PK
+        text name
+        text slug
+        text country
+        uuid default_currency_id FK
+        uuid created_by_user_id FK
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    district_users {
+        uuid id PK
+        uuid district_id FK
+        uuid user_id FK
+        text role
+        boolean is_active
+        timestamptz joined_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    currencies {
+        uuid id PK
+        text code
+        text name
+        text symbol
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    accounts {
+        uuid id PK
+        uuid district_id FK
+        text name
+        text account_type
+        uuid currency_id FK
+        text institution_name
+        text account_identifier
+        boolean is_active
+        int sort_order
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    funds {
+        uuid id PK
+        uuid district_id FK
+        text name
+        text code
+        text fund_nature
+        boolean requires_individual_member
+        boolean is_active
+        text description
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    members {
+        uuid id PK
+        uuid district_id FK
+        uuid parent_member_id FK
+        text name
+        text member_type
+        text code
+        text phone_number
+        text email
+        boolean is_active
+        jsonb metadata
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    counterparties {
+        uuid id PK
+        uuid district_id FK
+        text name
+        text counterparty_type
+        text code
+        text phone_number
+        text email
+        boolean is_active
+        jsonb metadata
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    transactions {
+        uuid id PK
+        uuid district_id FK
+        uuid client_generated_id
+        text device_id
+        date transaction_date
+        text transaction_type
+        text status
+        text reference_no
+        uuid account_id FK
+        uuid fund_id FK
+        uuid member_id FK
+        uuid counterparty_id FK
+        numeric amount
+        text description
+        uuid source_transaction_id FK
+        uuid transfer_group_id
+        uuid assembly_member_snapshot_id FK
+        uuid region_member_snapshot_id FK
+        uuid captured_by_user_id FK
+        uuid posted_by_user_id FK
+        timestamptz posted_at
+        uuid reversed_by_user_id FK
+        timestamptz reversed_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    transfers {
+        uuid id PK
+        uuid district_id FK
+        uuid client_generated_id
+        text device_id
+        date transfer_date
+        uuid from_account_id FK
+        uuid to_account_id FK
+        numeric amount
+        text reference_no
+        text description
+        text status
+        uuid captured_by_user_id FK
+        uuid posted_by_user_id FK
+        timestamptz posted_at
+        uuid reversed_by_user_id FK
+        timestamptz reversed_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    budgets {
+        uuid id PK
+        uuid district_id FK
+        uuid client_generated_id
+        text device_id
+        text name
+        date start_date
+        date end_date
+        text status
+        text description
+        uuid created_by_user_id FK
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    budget_lines {
+        uuid id PK
+        uuid district_id FK
+        uuid budget_id FK
+        uuid fund_id FK
+        uuid currency_id FK
+        text budget_kind
+        numeric amount
+        uuid scope_member_id FK
+        text notes
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    attachments {
+        uuid id PK
+        uuid district_id FK
+        uuid transaction_id FK
+        uuid budget_id FK
+        text storage_path
+        text original_filename
+        uuid uploaded_by_user_id FK
+        timestamptz created_at
+    }
+
+    users ||--|| user_profiles : "has profile"
+    users ||--o{ district_users : "belongs to"
+    users ||--o{ districts : "created"
+    districts ||--o{ district_users : "has members"
+    districts ||--o| currencies : "default currency"
+    districts ||--o{ accounts : "owns"
+    districts ||--o{ funds : "owns"
+    districts ||--o{ members : "has"
+    districts ||--o{ counterparties : "has"
+    districts ||--o{ transactions : "has"
+    districts ||--o{ transfers : "has"
+    districts ||--o{ budgets : "has"
+    currencies ||--o{ accounts : "denominates"
+    currencies ||--o{ budget_lines : "denominates"
+    accounts ||--o{ transactions : "primary account"
+    accounts ||--o{ transfers : "from"
+    accounts ||--o{ transfers : "to"
+    funds ||--o{ transactions : "tagged on"
+    funds ||--o{ budget_lines : "budgeted"
+    members ||--o{ members : "parent of"
+    members ||--o{ transactions : "member party"
+    members ||--o{ transactions : "assembly snapshot"
+    members ||--o{ transactions : "region snapshot"
+    members ||--o{ budget_lines : "scoped to"
+    counterparties ||--o{ transactions : "counterparty"
+    transactions ||--o{ transactions : "reverses"
+    transactions ||--o{ attachments : "has"
+    budgets ||--o{ budget_lines : "has lines"
+    budgets ||--o{ attachments : "has"
+    users ||--o{ transactions : "captured / posted / reversed"
+    users ||--o{ transfers : "captured / posted / reversed"
+    users ||--o{ budgets : "created"
+    users ||--o{ attachments : "uploaded"
+```
+
+### Core Tables
+
+| Table | Purpose |
+|-------|---------|
+| `users` | Supabase Auth identities |
+| `user_profiles` | Platform-level metadata; `is_superuser` grants cross-district access |
+| `districts` | Tenant boundary — every district-owned record carries `district_id` |
+| `district_users` | Maps users to districts with district-level roles (admin, treasurer, auditor, …) |
+| `currencies` | Global currency catalogue (USD, ZWG, ZAR, …) |
+| `accounts` | Cash, bank, and mobile-money accounts per district |
+| `funds` | Financial classification buckets (tithes, offerings, welfare, …) |
+| `members` | Church hierarchy tree: district → region → assembly → individual / department |
+| `counterparties` | External parties — suppliers and other payees |
+| `transactions` | Receipts, payments, adjustments, and reversals; immutable once posted |
+| `transfers` | Logical transfer objects that generate paired effect rows on posting |
+| `budgets` | Budget containers (draft → active → closed) |
+| `budget_lines` | Fund-and-currency-specific budget targets, optionally scoped to a member |
+| `attachments` | Files linked to transactions or budgets |
+
+### Transaction Lifecycle
+
+```
+DRAFT → POSTED → REVERSED
+DRAFT → VOID_DRAFT
+```
+
+Posted transactions are immutable. Corrections must go through a `REVERSAL` transaction that references the original via `source_transaction_id`.
+
+### Transfer Lifecycle
+
+On posting a transfer, the system generates two linked transaction effect rows — one `TRANSFER_OUT` and one `TRANSFER_IN` — sharing the same `transfer_group_id`. Transfers do not count as income or expense in fund reporting.
+
+### Member Hierarchy
+
+```
+DISTRICT
+  └── REGION
+        └── ASSEMBLY
+              └── INDIVIDUAL
+  └── DEPARTMENT (may attach to district, region, or assembly)
+```
+
+When a tithe transaction is posted against an `INDIVIDUAL` member, the system derives and snapshots `assembly_member_snapshot_id` and `region_member_snapshot_id` so historical reports remain correct even after hierarchy changes.
+
+### Key Enums
+
+| Field | Allowed Values |
+|-------|----------------|
+| `account_type` | `BANK`, `MOBILE_MONEY`, `CASH`, `DEPOSIT_HOLDING`, `OTHER` |
+| `fund_nature` | `INCOME`, `EXPENSE`, `BOTH` |
+| `member_type` | `DISTRICT`, `REGION`, `ASSEMBLY`, `INDIVIDUAL`, `DEPARTMENT` |
+| `counterparty_type` | `SUPPLIER`, `OTHER` |
+| `transaction_type` | `RECEIPT`, `PAYMENT`, `TRANSFER_IN`, `TRANSFER_OUT`, `ADJUSTMENT_IN`, `ADJUSTMENT_OUT`, `REVERSAL` |
+| `transaction_status` | `DRAFT`, `POSTED`, `REVERSED`, `VOID_DRAFT` |
+| `transfer_status` | `DRAFT`, `POSTED`, `REVERSED`, `VOID_DRAFT` |
+| `budget_status` | `DRAFT`, `ACTIVE`, `CLOSED` |
+| `budget_kind` | `INCOME`, `EXPENSE` |
+| `district_user_role` | `DISTRICT_ADMIN`, `DISTRICT_SECRETARY`, `TREASURER`, `AUDITOR`, `VIEWER` |
 
 Conference-specific tables and mobile content APIs are intentionally out of scope for this product.
 
