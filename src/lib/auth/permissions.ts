@@ -46,6 +46,7 @@ export type DistrictAction =
   | 'transactions.post'
   | 'transactions.reverse'
   // Transfers
+  | 'transfers.view'
   | 'transfers.draft'
   | 'transfers.post'
   | 'transfers.reverse'
@@ -80,6 +81,7 @@ const MATRIX: Record<DistrictRole, ReadonlyArray<DistrictAction>> = {
     'transactions.approve',
     'transactions.post',
     'transactions.reverse',
+    'transfers.view',
     'transfers.draft',
     'transfers.post',
     'transfers.reverse',
@@ -99,6 +101,7 @@ const MATRIX: Record<DistrictRole, ReadonlyArray<DistrictAction>> = {
     'transactions.draft',
     'transactions.approve',
     'transactions.post',
+    'transfers.view',
     'transfers.draft',
     'transfers.post',
     'budgets.manage',
@@ -113,6 +116,7 @@ const MATRIX: Record<DistrictRole, ReadonlyArray<DistrictAction>> = {
     'transactions.approve',
     'transactions.post',
     'transactions.reverse',
+    'transfers.view',
     'transfers.draft',
     'transfers.post',
     'transfers.reverse',
@@ -126,6 +130,7 @@ const MATRIX: Record<DistrictRole, ReadonlyArray<DistrictAction>> = {
 
   clerk: [
     'transactions.view',
+    'transfers.view',
     'transactions.draft',
     'transfers.draft',
     'budgets.manage',
@@ -136,12 +141,14 @@ const MATRIX: Record<DistrictRole, ReadonlyArray<DistrictAction>> = {
 
   auditor: [
     'transactions.view',
+    'transfers.view',
     'reports.view',
     'exports.generate',
   ],
 
   viewer: [
     'transactions.view',
+    'transfers.view',
     'reports.view',
   ],
 }

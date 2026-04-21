@@ -11,8 +11,13 @@ import type { TransactionStatus, TransactionKind } from '@/types'
 import {
   canTransitionTransaction,
   deriveSourceSnapshotsFromChain,
+  isIncomingTransactionEffect,
+  isOutgoingTransactionEffect,
+  reverseEffectDirection,
   fundNatureAllowsTransactionKind,
+  transactionDisplayLabel,
 } from '@/lib/finance/transactions'
+import { canTransitionTransfer } from '@/lib/finance/transfers'
 
 // ---------------------------------------------------------------------------
 // B0.2 invariant: new transactions must start as drafts
@@ -96,6 +101,20 @@ describe('workflow transitions', () => {
   })
 })
 
+describe('transfer workflow transitions', () => {
+  it('allows draft posting and posted reversal', () => {
+    expect(canTransitionTransfer('draft', 'posted')).toBe(true)
+    expect(canTransitionTransfer('posted', 'reversed')).toBe(true)
+    expect(canTransitionTransfer('draft', 'voided')).toBe(true)
+  })
+
+  it('blocks illegal transfer transitions', () => {
+    expect(canTransitionTransfer('posted', 'posted')).toBe(false)
+    expect(canTransitionTransfer('reversed', 'posted')).toBe(false)
+    expect(canTransitionTransfer('voided', 'posted')).toBe(false)
+  })
+})
+
 describe('fund nature validation', () => {
   it('allows only income kinds for income-only funds', () => {
     expect(fundNatureAllowsTransactionKind('income_only', 'receipt')).toBe(true)
@@ -105,6 +124,25 @@ describe('fund nature validation', () => {
   it('allows only expense kinds for expense-only funds', () => {
     expect(fundNatureAllowsTransactionKind('expense_only', 'payment')).toBe(true)
     expect(fundNatureAllowsTransactionKind('expense_only', 'receipt')).toBe(false)
+  })
+})
+
+describe('signed effect helpers', () => {
+  it('treats transfer inflows and reversal inflows correctly', () => {
+    expect(isIncomingTransactionEffect({ kind: 'transfer', effect_direction: 'in' })).toBe(true)
+    expect(isOutgoingTransactionEffect({ kind: 'transfer', effect_direction: 'out' })).toBe(true)
+    expect(isIncomingTransactionEffect({ kind: 'reversal', effect_direction: 'in' })).toBe(true)
+  })
+
+  it('reverses effect directions predictably', () => {
+    expect(reverseEffectDirection('in')).toBe('out')
+    expect(reverseEffectDirection('out')).toBe('in')
+  })
+
+  it('formats directional labels for transfer, adjustment, and reversal rows', () => {
+    expect(transactionDisplayLabel({ kind: 'transfer', effect_direction: 'in' })).toBe('Transfer In')
+    expect(transactionDisplayLabel({ kind: 'adjustment', effect_direction: 'out' })).toBe('Adjustment Out')
+    expect(transactionDisplayLabel({ kind: 'reversal', effect_direction: 'in' })).toBe('Reversal In')
   })
 })
 

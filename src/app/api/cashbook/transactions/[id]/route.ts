@@ -100,6 +100,7 @@ export async function PATCH(
     fund_id?: string | null
     source_id?: string | null
     kind?: TransactionKind
+    effect_direction?: 'in' | 'out' | null
     transaction_date?: string
     counterparty?: string | null
     narration?: string | null
@@ -120,7 +121,7 @@ export async function PATCH(
     const { data: txn, error: txnError } = await supabase
       .from('cashbook_transactions')
       .select(
-        'id, status, district_id, account_id, fund_id, source_id, kind, transaction_date, counterparty, narration, currency, total_amount',
+        'id, status, district_id, account_id, fund_id, source_id, kind, effect_direction, transaction_date, counterparty, narration, currency, total_amount',
       )
       .eq('id', id)
       .maybeSingle()
@@ -145,11 +146,14 @@ export async function PATCH(
       fund_id: body.fund_id !== undefined ? body.fund_id : txn.fund_id,
       source_id: body.source_id !== undefined ? body.source_id : txn.source_id,
       kind: body.kind ?? txn.kind,
+      effect_direction: body.effect_direction ?? txn.effect_direction,
       transaction_date: body.transaction_date ?? txn.transaction_date,
       counterparty: body.counterparty !== undefined ? body.counterparty : txn.counterparty,
       narration: body.narration !== undefined ? body.narration : txn.narration,
       currency: body.currency ?? txn.currency,
       total_amount: body.total_amount ?? txn.total_amount,
+    }, {
+      allowStandaloneTransfer: txn.kind === 'transfer',
     })
 
     const patch: Record<string, unknown> = {}
@@ -157,6 +161,7 @@ export async function PATCH(
     if (validated.values.fund_id !== txn.fund_id) patch.fund_id = validated.values.fund_id
     if (validated.values.source_id !== txn.source_id) patch.source_id = validated.values.source_id
     if (validated.values.kind !== txn.kind) patch.kind = validated.values.kind
+    if (validated.values.effect_direction !== txn.effect_direction) patch.effect_direction = validated.values.effect_direction
     if (validated.values.transaction_date !== txn.transaction_date) patch.transaction_date = validated.values.transaction_date
     if (validated.values.counterparty !== txn.counterparty) patch.counterparty = validated.values.counterparty
     if (validated.values.narration !== txn.narration) patch.narration = validated.values.narration

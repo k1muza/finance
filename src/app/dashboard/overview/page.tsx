@@ -2,10 +2,12 @@
 
 import type { ComponentType } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Landmark, PiggyBank, ReceiptText, Settings2 } from 'lucide-react'
+import { ArrowRight, ArrowRightLeft, BookOpen, Landmark, Settings2 } from 'lucide-react'
 import { useOverview } from '@/hooks/useOverview'
 import { useAuth } from '@/contexts/AuthContext'
 import { StatsRow } from '@/components/overview/StatsRow'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
 import { cn } from '@/lib/utils/cn'
@@ -27,21 +29,21 @@ export default function OverviewPage() {
 
   const quickLinks: QuickLink[] = [
     {
-      href: '/dashboard/finance/expenditure',
-      label: 'Expenditure',
-      hint: 'Track outgoing transactions and spending categories',
-      icon: ReceiptText,
+      href: '/dashboard/finance/cashbook',
+      label: 'Cashbook',
+      hint: 'Work through draft, approval, posting, and reversals',
+      icon: BookOpen,
     },
     {
-      href: '/dashboard/finance/income',
-      label: 'Income',
-      hint: 'Capture incoming funds and maintain income categories',
-      icon: PiggyBank,
+      href: '/dashboard/finance/transfers',
+      label: 'Transfers',
+      hint: 'Move funds between district accounts without polluting fund totals',
+      icon: ArrowRightLeft,
     },
     {
       href: '/dashboard/finance/reports',
       label: 'Reports',
-      hint: 'Export finance statements as CSV, DOCX, or PDF',
+      hint: 'Review operational cashbook, fund, and budget reporting',
       icon: Landmark,
     },
     {
@@ -64,19 +66,17 @@ export default function OverviewPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-100">Overview</h1>
-        <p className="text-sm text-slate-400 mt-1">{scopeSummary}</p>
-      </div>
+      <PageHeader title="Overview" description={scopeSummary} />
 
       <StatsRow stats={data} />
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <section className="lg:col-span-3 bg-slate-800 rounded-xl border border-slate-700 p-5">
-          <h2 className="text-sm font-semibold text-slate-100">Category Highlights</h2>
-          <p className="text-xs text-slate-400 mt-1">Top finance categories in the current scope.</p>
-
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Category Highlights</CardTitle>
+            <CardDescription className="text-xs">Top finance categories in the current scope.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-4 pt-0 md:grid-cols-2">
             <CategoryPanel
               title="Income"
               tone="emerald"
@@ -89,14 +89,15 @@ export default function OverviewPage() {
               emptyLabel="No expenditure categories yet."
               items={data.topExpenseCategories}
             />
-          </div>
-        </section>
+          </CardContent>
+        </Card>
 
-        <section className="lg:col-span-2 bg-slate-800 rounded-xl border border-slate-700 p-5">
-          <h2 className="text-sm font-semibold text-slate-100">Quick Access</h2>
-          <p className="text-xs text-slate-400 mt-1">Jump to the core finance workflows.</p>
-
-          <div className="mt-4 space-y-1.5">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Quick Access</CardTitle>
+            <CardDescription className="text-xs">Jump to the core finance workflows.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-1.5 pt-0">
             {quickLinks.map((link) => {
               const Icon = link.icon
               return (
@@ -114,21 +115,21 @@ export default function OverviewPage() {
                 </Link>
               )
             })}
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       </div>
 
-      <section className="bg-slate-800 rounded-xl border border-slate-700 p-5">
-        <h2 className="text-sm font-semibold text-slate-100">
-          {isAdmin && !districtId ? 'District Comparison' : 'District Snapshot'}
-        </h2>
-        <p className="text-xs text-slate-400 mt-1">
-          {isAdmin && !districtId
-            ? 'Compare district financial performance across the current workspace.'
-            : 'Current district performance summary.'}
-        </p>
+      <Card>
+        <CardHeader>
+          <CardTitle>{isAdmin && !districtId ? 'District Comparison' : 'District Snapshot'}</CardTitle>
+          <CardDescription className="text-xs">
+            {isAdmin && !districtId
+              ? 'Compare district financial performance across the current workspace.'
+              : 'Current district performance summary.'}
+          </CardDescription>
+        </CardHeader>
 
-        <div className="mt-4 overflow-x-auto">
+        <CardContent className="overflow-x-auto pt-0">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-700">
@@ -166,8 +167,8 @@ export default function OverviewPage() {
               ))}
             </tbody>
           </table>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
     </div>
   )
 }

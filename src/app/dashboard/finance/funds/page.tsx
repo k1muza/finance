@@ -5,13 +5,15 @@ import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFunds } from '@/hooks/useFunds'
 import { createClient } from '@/lib/supabase/client'
+import {
+  isIncomingTransactionEffect,
+  shouldIncludeInFundReporting,
+} from '@/lib/finance/transactions'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
 import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { FundsSection } from '@/components/settings/SettingsPanel'
 import { Wallet, TrendingUp, TrendingDown, ChevronRight, Lock } from 'lucide-react'
-import type { Currency, TransactionKind } from '@/types'
-
-const IN_KINDS: TransactionKind[] = ['receipt', 'opening_balance', 'adjustment']
+import type { CashbookTransaction, Currency } from '@/types'
 
 interface FundBalance {
   fundId: string
@@ -32,7 +34,7 @@ function FundBalanceCards({ districtId }: { districtId: string }) {
     async function load() {
       const { data: txns } = await supabase
         .from('cashbook_transactions')
-        .select('fund_id, kind, total_amount, currency')
+        .select('fund_id, kind, effect_direction, total_amount, currency')
         .eq('district_id', districtId)
         .eq('status', 'posted')
         .not('fund_id', 'is', null)
@@ -44,9 +46,10 @@ function FundBalanceCards({ districtId }: { districtId: string }) {
 
       for (const t of txns ?? []) {
         if (!t.fund_id || !map[t.fund_id]) continue
+        if (!shouldIncludeInFundReporting(t as Pick<CashbookTransaction, 'kind'>)) continue
         const entry = map[t.fund_id]
         entry.currency = t.currency
-        if (IN_KINDS.includes(t.kind)) {
+        if (isIncomingTransactionEffect(t as Pick<CashbookTransaction, 'kind' | 'effect_direction'>)) {
           entry.totalIn += Number(t.total_amount)
         } else {
           entry.totalOut += Number(t.total_amount)

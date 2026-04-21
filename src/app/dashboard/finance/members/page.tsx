@@ -12,15 +12,17 @@ import {
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Select } from '@/components/ui/Select'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import { useSources } from '@/hooks/useSources'
 import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { Source, SourceType, IndividualTitle, INDIVIDUAL_TITLE_LABELS } from '@/types'
-import { cn } from '@/lib/utils/cn'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -141,8 +143,9 @@ function MemberTable({
   return (
     <div className="space-y-4">
       {adding && (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {showTitle && (
               <Select
                 label="Title"
@@ -185,16 +188,17 @@ function MemberTable({
               onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
               placeholder="Optional"
             />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setAdding(false)} disabled={saving}>Cancel</Button>
-            <Button onClick={handleAdd} loading={saving}>Save</Button>
-          </div>
-        </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setAdding(false)} disabled={saving}>Cancel</Button>
+              <Button onClick={handleAdd} loading={saving}>Save</Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-slate-700 flex items-center justify-between">
+      <Card className="overflow-hidden">
+        <CardHeader className="flex items-center justify-between border-b border-slate-700 px-5 py-3">
           <span className="text-xs text-slate-500">{typeItems.length} {typeItems.length === 1 ? 'record' : 'records'}</span>
           {!adding && (
             <Button variant="ghost" size="sm" onClick={() => { setAdding(true); setForm(emptyForm()) }}>
@@ -202,7 +206,7 @@ function MemberTable({
               Add
             </Button>
           )}
-        </div>
+        </CardHeader>
 
         {loading ? (
           <div className="px-5 py-8 text-sm text-slate-500">Loading...</div>
@@ -325,7 +329,7 @@ function MemberTable({
             </table>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }
@@ -409,76 +413,67 @@ export default function MembersPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-100">Members</h1>
-        <p className="text-sm text-slate-400 mt-1">Individuals, assemblies, and regions within this district.</p>
-      </div>
+      <PageHeader
+        title="Members"
+        description="Individuals, assemblies, and regions within this district."
+        size="md"
+      />
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-700">
-        {TABS.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveTab(key)}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-              activeTab === key
-                ? 'border-cyan-400 text-cyan-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            )}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as MemberTab)}>
+        <TabsList className="w-full justify-start">
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <TabsTrigger key={key} value={key} className="gap-2 px-1 sm:px-4">
+              <Icon className="h-4 w-4" />
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {/* Tab content */}
-      {activeTab === 'regions' && (
-        <MemberTable
-          sourceType="region"
-          sources={sources}
-          loading={loading}
-          parentOptions={[]}
-          showParentColumn={false}
-          showTitle={false}
-          parentLabel="Parent"
-          onAdd={(values) => handleAdd('region', values)}
-          onUpdate={handleUpdate}
-          onDelete={(s) => setConfirmDelete({ open: true, source: s })}
-        />
-      )}
+        <TabsContent value="regions">
+          <MemberTable
+            sourceType="region"
+            sources={sources}
+            loading={loading}
+            parentOptions={[]}
+            showParentColumn={false}
+            showTitle={false}
+            parentLabel="Parent"
+            onAdd={(values) => handleAdd('region', values)}
+            onUpdate={handleUpdate}
+            onDelete={(s) => setConfirmDelete({ open: true, source: s })}
+          />
+        </TabsContent>
 
-      {activeTab === 'assemblies' && (
-        <MemberTable
-          sourceType="assembly"
-          sources={sources}
-          loading={loading}
-          parentOptions={regionOptions}
-          showParentColumn={regionOptions.length > 0}
-          showTitle={false}
-          parentLabel="Region"
-          onAdd={(values) => handleAdd('assembly', values)}
-          onUpdate={handleUpdate}
-          onDelete={(s) => setConfirmDelete({ open: true, source: s })}
-        />
-      )}
+        <TabsContent value="assemblies">
+          <MemberTable
+            sourceType="assembly"
+            sources={sources}
+            loading={loading}
+            parentOptions={regionOptions}
+            showParentColumn={regionOptions.length > 0}
+            showTitle={false}
+            parentLabel="Region"
+            onAdd={(values) => handleAdd('assembly', values)}
+            onUpdate={handleUpdate}
+            onDelete={(s) => setConfirmDelete({ open: true, source: s })}
+          />
+        </TabsContent>
 
-      {activeTab === 'individuals' && (
-        <MemberTable
-          sourceType="individual"
-          sources={sources}
-          loading={loading}
-          parentOptions={assemblyOptions}
-          showParentColumn={assemblyOptions.length > 0}
-          showTitle={true}
-          parentLabel="Assembly"
-          onAdd={(values) => handleAdd('individual', values)}
-          onUpdate={handleUpdate}
-          onDelete={(s) => setConfirmDelete({ open: true, source: s })}
-        />
-      )}
+        <TabsContent value="individuals">
+          <MemberTable
+            sourceType="individual"
+            sources={sources}
+            loading={loading}
+            parentOptions={assemblyOptions}
+            showParentColumn={assemblyOptions.length > 0}
+            showTitle={true}
+            parentLabel="Assembly"
+            onAdd={(values) => handleAdd('individual', values)}
+            onUpdate={handleUpdate}
+            onDelete={(s) => setConfirmDelete({ open: true, source: s })}
+          />
+        </TabsContent>
+      </Tabs>
 
       <ConfirmDialog
         open={confirmDelete.open}

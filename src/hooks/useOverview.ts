@@ -2,9 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { DistrictFinanceBreakdown, FinanceCategoryBreakdown, OverviewStats } from '@/types'
-
-const IN_KINDS = new Set(['receipt', 'opening_balance', 'adjustment'])
+import type {
+  CashbookEffectDirection,
+  DistrictFinanceBreakdown,
+  FinanceCategoryBreakdown,
+  OverviewStats,
+  TransactionKind,
+} from '@/types'
+import {
+  isIncomingTransactionEffect,
+  shouldIncludeInFundReporting,
+} from '@/lib/finance/transactions'
 
 export function useOverview(districtId?: string | null) {
   const [data, setData] = useState<OverviewStats | null>(null)
@@ -22,7 +30,7 @@ export function useOverview(districtId?: string | null) {
         supabase.from('districts').select('id, name').order('name'),
         supabase
           .from('cashbook_transactions')
-          .select('district_id, total_amount, currency, kind, fund:funds(name)')
+          .select('district_id, total_amount, currency, kind, effect_direction, fund:funds(name)')
           .eq('status', 'posted'),
       ])
 
@@ -30,7 +38,8 @@ export function useOverview(districtId?: string | null) {
         district_id: string
         total_amount: number
         currency: string
-        kind: string
+        kind: TransactionKind
+        effect_direction: CashbookEffectDirection
         fund: { name: string } | { name: string }[] | null
       }
 
@@ -60,8 +69,9 @@ export function useOverview(districtId?: string | null) {
       for (const t of allTxns) {
         const entry = totalsByDistrict.get(t.district_id)
         if (!entry) continue
+        if (!shouldIncludeInFundReporting(t)) continue
         const amount = Number(t.total_amount)
-        if (IN_KINDS.has(t.kind)) {
+        if (isIncomingTransactionEffect(t)) {
           entry.income_total += amount
           entry.income_count += 1
         } else {
@@ -76,21 +86,21 @@ export function useOverview(districtId?: string | null) {
 
       // Scoped totals (USD only for the headline stats — multi-currency is handled in Reports)
       const totalIncome = scopedTxns
-        .filter((t) => IN_KINDS.has(t.kind))
+        .filter((t) => shouldIncludeInFundReporting(t) && isIncomingTransactionEffect(t))
         .reduce((sum, t) => sum + Number(t.total_amount), 0)
 
       const totalExpenses = scopedTxns
-        .filter((t) => !IN_KINDS.has(t.kind))
+        .filter((t) => shouldIncludeInFundReporting(t) && !isIncomingTransactionEffect(t))
         .reduce((sum, t) => sum + Number(t.total_amount), 0)
 
       setData({
         totalIncome,
         totalExpenses,
         netBalance: totalIncome - totalExpenses,
-        incomeCount: scopedTxns.filter((t) => IN_KINDS.has(t.kind)).length,
-        expenseCount: scopedTxns.filter((t) => !IN_KINDS.has(t.kind)).length,
-        topIncomeCategories: groupByFund(scopedTxns.filter((t) => IN_KINDS.has(t.kind))),
-        topExpenseCategories: groupByFund(scopedTxns.filter((t) => !IN_KINDS.has(t.kind))),
+        incomeCount: scopedTxns.filter((t) => shouldIncludeInFundReporting(t) && isIncomingTransactionEffect(t)).length,
+        expenseCount: scopedTxns.filter((t) => shouldIncludeInFundReporting(t) && !isIncomingTransactionEffect(t)).length,
+        topIncomeCategories: groupByFund(scopedTxns.filter((t) => shouldIncludeInFundReporting(t) && isIncomingTransactionEffect(t))),
+        topExpenseCategories: groupByFund(scopedTxns.filter((t) => shouldIncludeInFundReporting(t) && !isIncomingTransactionEffect(t))),
         districtBreakdown,
       })
 

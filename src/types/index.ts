@@ -195,7 +195,9 @@ export type TransactionStatus =
   | 'reversed'
   | 'voided'
 
+export type CashbookEffectDirection = 'in' | 'out'
 export type LineDirection = 'debit' | 'credit'
+export type TransferStatus = 'draft' | 'posted' | 'reversed' | 'voided'
 
 export const TRANSACTION_KIND_LABELS: Record<TransactionKind, string> = {
   receipt: 'Receipt',
@@ -215,15 +217,24 @@ export const TRANSACTION_STATUS_LABELS: Record<TransactionStatus, string> = {
   voided: 'Voided',
 }
 
+export const TRANSFER_STATUS_LABELS: Record<TransferStatus, string> = {
+  draft: 'Draft',
+  posted: 'Posted',
+  reversed: 'Reversed',
+  voided: 'Voided',
+}
+
 export interface CashbookTransaction {
   id: string
   district_id: string
   account_id: string
   fund_id: string | null
   source_id: string | null
+  transfer_id: string | null
   assembly_snapshot_id: string | null
   region_snapshot_id: string | null
   kind: TransactionKind
+  effect_direction: CashbookEffectDirection
   status: TransactionStatus
   transaction_date: string
   reference_number: string | null
@@ -279,6 +290,30 @@ export interface CashbookAuditLog {
   new_status: TransactionStatus | null
   details: Record<string, unknown> | null
   created_at: string
+}
+
+export interface Transfer {
+  id: string
+  district_id: string
+  client_generated_id: string | null
+  device_id: string | null
+  transfer_date: string
+  from_account_id: string
+  to_account_id: string
+  amount: number
+  reference_no: string | null
+  description: string | null
+  status: TransferStatus
+  captured_by_user_id: string
+  posted_by_user_id: string | null
+  posted_at: string | null
+  reversed_by_user_id: string | null
+  reversed_at: string | null
+  created_at: string
+  updated_at: string
+  from_account?: Account | null
+  to_account?: Account | null
+  effect_transactions?: CashbookTransaction[]
 }
 
 export interface OverviewStats {

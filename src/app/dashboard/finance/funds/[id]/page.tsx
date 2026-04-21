@@ -6,6 +6,11 @@ import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFunds } from '@/hooks/useFunds'
 import { createClient } from '@/lib/supabase/client'
+import {
+  isIncomingTransactionEffect,
+  shouldIncludeInFundReporting,
+  transactionDisplayLabel,
+} from '@/lib/finance/transactions'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
 import { Badge } from '@/components/ui/Badge'
 import {
@@ -21,13 +26,10 @@ import {
   CashbookTransaction,
   Currency,
   TransactionKind,
-  TRANSACTION_KIND_LABELS,
   TRANSACTION_STATUS_LABELS,
 } from '@/types'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-
-const IN_KINDS: TransactionKind[] = ['receipt', 'opening_balance', 'adjustment']
 
 const KIND_BADGE: Record<TransactionKind, 'green' | 'red' | 'yellow' | 'default'> = {
   receipt: 'green',
@@ -92,14 +94,15 @@ export default function FundDetailPage() {
     if (!id) return
     supabase
       .from('cashbook_transactions')
-      .select('kind, total_amount, currency')
+      .select('kind, effect_direction, total_amount, currency')
       .eq('fund_id', id)
       .eq('status', 'posted')
       .then(({ data }) => {
         let totalIn = 0, totalOut = 0, currency = 'USD'
         for (const t of data ?? []) {
+          if (!shouldIncludeInFundReporting(t as Pick<CashbookTransaction, 'kind'>)) continue
           currency = t.currency
-          if (IN_KINDS.includes(t.kind)) totalIn += Number(t.total_amount)
+          if (isIncomingTransactionEffect(t as Pick<CashbookTransaction, 'kind' | 'effect_direction'>)) totalIn += Number(t.total_amount)
           else totalOut += Number(t.total_amount)
         }
         setAllTime({ totalIn, totalOut, currency })
@@ -110,9 +113,9 @@ export default function FundDetailPage() {
   const currency = (allTime?.currency ?? 'USD') as Currency
 
   // Period totals (filtered by date range, posted only)
-  const postedInPeriod = transactions.filter((t) => t.status === 'posted')
-  const periodIn = postedInPeriod.filter((t) => IN_KINDS.includes(t.kind)).reduce((s, t) => s + t.total_amount, 0)
-  const periodOut = postedInPeriod.filter((t) => !IN_KINDS.includes(t.kind)).reduce((s, t) => s + t.total_amount, 0)
+  const postedInPeriod = transactions.filter((t) => t.status === 'posted' && shouldIncludeInFundReporting(t))
+  const periodIn = postedInPeriod.filter((t) => isIncomingTransactionEffect(t)).reduce((s, t) => s + t.total_amount, 0)
+  const periodOut = postedInPeriod.filter((t) => !isIncomingTransactionEffect(t)).reduce((s, t) => s + t.total_amount, 0)
 
   if (fundsLoading) return (
     <div className="p-6 flex items-center gap-2 text-slate-500 text-sm">
@@ -241,13 +244,13 @@ export default function FundDetailPage() {
               </thead>
               <tbody>
                 {transactions.map((txn) => {
-                  const isIn = IN_KINDS.includes(txn.kind)
+                  const isIn = isIncomingTransactionEffect(txn)
                   const txnCurrency = ((txn.account as { currency?: string } | null)?.currency ?? txn.currency ?? 'USD') as Currency
                   return (
                     <tr key={txn.id} className="border-b border-slate-700/50 last:border-0 hover:bg-slate-700/20 transition-colors">
                       <td className="px-4 py-3 text-slate-300 whitespace-nowrap">{formatDate(txn.transaction_date)}</td>
                       <td className="px-4 py-3">
-                        <Badge variant={KIND_BADGE[txn.kind]}>{TRANSACTION_KIND_LABELS[txn.kind]}</Badge>
+                        <Badge variant={KIND_BADGE[txn.kind]}>{transactionDisplayLabel(txn)}</Badge>
                       </td>
                       <td className="px-4 py-3 max-w-[200px]">
                         {txn.counterparty && <p className="text-slate-200 truncate">{txn.counterparty}</p>}

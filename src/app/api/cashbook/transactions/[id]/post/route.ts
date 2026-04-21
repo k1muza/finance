@@ -24,7 +24,7 @@ export async function POST(
     const { data: txn, error: txnError } = await supabase
       .from('cashbook_transactions')
       .select(
-        'id, status, district_id, account_id, fund_id, source_id, kind, transaction_date, counterparty, narration, currency, total_amount',
+        'id, status, district_id, account_id, fund_id, source_id, kind, effect_direction, transaction_date, counterparty, narration, currency, total_amount',
       )
       .eq('id', id)
       .maybeSingle()
@@ -49,11 +49,14 @@ export async function POST(
       fund_id: txn.fund_id,
       source_id: txn.source_id,
       kind: txn.kind,
+      effect_direction: txn.effect_direction,
       transaction_date: txn.transaction_date,
       counterparty: txn.counterparty,
       narration: txn.narration,
       currency: txn.currency,
       total_amount: txn.total_amount,
+    }, {
+      allowStandaloneTransfer: txn.kind === 'transfer',
     })
 
     const snapshots = await buildPostingSnapshots(supabase, txn.district_id, txn.source_id)

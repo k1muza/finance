@@ -17,6 +17,12 @@ import { SlideOver } from '@/components/ui/SlideOver'
 import { Modal } from '@/components/ui/Modal'
 import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
+import {
+  defaultEffectDirectionForTransactionKind,
+  isIncomingTransactionEffect,
+  isOutgoingTransactionEffect,
+  transactionDisplayLabel,
+} from '@/lib/finance/transactions'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils/cn'
 import { useAppUiStore } from '@/stores/app-ui-store'
@@ -43,6 +49,7 @@ import {
 } from 'lucide-react'
 import {
   Account,
+  CashbookEffectDirection,
   CashbookTransaction,
   CashbookAuditLog,
   CashbookTransactionLine,
@@ -68,15 +75,6 @@ const firstOfMonth = () => {
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-
-const KIND_DIRECTION: Record<TransactionKind, 'in' | 'out' | 'neutral'> = {
-  receipt: 'in',
-  opening_balance: 'in',
-  adjustment: 'in',
-  payment: 'out',
-  transfer: 'out',
-  reversal: 'out',
-}
 
 const STATUS_BADGE_VARIANT: Record<string, 'default' | 'green' | 'yellow' | 'teal' | 'red'> = {
   draft: 'default',
@@ -163,6 +161,7 @@ function NewTransactionForm({ accounts, funds, sources, districtId, defaultAccou
   const [form, setForm] = useState({
     account_id: defaultAccountId,
     kind: 'receipt' as TransactionKind,
+    effect_direction: 'in' as CashbookEffectDirection,
     transaction_date: toIsoDate(new Date()),
     source_id: '',
     counterparty: '',
@@ -213,6 +212,7 @@ function NewTransactionForm({ accounts, funds, sources, districtId, defaultAccou
           fund_id: form.fund_id || null,
           source_id: form.source_id || null,
           kind: form.kind,
+          effect_direction: form.kind === 'adjustment' ? form.effect_direction : undefined,
           transaction_date: form.transaction_date,
           counterparty: form.counterparty || null,
           narration: form.narration || null,
@@ -247,12 +247,30 @@ function NewTransactionForm({ accounts, funds, sources, districtId, defaultAccou
         <Select
           label="Kind *"
           value={form.kind}
-          onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value as TransactionKind }))}
-          options={(['receipt', 'payment', 'transfer', 'adjustment'] as TransactionKind[]).map((k) => ({
+          onChange={(e) => setForm((f) => {
+            const kind = e.target.value as TransactionKind
+            return {
+              ...f,
+              kind,
+              effect_direction: defaultEffectDirectionForTransactionKind(kind) ?? f.effect_direction,
+            }
+          })}
+          options={(['receipt', 'payment', 'adjustment'] as TransactionKind[]).map((k) => ({
             value: k,
             label: TRANSACTION_KIND_LABELS[k],
           }))}
         />
+        {form.kind === 'adjustment' && (
+          <Select
+            label="Adjustment Direction *"
+            value={form.effect_direction}
+            onChange={(e) => setForm((f) => ({ ...f, effect_direction: e.target.value as CashbookEffectDirection }))}
+            options={[
+              { value: 'in', label: 'Adjustment In' },
+              { value: 'out', label: 'Adjustment Out' },
+            ]}
+          />
+        )}
         <Input
           label="Date *"
           type="date"
@@ -351,6 +369,7 @@ function EditDraftForm({ txn, accounts, funds, sources, onSaved, onClose }: Edit
   const [form, setForm] = useState({
     account_id: txn.account_id,
     kind: txn.kind,
+    effect_direction: txn.effect_direction,
     transaction_date: txn.transaction_date,
     source_id: txn.source_id ?? '',
     counterparty: txn.counterparty ?? '',
@@ -398,6 +417,7 @@ function EditDraftForm({ txn, accounts, funds, sources, onSaved, onClose }: Edit
           fund_id: form.fund_id || null,
           source_id: form.source_id || null,
           kind: form.kind,
+          effect_direction: form.kind === 'adjustment' ? form.effect_direction : undefined,
           transaction_date: form.transaction_date,
           counterparty: form.counterparty || null,
           narration: form.narration || null,
@@ -431,12 +451,30 @@ function EditDraftForm({ txn, accounts, funds, sources, onSaved, onClose }: Edit
         <Select
           label="Kind *"
           value={form.kind}
-          onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value as TransactionKind }))}
-          options={(['receipt', 'payment', 'transfer', 'adjustment'] as TransactionKind[]).map((k) => ({
+          onChange={(e) => setForm((f) => {
+            const kind = e.target.value as TransactionKind
+            return {
+              ...f,
+              kind,
+              effect_direction: defaultEffectDirectionForTransactionKind(kind) ?? f.effect_direction,
+            }
+          })}
+          options={(['receipt', 'payment', 'adjustment'] as TransactionKind[]).map((k) => ({
             value: k,
             label: TRANSACTION_KIND_LABELS[k],
           }))}
         />
+        {form.kind === 'adjustment' && (
+          <Select
+            label="Adjustment Direction *"
+            value={form.effect_direction}
+            onChange={(e) => setForm((f) => ({ ...f, effect_direction: e.target.value as CashbookEffectDirection }))}
+            options={[
+              { value: 'in', label: 'Adjustment In' },
+              { value: 'out', label: 'Adjustment Out' },
+            ]}
+          />
+        )}
         <Input
           label="Date *"
           type="date"
@@ -597,7 +635,11 @@ function TransactionDetail({ txnId, userId, onTableRefresh, onReverseRequest }: 
   const canApprove = data.status === 'submitted' && !isSelf && can('transactions.approve')
   const canPost = data.status === 'approved' && can('transactions.post')
   const canVoid = data.status === 'draft' && can('transactions.draft')
-  const canReverse = data.status === 'posted' && data.kind !== 'reversal' && !data.source_transaction_id && can('transactions.reverse')
+  const canReverse = data.status === 'posted'
+    && data.kind !== 'reversal'
+    && !data.source_transaction_id
+    && !data.transfer_id
+    && can('transactions.reverse')
 
   return (
     <div className="space-y-6 text-sm">
@@ -608,7 +650,7 @@ function TransactionDetail({ txnId, userId, onTableRefresh, onReverseRequest }: 
           {data.reference_number && <span className="font-mono text-slate-400 text-xs">{data.reference_number}</span>}
         </div>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-          <dt className="text-slate-400">Kind</dt><dd className="text-slate-100">{TRANSACTION_KIND_LABELS[data.kind]}</dd>
+          <dt className="text-slate-400">Kind</dt><dd className="text-slate-100">{transactionDisplayLabel(data)}</dd>
           <dt className="text-slate-400">Date</dt><dd className="text-slate-100">{formatDate(data.transaction_date)}</dd>
           <dt className="text-slate-400">Amount</dt><dd className="text-slate-100 font-medium">{formatCurrency(data.total_amount, data.currency)}</dd>
           {(data.source || data.source_name_snapshot) && (
@@ -920,8 +962,8 @@ export default function CashbookPage() {
   })()
 
   const posted = transactions.filter((t) => t.status === 'posted')
-  const totalIn = posted.filter((t) => KIND_DIRECTION[t.kind] === 'in').reduce((s, t) => s + t.total_amount, 0)
-  const totalOut = posted.filter((t) => KIND_DIRECTION[t.kind] === 'out').reduce((s, t) => s + t.total_amount, 0)
+  const totalIn = posted.filter((t) => isIncomingTransactionEffect(t)).reduce((s, t) => s + t.total_amount, 0)
+  const totalOut = posted.filter((t) => isOutgoingTransactionEffect(t)).reduce((s, t) => s + t.total_amount, 0)
   const closingBalance = openingBalance + totalIn - totalOut
 
   // ── filtered display list ─────────────────────────────────────────────────
@@ -1249,8 +1291,8 @@ export default function CashbookPage() {
               </thead>
               <tbody>
                 {filtered.map((txn) => {
-                  const isIn = KIND_DIRECTION[txn.kind] === 'in'
-                  const isOut = KIND_DIRECTION[txn.kind] === 'out'
+                  const isIn = isIncomingTransactionEffect(txn)
+                  const isOut = isOutgoingTransactionEffect(txn)
                   return (
                     <tr key={txn.id} className="border-b border-slate-700/50 transition-colors last:border-0 hover:bg-slate-700/20">
                       <td className="whitespace-nowrap px-4 py-3.5 text-slate-300">{formatDate(txn.transaction_date)}</td>
@@ -1259,7 +1301,7 @@ export default function CashbookPage() {
                       </td>
                       <td className="px-4 py-3.5">
                         <Badge variant={txn.kind === 'receipt' ? 'green' : txn.kind === 'payment' ? 'red' : txn.kind === 'reversal' ? 'yellow' : 'default'}>
-                          {TRANSACTION_KIND_LABELS[txn.kind]}
+                          {transactionDisplayLabel(txn)}
                         </Badge>
                       </td>
                       <td className="max-w-[280px] px-4 py-3.5">
@@ -1285,7 +1327,7 @@ export default function CashbookPage() {
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
                           )}
-                          {txn.status === 'posted' && canReverseTransactions && txn.kind !== 'reversal' && !txn.source_transaction_id && (
+                          {txn.status === 'posted' && canReverseTransactions && txn.kind !== 'reversal' && !txn.source_transaction_id && !txn.transfer_id && (
                             <Button size="sm" variant="ghost" onClick={() => { setReverseTarget(txn); setReverseNarration('') }} className="text-amber-400 hover:text-amber-300" title="Reverse">
                               <RotateCcw className="h-3.5 w-3.5" />
                             </Button>

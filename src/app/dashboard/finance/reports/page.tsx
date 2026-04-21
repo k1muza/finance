@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useDistricts } from '@/hooks/useDistricts'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
 import { exportToCsv } from '@/lib/csv'
@@ -16,9 +18,11 @@ import {
   buildCashbookTotalsByCurrency,
   type FundBalanceRow,
 } from '@/lib/finance/reporting'
+import {
+  isIncomingTransactionEffect,
+  shouldIncludeInFundReporting,
+} from '@/lib/finance/transactions'
 import type { CashbookTransaction, Currency } from '@/types'
-
-const IN_KINDS = new Set(['receipt', 'opening_balance', 'adjustment'])
 
 type PeriodPreset = 'this_month' | 'last_month' | 'this_year' | 'all_time'
 
@@ -70,13 +74,13 @@ function SectionCard({
   children: ReactNode
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-800">
-      <div className="border-b border-slate-700 px-5 py-4">
-        <h3 className="text-sm font-semibold text-slate-300">{title}</h3>
-        <p className="mt-1 text-xs text-slate-500">{description}</p>
-      </div>
+    <Card className="overflow-hidden">
+      <CardHeader className="border-b border-slate-700">
+        <CardTitle>{title}</CardTitle>
+        <CardDescription className="text-xs">{description}</CardDescription>
+      </CardHeader>
       {children}
-    </div>
+    </Card>
   )
 }
 
@@ -94,10 +98,11 @@ function MetricCard({
   helper: string
 }) {
   return (
-    <div className="flex items-start gap-4 rounded-xl border border-slate-700 bg-slate-800 p-5">
-      <div className="shrink-0 rounded-lg bg-slate-900/60 p-3">{icon}</div>
-      <div>
-        <p className="text-sm text-slate-400">{title}</p>
+    <Card>
+      <CardContent className="flex items-start gap-4">
+        <div className="shrink-0 rounded-lg bg-slate-900/60 p-3">{icon}</div>
+        <div>
+          <p className="text-sm text-slate-400">{title}</p>
         {values.length === 0 ? (
           <p className={`mt-0.5 text-2xl font-bold ${fallbackClassName}`}>-</p>
         ) : (
@@ -108,8 +113,9 @@ function MetricCard({
           ))
         )}
         <p className="mt-1 text-xs text-slate-500">{helper}</p>
-      </div>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -136,8 +142,8 @@ function CashbookStatement({
           const totalOut = outByCurrency[currency] ?? 0
           const net = totalIn - totalOut
           const netPositive = net >= 0
-          const inTxns = transactions.filter((t) => t.currency === currency && IN_KINDS.has(t.kind))
-          const outTxns = transactions.filter((t) => t.currency === currency && !IN_KINDS.has(t.kind))
+          const inTxns = transactions.filter((t) => t.currency === currency && isIncomingTransactionEffect(t))
+          const outTxns = transactions.filter((t) => t.currency === currency && !isIncomingTransactionEffect(t))
 
           return (
             <div key={currency}>
@@ -416,12 +422,16 @@ export default function ReportsPage() {
   const districtName = districtId
     ? districts.find((d) => d.id === districtId)?.name ?? 'District'
     : 'All Districts'
-
-  const { inByCurrency, outByCurrency } = useMemo(
-    () => buildCashbookTotalsByCurrency(transactions),
+  const operationalTransactions = useMemo(
+    () => transactions.filter((txn) => shouldIncludeInFundReporting(txn)),
     [transactions],
   )
-  const fundBalances = useMemo(() => buildCashbookFundBalances(transactions), [transactions])
+
+  const { inByCurrency, outByCurrency } = useMemo(
+    () => buildCashbookTotalsByCurrency(operationalTransactions),
+    [operationalTransactions],
+  )
+  const fundBalances = useMemo(() => buildCashbookFundBalances(operationalTransactions), [operationalTransactions])
   const allCurrencies = useMemo(
     () => [...new Set([...Object.keys(inByCurrency), ...Object.keys(outByCurrency)])] as Currency[],
     [inByCurrency, outByCurrency],
@@ -474,7 +484,7 @@ export default function ReportsPage() {
       const net = totalIn - totalOut
 
       pushRow({ Section: `RECEIPTS (${currency})` })
-      for (const txn of transactions.filter((t) => t.currency === currency && IN_KINDS.has(t.kind))) {
+      for (const txn of operationalTransactions.filter((t) => t.currency === currency && isIncomingTransactionEffect(t))) {
         pushRow({
           Date: txn.transaction_date,
           Reference: txn.reference_number ?? '',
@@ -493,7 +503,7 @@ export default function ReportsPage() {
 
       pushRow({})
       pushRow({ Section: `PAYMENTS (${currency})` })
-      for (const txn of transactions.filter((t) => t.currency === currency && !IN_KINDS.has(t.kind))) {
+      for (const txn of operationalTransactions.filter((t) => t.currency === currency && !isIncomingTransactionEffect(t))) {
         pushRow({
           Date: txn.transaction_date,
           Reference: txn.reference_number ?? '',
@@ -538,17 +548,15 @@ export default function ReportsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-100">Reports</h1>
-          <p className="mt-1 text-sm text-slate-400">
-            {districtName} · {periodLabel}
-          </p>
-        </div>
-        <Button variant="ghost" onClick={handleExport} disabled={transactions.length === 0}>
+      <PageHeader
+        title="Reports"
+        description={`${districtName} · ${periodLabel}`}
+        actions={(
+          <Button variant="ghost" onClick={handleExport} disabled={operationalTransactions.length === 0}>
           <Download className="h-4 w-4" /> Export CSV
-        </Button>
-      </div>
+          </Button>
+        )}
+      />
 
       <div className="flex flex-wrap gap-2">
         {(Object.keys(PRESET_LABELS) as PeriodPreset[]).map((p) => (
@@ -588,7 +596,7 @@ export default function ReportsPage() {
                   className: 'text-emerald-400',
                 }))}
                 fallbackClassName="text-emerald-400"
-                helper={`${transactions.filter((t) => IN_KINDS.has(t.kind)).length} transaction(s)`}
+                helper={`${operationalTransactions.filter((t) => isIncomingTransactionEffect(t)).length} transaction(s)`}
               />
               <MetricCard
                 icon={<TrendingDown className="h-5 w-5 text-red-400" />}
@@ -599,7 +607,7 @@ export default function ReportsPage() {
                   className: 'text-red-400',
                 }))}
                 fallbackClassName="text-red-400"
-                helper={`${transactions.filter((t) => !IN_KINDS.has(t.kind)).length} transaction(s)`}
+                helper={`${operationalTransactions.filter((t) => !isIncomingTransactionEffect(t)).length} transaction(s)`}
               />
               <MetricCard
                 icon={<Landmark className="h-5 w-5 text-cyan-400" />}
@@ -630,7 +638,7 @@ export default function ReportsPage() {
             </div>
 
             <CashbookStatement
-              transactions={transactions}
+              transactions={operationalTransactions}
               currencies={allCurrencies}
               inByCurrency={inByCurrency}
               outByCurrency={outByCurrency}

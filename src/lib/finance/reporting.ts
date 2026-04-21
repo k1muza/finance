@@ -1,7 +1,8 @@
 import { CashbookTransaction, Currency } from '@/types'
-
-// Kinds that represent money flowing IN to the district
-const CASHBOOK_IN_KINDS = new Set(['receipt', 'opening_balance', 'adjustment'])
+import {
+  isIncomingTransactionEffect,
+  shouldIncludeInFundReporting,
+} from '@/lib/finance/transactions'
 
 export function buildCashbookFundBalances(transactions: CashbookTransaction[]) {
   const rows = new Map<string, FundBalanceRow>()
@@ -29,13 +30,15 @@ export function buildCashbookFundBalances(transactions: CashbookTransaction[]) {
   }
 
   for (const txn of transactions) {
+    if (!shouldIncludeInFundReporting(txn)) continue
+
     const row = ensureRow(
       txn.district_id,
       txn.fund_id,
       (txn.fund as { name?: string } | null)?.name ?? 'Unassigned',
       txn.currency
     )
-    if (CASHBOOK_IN_KINDS.has(txn.kind)) {
+    if (isIncomingTransactionEffect(txn)) {
       row.income_total += Number(txn.total_amount)
     } else {
       row.expense_total += Number(txn.total_amount)
@@ -55,7 +58,9 @@ export function buildCashbookTotalsByCurrency(transactions: CashbookTransaction[
   const outByCurrency: Partial<Record<Currency, number>> = {}
 
   for (const txn of transactions) {
-    if (CASHBOOK_IN_KINDS.has(txn.kind)) {
+    if (!shouldIncludeInFundReporting(txn)) continue
+
+    if (isIncomingTransactionEffect(txn)) {
       inByCurrency[txn.currency] = (inByCurrency[txn.currency] ?? 0) + Number(txn.total_amount)
     } else {
       outByCurrency[txn.currency] = (outByCurrency[txn.currency] ?? 0) + Number(txn.total_amount)
@@ -75,5 +80,4 @@ export interface FundBalanceRow {
   expense_total: number
   net_balance: number
 }
-
 

@@ -1,4 +1,9 @@
+import {
+  TRANSACTION_KIND_LABELS,
+} from '@/types'
 import type {
+  CashbookEffectDirection,
+  CashbookTransaction,
   FundNature,
   SourceType,
   TransactionKind,
@@ -37,11 +42,72 @@ export function fundNatureAllowsTransactionKind(
   kind: TransactionKind,
 ) {
   const incomeKinds: TransactionKind[] = ['receipt', 'opening_balance', 'adjustment']
-  const expenseKinds: TransactionKind[] = ['payment', 'transfer']
+  const expenseKinds: TransactionKind[] = ['payment', 'adjustment', 'transfer']
 
   if (nature === 'income_only') return incomeKinds.includes(kind)
   if (nature === 'expense_only') return expenseKinds.includes(kind)
   return true
+}
+
+export function defaultEffectDirectionForTransactionKind(
+  kind: TransactionKind,
+): CashbookEffectDirection | null {
+  switch (kind) {
+    case 'receipt':
+    case 'opening_balance':
+      return 'in'
+    case 'payment':
+    case 'transfer':
+      return 'out'
+    case 'adjustment':
+      return 'in'
+    default:
+      return null
+  }
+}
+
+export function reverseEffectDirection(
+  direction: CashbookEffectDirection,
+): CashbookEffectDirection {
+  return direction === 'in' ? 'out' : 'in'
+}
+
+type DirectionalTransaction = Pick<CashbookTransaction, 'kind' | 'effect_direction'>
+
+export function transactionEffectDirection(
+  txn: DirectionalTransaction,
+): CashbookEffectDirection | null {
+  return txn.effect_direction ?? defaultEffectDirectionForTransactionKind(txn.kind)
+}
+
+export function isIncomingTransactionEffect(txn: DirectionalTransaction) {
+  return transactionEffectDirection(txn) === 'in'
+}
+
+export function isOutgoingTransactionEffect(txn: DirectionalTransaction) {
+  return transactionEffectDirection(txn) === 'out'
+}
+
+export function shouldIncludeInFundReporting(
+  txn: Pick<CashbookTransaction, 'kind'>,
+) {
+  return txn.kind !== 'transfer'
+}
+
+export function transactionDisplayLabel(txn: DirectionalTransaction) {
+  if (txn.kind === 'transfer') {
+    return transactionEffectDirection(txn) === 'in' ? 'Transfer In' : 'Transfer Out'
+  }
+
+  if (txn.kind === 'adjustment') {
+    return transactionEffectDirection(txn) === 'out' ? 'Adjustment Out' : 'Adjustment In'
+  }
+
+  if (txn.kind === 'reversal') {
+    return transactionEffectDirection(txn) === 'in' ? 'Reversal In' : 'Reversal Out'
+  }
+
+  return TRANSACTION_KIND_LABELS[txn.kind]
 }
 
 export interface SourceSnapshotChainNode {

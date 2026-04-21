@@ -7,9 +7,12 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useOpeningBalances } from '@/hooks/useOpeningBalances'
 import { createClient } from '@/lib/supabase/client'
+import {
+  isIncomingTransactionEffect,
+} from '@/lib/finance/transactions'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
 import { Landmark, TrendingUp, TrendingDown, Scale } from 'lucide-react'
-import { Account, Currency } from '@/types'
+import type { Account, CashbookTransaction, Currency } from '@/types'
 
 interface AccountBalance {
   accountId: string
@@ -44,14 +47,14 @@ function AccountBalanceCards({ districtId }: { districtId: string }) {
         // Sum posted cashbook transactions
         const { data: txns } = await supabase
           .from('cashbook_transactions')
-          .select('kind, total_amount')
+          .select('kind, effect_direction, total_amount')
           .eq('account_id', account.id)
           .eq('status', 'posted')
 
         let totalIn = 0
         let totalOut = 0
         for (const t of txns ?? []) {
-          if (['receipt', 'opening_balance', 'adjustment'].includes(t.kind)) {
+          if (isIncomingTransactionEffect(t as Pick<CashbookTransaction, 'kind' | 'effect_direction'>)) {
             totalIn += Number(t.total_amount)
           } else {
             totalOut += Number(t.total_amount)

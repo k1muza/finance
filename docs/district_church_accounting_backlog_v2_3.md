@@ -281,7 +281,7 @@ Done when:
 
 ## Phase 3: Transfers and reversals
 
-### B4.1 `P1` Add the `transfers` aggregate
+### B4.1 `P1` ✅ Add the `transfers` aggregate
 
 Create an explicit transfer model instead of treating transfer as only a transaction kind.
 
@@ -290,7 +290,7 @@ Done when:
 - a transfer has source account, destination account, amount, status, and metadata
 - transfer records stay within one district
 
-### B4.2 `P1` Implement transfer posting as an atomic workflow
+### B4.2 `P1` ✅ Implement transfer posting as an atomic workflow
 
 Posting a transfer should create both effect rows or fail entirely.
 
@@ -299,7 +299,7 @@ Done when:
 - transfer posting is transactional and idempotent
 - transfer effect rows do not affect fund totals
 
-### B4.3 `P1` Implement transfer reversal
+### B4.3 `P1` ✅ Implement transfer reversal
 
 Reverse a transfer as one logical unit with appropriate linked records.
 
@@ -308,7 +308,7 @@ Done when:
 - reversal creates the matching compensating effect
 - original and reversal records remain traceable
 
-### B4.4 `P2` Add transfer UI and reporting visibility
+### B4.4 `P2` ✅ Add transfer UI and reporting visibility
 
 Make transfers manageable without polluting receipt or payment views.
 

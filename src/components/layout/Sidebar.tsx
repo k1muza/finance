@@ -19,12 +19,14 @@ import {
   BookOpen,
   Wallet,
   Users,
+  ArrowRightLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 const baseNav = [
   { href: '/dashboard/overview', icon: BarChart3, label: 'Overview' },
   { href: '/dashboard/finance/cashbook', icon: BookOpen, label: 'Cashbook' },
+  { href: '/dashboard/finance/transfers', icon: ArrowRightLeft, label: 'Transfers' },
   { href: '/dashboard/finance/accounts', icon: Landmark, label: 'Accounts' },
   { href: '/dashboard/finance/funds', icon: Wallet, label: 'Funds' },
   { href: '/dashboard/finance/members', icon: Users, label: 'Members' },

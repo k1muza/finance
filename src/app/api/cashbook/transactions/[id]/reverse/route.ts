@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireDistrictAction } from '@/lib/auth/server'
 import { canTransitionTransaction } from '@/lib/finance/transactions'
 import { hydrateTransactionSources } from '@/lib/finance/transaction-server'
+import { reverseEffectDirection } from '@/lib/finance/transactions'
 import { ApiRouteError, toErrorResponse } from '@/lib/server/errors'
 import { createServerClient } from '@/lib/supabase/server'
 
@@ -48,6 +49,13 @@ export async function POST(
         422,
       )
     }
+    if (original.transfer_id) {
+      throw new ApiRouteError(
+        'TRANSFER_REVERSAL_USE_TRANSFER_ROUTE',
+        'Transfer effect rows must be reversed from the transfer workflow.',
+        422,
+      )
+    }
     if (original.kind === 'reversal' || original.source_transaction_id) {
       throw new ApiRouteError(
         'REVERSAL_NOT_ALLOWED',
@@ -84,6 +92,7 @@ export async function POST(
         narration: body.narration?.trim() || `Reversal of ${original.reference_number ?? original.id}`,
         currency: original.currency,
         total_amount: original.total_amount,
+        effect_direction: reverseEffectDirection(original.effect_direction),
         source_transaction_id: original.id,
         assembly_snapshot_id: original.assembly_snapshot_id ?? null,
         region_snapshot_id: original.region_snapshot_id ?? null,

@@ -136,6 +136,7 @@ export function useCashbook(filter: CashbookFilter = {}) {
     fund_id: string | null
     source_id: string | null
     kind: TransactionKind
+    effect_direction: 'in' | 'out'
     transaction_date: string
     counterparty: string | null
     narration: string | null
@@ -166,6 +167,7 @@ export function useCashbook(filter: CashbookFilter = {}) {
     fund_id?: string | null
     source_id?: string | null
     kind: TransactionKind
+    effect_direction?: 'in' | 'out'
     transaction_date: string
     counterparty?: string | null
     narration?: string | null

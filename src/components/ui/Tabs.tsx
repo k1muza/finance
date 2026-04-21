@@ -13,7 +13,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      'inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border bg-[var(--tabs-list-bg)] p-1 text-[var(--tabs-trigger-text)] [border-color:var(--tabs-list-border)]',
+      'app-tabs-list inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border bg-[var(--tabs-list-bg)] p-1 text-[var(--tabs-trigger-text)] [border-color:var(--tabs-list-border)]',
       className,
     )}
     {...props}
@@ -28,7 +28,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      'inline-flex items-center justify-center whitespace-nowrap rounded-[calc(var(--radius-sm)-2px)] px-4 py-1.5 text-sm font-medium text-[var(--tabs-trigger-text)] ring-offset-[var(--tabs-ring-offset)] transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-[var(--tabs-trigger-hover-bg)] data-[state=active]:bg-[var(--tabs-trigger-active-bg)] data-[state=active]:text-[var(--tabs-trigger-active-text)] data-[state=active]:shadow-[var(--tabs-trigger-active-shadow)]',
+      'app-tabs-trigger inline-flex items-center justify-center whitespace-nowrap rounded-[calc(var(--radius-sm)-2px)] px-4 py-1.5 text-sm font-medium text-[var(--tabs-trigger-text)] ring-offset-[var(--tabs-ring-offset)] transition-[background-color,color,box-shadow,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-[var(--tabs-trigger-hover-bg)] data-[state=active]:bg-[var(--tabs-trigger-active-bg)] data-[state=active]:text-[var(--tabs-trigger-active-text)] data-[state=active]:shadow-[var(--tabs-trigger-active-shadow)]',
       className,
     )}
     {...props}

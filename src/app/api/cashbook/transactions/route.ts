@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
     fund_id?: string | null
     source_id?: string | null
     kind: TransactionKind
+    effect_direction?: 'in' | 'out' | null
     transaction_date: string
     counterparty?: string | null
     narration?: string | null
