@@ -259,8 +259,8 @@ erDiagram
         uuid district_id FK
         uuid budget_id FK
         uuid fund_id FK
-        uuid currency_id FK
-        text budget_kind
+        text line_description
+        text currency
         numeric amount
         uuid scope_member_id FK
         text notes
@@ -329,8 +329,8 @@ erDiagram
 | `counterparties` | External parties — suppliers and other payees |
 | `transactions` | Receipts, payments, adjustments, and reversals; immutable once posted |
 | `transfers` | Logical transfer objects that generate paired effect rows on posting |
-| `budgets` | Budget containers (draft → active → closed) |
-| `budget_lines` | Fund-and-currency-specific budget targets, optionally scoped to a member |
+| `budgets` | Expense budget containers (draft → active → closed) |
+| `budget_lines` | Planned expense targets identified by fund, line description, currency, and optional member scope |
 | `attachments` | Files linked to transactions or budgets |
 
 ### Transaction Lifecycle
@@ -370,7 +370,6 @@ When a tithe transaction is posted against an `INDIVIDUAL` member, the system de
 | `transaction_status` | `DRAFT`, `POSTED`, `REVERSED`, `VOID_DRAFT` |
 | `transfer_status` | `DRAFT`, `POSTED`, `REVERSED`, `VOID_DRAFT` |
 | `budget_status` | `DRAFT`, `ACTIVE`, `CLOSED` |
-| `budget_kind` | `INCOME`, `EXPENSE` |
 | `district_user_role` | `DISTRICT_ADMIN`, `DISTRICT_SECRETARY`, `TREASURER`, `AUDITOR`, `VIEWER` |
 
 Conference-specific tables and mobile content APIs are intentionally out of scope for this product.

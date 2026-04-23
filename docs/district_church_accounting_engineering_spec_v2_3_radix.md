@@ -20,7 +20,7 @@ The system is intended to support:
 - fund-based reporting
 - tithe capture at individual level
 - reporting at assembly and region level
-- budgets by fund
+- expense budgets by fund
 - monthly cashbook spreadsheet exports
 - offline-first capture with sync when back online
 
@@ -30,7 +30,7 @@ This version reflects the following product and architecture decisions:
 - stack changed to Supabase + Next.js + Tailwind
 - `entities` split into `members` and `counterparties`
 - `audit_events` removed from current scope
-- budgets added
+- expense budgeting added
 - offline functionality included
 - monthly cashbook spreadsheet export included
 - offline mode is **draft-capture only**
@@ -48,8 +48,8 @@ The system must allow each district to:
 - record receipts
 - record payments
 - record transfers
-- manage budgets tied to funds
-- compare budget against actuals
+- manage expense budgets tied to funds
+- compare expense budgets against actual expenses
 - export monthly cashbooks
 - work offline for core draft capture workflows
 - sync local changes when connectivity returns
@@ -446,6 +446,8 @@ Examples:
 **Constraints:**
 - unique `(district_id, name)`
 - inactive funds cannot be used for new records
+- if `requires_individual_member = true`, receipt transactions posted into the fund must reference a member of type `INDIVIDUAL`
+- `requires_individual_member` does not restrict payments or other withdrawals from the fund; those follow the standard payment controls
 
 **Examples:**
 - Tithes
@@ -623,7 +625,7 @@ Examples:
 
 ### 9.11 `budgets`
 
-**Purpose:** Represents a budget period or budget container for a district.
+**Purpose:** Represents an expense budget period or budget container for a district.
 
 **Fields:**
 - `id`
@@ -640,9 +642,9 @@ Examples:
 - `updated_at`
 
 **Allowed `status`:**
-- `DRAFT`
-- `ACTIVE`
-- `CLOSED`
+- `draft`
+- `active`
+- `closed`
 
 **Constraints:**
 - `start_date <= end_date`
@@ -653,35 +655,36 @@ Examples:
 
 ### 9.12 `budget_lines`
 
-**Purpose:** Represents a budget target for a specific fund and currency, optionally scoped to a member.
+**Purpose:** Represents an expense budget target for a specific fund and currency, optionally scoped to a member.
 
 **Fields:**
 - `id`
 - `district_id`
 - `budget_id`
 - `fund_id`
-- `currency_id`
-- `budget_kind`
+- `line_description`
+- `currency`
 - `amount`
 - `scope_member_id`, nullable
 - `notes`
 - `created_at`
 - `updated_at`
 
-**Allowed `budget_kind`:**
-- `INCOME`
-- `EXPENSE`
-
 **Constraints:**
 - `district_id` required
 - budget, fund, and scoped member must belong to same district where applicable
+- budget lines are expense-only in this version
+- `line_description` is required and must not be blank
 - amount > 0
+- only draft budgets may be edited freely
+- activation is `draft -> active`
+- closure is `active -> closed`
 - recommended uniqueness on:
   - `budget_id`
   - `fund_id`
-  - `currency_id`
-  - `budget_kind`
+  - `currency`
   - `scope_member_id`
+  - normalized `line_description`
 
 ---
 
@@ -850,7 +853,7 @@ Sum all posted effective transaction effects for the account in that district.
 - draft transactions may be voided
 
 ### 13.2 Tithes rules
-- if fund = Tithes, `member_id` must be `INDIVIDUAL`
+- if fund = Tithes on a receipt, `member_id` must be `INDIVIDUAL`
 - individual must belong to an assembly
 - assembly must belong to a region
 - snapshots must be populated on posting
@@ -860,6 +863,7 @@ Sum all posted effective transaction effects for the account in that district.
 - payments should normally have either a payee member or a registered counterparty
 - payment must belong to one fund
 - payment decreases one account only in this phase
+- `requires_individual_member` on the fund does not by itself require an individual member for payments
 
 ### 13.4 Receipt rules
 - receipts should normally have a member
@@ -874,10 +878,13 @@ Sum all posted effective transaction effects for the account in that district.
 
 ### 13.6 Budget rules
 - every budget belongs to one district
+- budget lines represent planned expenses only
 - budget lines target specific funds
 - budget lines are currency-specific
 - budget lines may optionally be scoped to a member
-- actuals must be computed only from transactions in same district and date range
+- actuals must be computed only from posted expense-side transactions in same district and date range
+- budget actuals must include `PAYMENT` and `ADJUSTMENT_OUT` transactions only
+- receipts and transfers must never contribute to budget actuals
 
 ---
 
@@ -1153,13 +1160,13 @@ Show current balance by account.
 ### 19.7 Budget vs actual
 For each budget line:
 - fund
+- line description
 - currency
-- budget kind
 - budget amount
 - actual amount
-- variance
+- variance (`budget amount - actual amount`)
 
-Actuals must be derived from posted transactions in same district and period.
+Actuals must be derived from posted expense-side transactions in the same district and period.
 
 ---
 
@@ -1294,7 +1301,7 @@ For every district-scoped write:
 - counterparty same district where supplied
 - amount > 0
 - valid transaction type
-- if fund requires individual member, member must be `INDIVIDUAL`
+- if transaction type is a receipt and fund requires individual member, member must be `INDIVIDUAL`
 - snapshots derivable where required
 
 ### 22.4 Transfer validation
@@ -1407,7 +1414,7 @@ Common errors include:
 - invalid district access
 - cross-district reference attempt
 - invalid member hierarchy
-- tithe without individual member
+- tithe receipt without individual member
 - inactive fund/account/member/counterparty
 - duplicate post/reversal attempt
 - sync conflict due to stale offline data
@@ -1463,7 +1470,7 @@ Cover:
 - district user cannot access another district’s data
 - superuser can access all districts
 - tithe receipt populates snapshots
-- budget vs actual uses same district only
+- budget vs actual uses same district and only expense-side posted transactions
 - monthly export excludes other districts
 - offline replay does not create duplicate transaction
 - offline posting attempt is rejected while offline or deferred until online
@@ -1540,6 +1547,7 @@ These still need explicit decision:
 **Resolved in this version:**
 - offline mode allows draft capture only, not posting
 - `client_generated_id` uniqueness scope is global
+- budgets support expense planning only; income budgeting is out of scope
 
 ---
 

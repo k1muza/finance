@@ -5,7 +5,7 @@ export default function SettingsPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-100">Settings</h1>
-        <p className="text-sm text-slate-400 mt-1">Manage accounts, funds, budgets, districts, imports, and finance configuration.</p>
+        <p className="text-sm text-slate-400 mt-1">Manage accounts, funds, districts, imports, and finance configuration.</p>
       </div>
       <SettingsPanel />
     </div>

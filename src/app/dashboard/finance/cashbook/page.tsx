@@ -190,6 +190,7 @@ function NewTransactionForm({
   const selectedMember = members.find((member) => member.id === form.member_id) ?? null
   const memberPreview = buildMemberSnapshotPreview(members, form.member_id)
   const counterpartyLabel = form.kind === 'payment' ? 'Fallback Payee Name' : 'Fallback Counterparty Name'
+  const requiresIndividualReceiptMember = form.kind === 'receipt' && selectedFund?.requires_individual_member
 
   const handleSave = async () => {
     setError(null)
@@ -203,8 +204,8 @@ function NewTransactionForm({
       setError('Provide a district member, a registered counterparty, or a fallback counterparty name')
       return
     }
-    if (selectedFund?.requires_individual_member && selectedMember?.type !== 'individual') {
-      setError('This fund requires an individual member')
+    if (requiresIndividualReceiptMember && selectedMember?.type !== 'individual') {
+      setError('This fund requires an individual member on receipts')
       return
     }
     const amount = parseFloat(form.amount)
@@ -293,7 +294,7 @@ function NewTransactionForm({
         />
         <div className="space-y-1">
           <Select
-            label={`Member${selectedFund?.requires_individual_member ? ' *' : ''}`}
+            label={`Member${requiresIndividualReceiptMember ? ' *' : ''}`}
             value={form.member_id}
             onChange={(e) => setForm((f) => ({
               ...f,
@@ -307,8 +308,8 @@ function NewTransactionForm({
             placeholder="No member"
           />
           <p className="text-xs text-slate-500">
-            {selectedFund?.requires_individual_member
-              ? 'This fund can only be posted with an individual member.'
+            {requiresIndividualReceiptMember
+              ? 'Receipts into this fund must be posted against an individual member.'
               : form.kind === 'payment'
                 ? 'Choose the district member to record as payee when the payment is internal.'
                 : 'Choose the district member to keep reporting tied to the member hierarchy.'}
@@ -434,6 +435,7 @@ function EditDraftForm({
   const selectedMember = members.find((member) => member.id === form.member_id) ?? null
   const memberPreview = buildMemberSnapshotPreview(members, form.member_id)
   const counterpartyLabel = form.kind === 'payment' ? 'Fallback Payee Name' : 'Fallback Counterparty Name'
+  const requiresIndividualReceiptMember = form.kind === 'receipt' && selectedFund?.requires_individual_member
 
   const handleSave = async () => {
     setError(null)
@@ -445,8 +447,8 @@ function EditDraftForm({
       setError('Provide a district member, a registered counterparty, or a fallback counterparty name')
       return
     }
-    if (selectedFund?.requires_individual_member && selectedMember?.type !== 'individual') {
-      setError('This fund requires an individual member')
+    if (requiresIndividualReceiptMember && selectedMember?.type !== 'individual') {
+      setError('This fund requires an individual member on receipts')
       return
     }
     const amount = parseFloat(form.amount)
@@ -533,7 +535,7 @@ function EditDraftForm({
         />
         <div className="space-y-1">
           <Select
-            label={`Member${selectedFund?.requires_individual_member ? ' *' : ''}`}
+            label={`Member${requiresIndividualReceiptMember ? ' *' : ''}`}
             value={form.member_id}
             onChange={(e) => setForm((f) => ({
               ...f,
@@ -547,8 +549,8 @@ function EditDraftForm({
             placeholder="No member"
           />
           <p className="text-xs text-slate-500">
-            {selectedFund?.requires_individual_member
-              ? 'This fund can only be posted with an individual member.'
+            {requiresIndividualReceiptMember
+              ? 'Receipts into this fund must be posted against an individual member.'
               : form.kind === 'payment'
                 ? 'Choose the district member to record as payee when the payment is internal.'
                 : 'Choose the district member to keep reporting tied to the member hierarchy.'}

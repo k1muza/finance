@@ -148,23 +148,46 @@ export interface Counterparty {
   updated_at: string
 }
 
-export type BudgetType = 'income' | 'expense'
+export type BudgetStatus = 'draft' | 'active' | 'closed'
+
+export const BUDGET_STATUS_LABELS: Record<BudgetStatus, string> = {
+  draft: 'Draft',
+  active: 'Active',
+  closed: 'Closed',
+}
 
 export interface Budget {
   id: string
   district_id: string
-  fund_id: string | null
-  type: BudgetType
-  category: string
-  amount: number
-  currency: Currency
-  period_start: string
-  period_end: string
-  notes: string | null
+  client_generated_id: string | null
+  device_id: string | null
+  name: string
+  start_date: string
+  end_date: string
+  status: BudgetStatus
+  description: string | null
+  created_by_user_id: string | null
   created_at: string
   updated_at: string
   district?: District | null
+  lines?: BudgetLine[]
+}
+
+export interface BudgetLine {
+  id: string
+  district_id: string
+  budget_id: string
+  fund_id: string
+  line_description: string
+  currency: Currency
+  amount: number
+  scope_member_id: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  budget?: Budget | null
   fund?: Fund | null
+  scope_member?: Member | null
 }
 
 export interface FinanceCategoryBreakdown {

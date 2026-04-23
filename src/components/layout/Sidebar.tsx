@@ -20,6 +20,7 @@ import {
   Wallet,
   Users,
   ArrowRightLeft,
+  Target,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
@@ -29,6 +30,7 @@ const baseNav = [
   { href: '/dashboard/finance/transfers', icon: ArrowRightLeft, label: 'Transfers' },
   { href: '/dashboard/finance/accounts', icon: Landmark, label: 'Accounts' },
   { href: '/dashboard/finance/funds', icon: Wallet, label: 'Funds' },
+  { href: '/dashboard/finance/budgets', icon: Target, label: 'Budgets' },
   { href: '/dashboard/finance/members', icon: Users, label: 'Members' },
   { href: '/dashboard/finance/reports', icon: FileText, label: 'Reports' },
   { href: '/dashboard/settings', icon: Settings2, label: 'Settings' },

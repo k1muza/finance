@@ -4,6 +4,8 @@ const endpoints = [
   { method: 'POST', path: '/api/auth/register' },
   { method: 'GET', path: '/api/public/districts' },
   { method: 'POST', path: '/api/import/districts' },
+  { method: 'POST', path: '/api/budgets/{id}/activate' },
+  { method: 'POST', path: '/api/budgets/{id}/close' },
   { method: 'GET', path: '/api/transfers?district_id={districtId}' },
   { method: 'POST', path: '/api/transfers' },
   { method: 'GET', path: '/api/transfers/{id}' },

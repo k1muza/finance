@@ -904,7 +904,7 @@ export function FundsSection({ districtId }: { districtId: string }) {
                     onChange={(e) => setNewFund((current) => ({ ...current, requires_individual_member: e.target.checked }))}
                     className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
                   />
-                  <span className="text-sm text-slate-200">Requires individual member</span>
+                  <span className="text-sm text-slate-200">Receipts require individual member</span>
                 </label>
               </div>
             </div>
@@ -1000,7 +1000,7 @@ export function FundsSection({ districtId }: { districtId: string }) {
                                 onChange={(e) => setDraftFund((current) => ({ ...current, requires_individual_member: e.target.checked }))}
                                 className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
                               />
-                              Indiv. member required
+                              Indiv. member on receipts
                             </label>
                           </div>
                         ) : (

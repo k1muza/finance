@@ -440,10 +440,10 @@ export async function validateDraftTransactionPayload(
     }
   }
 
-  if (fund?.requires_individual_member && member?.type !== 'individual') {
+  if (payload.kind === 'receipt' && fund?.requires_individual_member && member?.type !== 'individual') {
     throw new ApiRouteError(
       'INDIVIDUAL_MEMBER_REQUIRED',
-      'This fund requires an individual member.',
+      'This fund requires an individual member on receipts.',
       422,
     )
   }

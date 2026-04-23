@@ -1,28 +1,40 @@
 'use client'
 
-import { type ReactNode, useMemo, useState } from 'react'
-import { Download, Landmark, Target, TrendingDown, TrendingUp } from 'lucide-react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { Download, Landmark, TrendingDown, TrendingUp } from 'lucide-react'
 import { useCashbook } from '@/hooks/useCashbook'
 import { useBudgets } from '@/hooks/useBudgets'
 import { useAuth } from '@/contexts/AuthContext'
 import { useDistricts } from '@/hooks/useDistricts'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Select } from '@/components/ui/Select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
 import { exportToCsv } from '@/lib/csv'
 import {
+  buildBudgetComparisonRows,
+  buildBudgetComparisonSummaryByCurrency,
   buildCashbookFundBalances,
   buildCashbookTotalsByCurrency,
+  type BudgetComparisonCurrencySummary,
+  type BudgetComparisonLineRow,
   type FundBalanceRow,
 } from '@/lib/finance/reporting'
 import {
   isIncomingTransactionEffect,
   shouldIncludeInFundReporting,
 } from '@/lib/finance/transactions'
-import type { CashbookTransaction, Currency } from '@/types'
+import {
+  type Budget,
+  BUDGET_STATUS_LABELS,
+  type CashbookTransaction,
+  type Currency,
+  MEMBER_TYPE_LABELS,
+} from '@/types'
 
 type PeriodPreset = 'this_month' | 'last_month' | 'this_year' | 'all_time'
 
@@ -103,16 +115,16 @@ function MetricCard({
         <div className="shrink-0 rounded-lg bg-slate-900/60 p-3">{icon}</div>
         <div>
           <p className="text-sm text-slate-400">{title}</p>
-        {values.length === 0 ? (
-          <p className={`mt-0.5 text-2xl font-bold ${fallbackClassName}`}>-</p>
-        ) : (
-          values.map(({ currency, amount, className }) => (
-            <p key={currency} className={`mt-0.5 text-xl font-bold ${className}`}>
-              {formatCurrency(amount, currency)}
-            </p>
-          ))
-        )}
-        <p className="mt-1 text-xs text-slate-500">{helper}</p>
+          {values.length === 0 ? (
+            <p className={`mt-0.5 text-2xl font-bold ${fallbackClassName}`}>-</p>
+          ) : (
+            values.map(({ currency, amount, className }) => (
+              <p key={currency} className={`mt-0.5 text-xl font-bold ${className}`}>
+                {formatCurrency(amount, currency)}
+              </p>
+            ))
+          )}
+          <p className="mt-1 text-xs text-slate-500">{helper}</p>
         </div>
       </CardContent>
     </Card>
@@ -316,88 +328,163 @@ function FundSummarySection({
   )
 }
 
+function budgetOptionLabel(budget: Budget, includeDistrict: boolean) {
+  const districtPrefix = includeDistrict && budget.district?.name
+    ? `${budget.district.name} - `
+    : ''
+
+  return `${districtPrefix}${budget.name} (${budget.start_date} to ${budget.end_date})`
+}
+
+function memberScopeLabel(row: BudgetComparisonLineRow) {
+  if (!row.scope_member_id) return 'District-wide'
+  if (!row.scope_member_name || !row.scope_member_type) return 'Member-scoped'
+  return `${MEMBER_TYPE_LABELS[row.scope_member_type]} - ${row.scope_member_name}`
+}
+
 function BudgetVsActualsSection({
-  currencies,
-  budgetTotalsByCurrency,
-  inByCurrency,
-  outByCurrency,
+  budgets,
+  selectedBudgetId,
+  onSelectBudgetId,
+  rows,
+  summaries,
+  showDistrictInOptions,
 }: {
-  currencies: Currency[]
-  budgetTotalsByCurrency: Record<string, { income: number; expense: number }>
-  inByCurrency: Partial<Record<string, number>>
-  outByCurrency: Partial<Record<string, number>>
+  budgets: Budget[]
+  selectedBudgetId: string | null
+  onSelectBudgetId: (budgetId: string) => void
+  rows: BudgetComparisonLineRow[]
+  summaries: BudgetComparisonCurrencySummary[]
+  showDistrictInOptions: boolean
 }) {
+  const selectedBudget = budgets.find((budget) => budget.id === selectedBudgetId) ?? null
+  const statusVariant = selectedBudget?.status === 'active'
+    ? 'green'
+    : selectedBudget?.status === 'closed'
+      ? 'yellow'
+      : 'default'
+
   return (
     <SectionCard
       title="Budget vs. Actuals"
-      description="Compare budget targets with posted cashbook activity by currency."
+      description="Compare a selected expense budget against posted payments and outgoing adjustments matched by period, fund, currency, and optional member scope."
     >
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-700">
-              <th className="px-4 py-3 text-left font-medium text-slate-400">Currency</th>
-              <th className="px-4 py-3 text-right font-medium text-slate-400">Budgeted Income</th>
-              <th className="px-4 py-3 text-right font-medium text-slate-400">Actual Receipts</th>
-              <th className="px-4 py-3 text-right font-medium text-slate-400">Variance</th>
-              <th className="px-4 py-3 text-right font-medium text-slate-400">Budgeted Spend</th>
-              <th className="px-4 py-3 text-right font-medium text-slate-400">Actual Payments</th>
-              <th className="px-4 py-3 text-right font-medium text-slate-400">Variance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currencies.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                  No budget or cashbook activity available for comparison.
-                </td>
-              </tr>
-            ) : (
-              currencies.map((currency) => {
-                const budgetIncome = budgetTotalsByCurrency[currency]?.income ?? 0
-                const budgetExpense = budgetTotalsByCurrency[currency]?.expense ?? 0
-                const actualIncome = inByCurrency[currency] ?? 0
-                const actualExpense = outByCurrency[currency] ?? 0
-                const incomeVariance = actualIncome - budgetIncome
-                const expenseVariance = budgetExpense - actualExpense
+      <div className="space-y-6 p-5">
+        {budgets.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-slate-700 p-10 text-center text-slate-500">
+            No budgets available for comparison.
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,340px),1fr]">
+              <Select
+                label="Budget"
+                value={selectedBudgetId ?? ''}
+                onChange={(e) => onSelectBudgetId(e.target.value)}
+                options={budgets.map((budget) => ({
+                  value: budget.id,
+                  label: budgetOptionLabel(budget, showDistrictInOptions),
+                }))}
+              />
+              {selectedBudget ? (
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium text-slate-100">{selectedBudget.name}</p>
+                    <Badge variant={statusVariant}>{BUDGET_STATUS_LABELS[selectedBudget.status]}</Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-400">
+                    {selectedBudget.start_date} to {selectedBudget.end_date}
+                  </p>
+                  {selectedBudget.description && (
+                    <p className="mt-2 text-sm text-slate-300">{selectedBudget.description}</p>
+                  )}
+                </div>
+              ) : null}
+            </div>
 
-                return (
-                  <tr key={currency} className="border-b border-slate-700/50 last:border-0">
-                    <td className="px-4 py-3 font-medium text-slate-100">{currency}</td>
-                    <td className="px-4 py-3 text-right text-slate-300">
-                      {formatCurrency(budgetIncome, currency)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium text-emerald-400">
-                      {formatCurrency(actualIncome, currency)}
-                    </td>
-                    <td
-                      className={`px-4 py-3 text-right font-medium ${
-                        incomeVariance >= 0 ? 'text-emerald-300' : 'text-amber-300'
-                      }`}
-                    >
-                      {incomeVariance >= 0 ? '+' : '-'}
-                      {formatCurrency(Math.abs(incomeVariance), currency)}
-                    </td>
-                    <td className="px-4 py-3 text-right text-slate-300">
-                      {formatCurrency(budgetExpense, currency)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium text-red-400">
-                      {formatCurrency(actualExpense, currency)}
-                    </td>
-                    <td
-                      className={`px-4 py-3 text-right font-medium ${
-                        expenseVariance >= 0 ? 'text-emerald-300' : 'text-red-300'
-                      }`}
-                    >
-                      {expenseVariance >= 0 ? '+' : '-'}
-                      {formatCurrency(Math.abs(expenseVariance), currency)}
-                    </td>
+            <div className="overflow-x-auto rounded-lg border border-slate-700">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700">
+                    <th className="px-4 py-3 text-left font-medium text-slate-400">Currency</th>
+                    <th className="px-4 py-3 text-right font-medium text-slate-400">Budget</th>
+                    <th className="px-4 py-3 text-right font-medium text-slate-400">Actual</th>
+                    <th className="px-4 py-3 text-right font-medium text-slate-400">Variance</th>
                   </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
+                </thead>
+                <tbody>
+                  {summaries.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                        This budget has no lines to compare yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    summaries.map((summary) => (
+                      <tr key={summary.currency} className="border-b border-slate-700/50 last:border-0">
+                        <td className="px-4 py-3 font-medium text-slate-100">{summary.currency}</td>
+                        <td className="px-4 py-3 text-right text-slate-300">
+                          {formatCurrency(summary.budget_total, summary.currency)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium text-red-400">
+                          {formatCurrency(summary.actual_total, summary.currency)}
+                        </td>
+                        <td className={`px-4 py-3 text-right font-medium ${summary.variance_total >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                          {summary.variance_total >= 0 ? '+' : '-'}
+                          {formatCurrency(Math.abs(summary.variance_total), summary.currency)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border border-slate-700">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700">
+                    <th className="px-4 py-3 text-left font-medium text-slate-400">Fund</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-400">Line</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-400">Currency</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-400">Member Scope</th>
+                    <th className="px-4 py-3 text-right font-medium text-slate-400">Budgeted</th>
+                    <th className="px-4 py-3 text-right font-medium text-slate-400">Actual</th>
+                    <th className="px-4 py-3 text-right font-medium text-slate-400">Variance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                        No budget lines available for detailed comparison.
+                      </td>
+                    </tr>
+                  ) : (
+                    rows.map((row) => (
+                      <tr key={row.budget_line_id} className="border-b border-slate-700/50 last:border-0">
+                        <td className="px-4 py-3 text-slate-100">{row.fund_name}</td>
+                        <td className="px-4 py-3 text-slate-300">{row.line_description}</td>
+                        <td className="px-4 py-3 text-slate-300">{row.currency}</td>
+                        <td className="px-4 py-3 text-slate-300">{memberScopeLabel(row)}</td>
+                        <td className="px-4 py-3 text-right text-slate-300">
+                          {formatCurrency(row.budget_amount, row.currency)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium text-red-400">
+                          {formatCurrency(row.actual_amount, row.currency)}
+                        </td>
+                        <td className={`px-4 py-3 text-right font-medium ${row.variance_amount >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                          {row.variance_amount >= 0 ? '+' : '-'}
+                          {formatCurrency(Math.abs(row.variance_amount), row.currency)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </SectionCard>
   )
@@ -406,25 +493,43 @@ function BudgetVsActualsSection({
 export default function ReportsPage() {
   const { districtId, isAdmin } = useAuth()
   const { data: districts } = useDistricts()
-  const { data: budgets } = useBudgets({ district_id: districtId ?? undefined })
+  const { data: budgets, loading: budgetsLoading } = useBudgets({ district_id: districtId ?? undefined })
+  const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
 
   const [preset, setPreset] = useState<PeriodPreset>('this_month')
   const { date_from, date_to, label: periodLabel } = getPeriodBounds(preset)
 
-  const { data: transactions, loading } = useCashbook({
+  const { data: periodTransactions, loading: periodLoading } = useCashbook({
     district_id: districtId === undefined ? undefined : districtId,
     status: 'posted',
     date_from,
     date_to,
   })
+  const { data: budgetTransactions, loading: budgetTransactionsLoading } = useCashbook({
+    district_id: districtId === undefined ? undefined : districtId,
+    status: 'posted',
+  })
+
+  useEffect(() => {
+    if (selectedBudgetId && budgets.some((budget) => budget.id === selectedBudgetId)) {
+      return
+    }
+
+    const nextBudget = budgets.find((budget) => budget.status === 'active') ?? budgets[0] ?? null
+    setSelectedBudgetId(nextBudget?.id ?? null)
+  }, [budgets, selectedBudgetId])
 
   const showDistrictColumn = isAdmin && !districtId
   const districtName = districtId
     ? districts.find((d) => d.id === districtId)?.name ?? 'District'
     : 'All Districts'
   const operationalTransactions = useMemo(
-    () => transactions.filter((txn) => shouldIncludeInFundReporting(txn)),
-    [transactions],
+    () => periodTransactions.filter((txn) => shouldIncludeInFundReporting(txn)),
+    [periodTransactions],
+  )
+  const budgetOperationalTransactions = useMemo(
+    () => budgetTransactions.filter((txn) => shouldIncludeInFundReporting(txn)),
+    [budgetTransactions],
   )
 
   const { inByCurrency, outByCurrency } = useMemo(
@@ -436,20 +541,39 @@ export default function ReportsPage() {
     () => [...new Set([...Object.keys(inByCurrency), ...Object.keys(outByCurrency)])] as Currency[],
     [inByCurrency, outByCurrency],
   )
-  const budgetTotalsByCurrency = useMemo(
+  const activeBudgetTotalsByCurrency = useMemo(
     () =>
-      budgets.reduce<Record<string, { income: number; expense: number }>>((acc, b) => {
-        if (!acc[b.currency]) acc[b.currency] = { income: 0, expense: 0 }
-        if (b.type === 'income') acc[b.currency].income += b.amount
-        else acc[b.currency].expense += b.amount
-        return acc
-      }, {}),
+      budgets
+        .filter((budget) => budget.status === 'active')
+        .reduce<Record<string, number>>((acc, budget) => {
+          for (const line of budget.lines ?? []) {
+            if (!acc[line.currency]) acc[line.currency] = 0
+            acc[line.currency] += Number(line.amount)
+          }
+          return acc
+        }, {}),
     [budgets],
   )
-  const comparisonCurrencies = useMemo(
-    () => [...new Set([...allCurrencies, ...Object.keys(budgetTotalsByCurrency)])] as Currency[],
-    [allCurrencies, budgetTotalsByCurrency],
+  const activeBudgetLineCount = useMemo(
+    () => budgets
+      .filter((budget) => budget.status === 'active')
+      .reduce((total, budget) => total + (budget.lines?.length ?? 0), 0),
+    [budgets],
   )
+  const selectedBudget = useMemo(
+    () => budgets.find((budget) => budget.id === selectedBudgetId) ?? null,
+    [budgets, selectedBudgetId],
+  )
+  const budgetComparisonRows = useMemo(
+    () => buildBudgetComparisonRows(selectedBudget, budgetOperationalTransactions),
+    [budgetOperationalTransactions, selectedBudget],
+  )
+  const budgetComparisonSummary = useMemo(
+    () => buildBudgetComparisonSummaryByCurrency(budgetComparisonRows),
+    [budgetComparisonRows],
+  )
+
+  const loading = periodLoading || budgetTransactionsLoading || budgetsLoading
 
   const handleExport = () => {
     const rows: Record<string, string | number | null>[] = []
@@ -464,7 +588,10 @@ export default function ReportsPage() {
         Date: '',
         Reference: '',
         District: '',
+        Budget: '',
+        'Budget Status': '',
         Fund: '',
+        'Budget Line': '',
         Account: '',
         Counterparty: '',
         Narration: '',
@@ -472,6 +599,10 @@ export default function ReportsPage() {
         Kind: '',
         Amount: '',
         Direction: '',
+        'Budget Scope': '',
+        'Budget Amount': '',
+        'Actual Amount': '',
+        Variance: '',
         ...row,
       })
 
@@ -539,6 +670,47 @@ export default function ReportsPage() {
       })
     }
 
+    if (selectedBudget) {
+      pushRow({})
+      pushRow({
+        Section: `BUDGET VS ACTUAL - ${selectedBudget.name}`,
+        District: showDistrictColumn ? selectedBudget.district?.name ?? selectedBudget.district_id : '',
+        Budget: selectedBudget.name,
+        'Budget Status': BUDGET_STATUS_LABELS[selectedBudget.status],
+        Date: `${selectedBudget.start_date} to ${selectedBudget.end_date}`,
+      })
+
+      for (const summary of budgetComparisonSummary) {
+        pushRow({
+          Section: 'BUDGET SUMMARY',
+          Budget: selectedBudget.name,
+          'Budget Status': BUDGET_STATUS_LABELS[selectedBudget.status],
+          Currency: summary.currency,
+          Kind: 'expense_budget',
+          'Budget Amount': summary.budget_total,
+          'Actual Amount': summary.actual_total,
+          Variance: summary.variance_total,
+        })
+      }
+
+      for (const row of budgetComparisonRows) {
+        pushRow({
+          Section: 'BUDGET LINE',
+          Budget: row.budget_name,
+          'Budget Status': BUDGET_STATUS_LABELS[row.budget_status],
+          District: showDistrictColumn ? selectedBudget.district?.name ?? selectedBudget.district_id : '',
+          Fund: row.fund_name,
+          'Budget Line': row.line_description,
+          Currency: row.currency,
+          Kind: 'expense_budget',
+          'Budget Scope': memberScopeLabel(row),
+          'Budget Amount': row.budget_amount,
+          'Actual Amount': row.actual_amount,
+          Variance: row.variance_amount,
+        })
+      }
+    }
+
     const filename = `cashbook-${periodLabel.replace(/\s+/g, '-').toLowerCase()}-${districtName.replace(
       /\s+/g,
       '-',
@@ -550,10 +722,10 @@ export default function ReportsPage() {
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <PageHeader
         title="Reports"
-        description={`${districtName} · ${periodLabel}`}
+        description={`${districtName} - ${periodLabel}`}
         actions={(
-          <Button variant="ghost" onClick={handleExport} disabled={operationalTransactions.length === 0}>
-          <Download className="h-4 w-4" /> Export CSV
+          <Button variant="ghost" onClick={handleExport} disabled={operationalTransactions.length === 0 && budgetComparisonRows.length === 0}>
+            <Download className="h-4 w-4" /> Export CSV
           </Button>
         )}
       />
@@ -610,30 +782,17 @@ export default function ReportsPage() {
                 helper={`${operationalTransactions.filter((t) => !isIncomingTransactionEffect(t)).length} transaction(s)`}
               />
               <MetricCard
-                icon={<Landmark className="h-5 w-5 text-cyan-400" />}
-                title="Budgeted Income"
-                values={Object.entries(budgetTotalsByCurrency)
-                  .filter(([, totals]) => totals.income > 0)
-                  .map(([currency, totals]) => ({
+                icon={<Landmark className="h-5 w-5 text-amber-400" />}
+                title="Active Budgeted Expenses"
+                values={Object.entries(activeBudgetTotalsByCurrency)
+                  .filter(([, total]) => total > 0)
+                  .map(([currency, total]) => ({
                     currency: currency as Currency,
-                    amount: totals.income,
-                    className: 'text-cyan-300',
-                  }))}
-                fallbackClassName="text-cyan-300"
-                helper="Across defined income budgets"
-              />
-              <MetricCard
-                icon={<Target className="h-5 w-5 text-amber-400" />}
-                title="Budgeted Expenditure"
-                values={Object.entries(budgetTotalsByCurrency)
-                  .filter(([, totals]) => totals.expense > 0)
-                  .map(([currency, totals]) => ({
-                    currency: currency as Currency,
-                    amount: totals.expense,
+                    amount: total,
                     className: 'text-amber-300',
                   }))}
                 fallbackClassName="text-amber-300"
-                helper={`${budgets.length} budget line${budgets.length !== 1 ? 's' : ''}`}
+                helper={`${activeBudgetLineCount} active budget line${activeBudgetLineCount === 1 ? '' : 's'}`}
               />
             </div>
 
@@ -652,10 +811,12 @@ export default function ReportsPage() {
 
           <TabsContent value="budget">
             <BudgetVsActualsSection
-              currencies={comparisonCurrencies}
-              budgetTotalsByCurrency={budgetTotalsByCurrency}
-              inByCurrency={inByCurrency}
-              outByCurrency={outByCurrency}
+              budgets={budgets}
+              selectedBudgetId={selectedBudgetId}
+              onSelectBudgetId={setSelectedBudgetId}
+              rows={budgetComparisonRows}
+              summaries={budgetComparisonSummary}
+              showDistrictInOptions={showDistrictColumn}
             />
           </TabsContent>
         </Tabs>

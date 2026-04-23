@@ -29,6 +29,13 @@ function buildFinanceSupabase() {
         is_active: true,
         requires_individual_member: true,
       },
+      {
+        id: 'fund-building',
+        district_id: 'district-1',
+        nature: 'mixed',
+        is_active: true,
+        requires_individual_member: true,
+      },
     ],
     members: [
       {
@@ -145,7 +152,7 @@ describe('validateDraftTransactionPayload', () => {
     })
   })
 
-  it('requires an individual member for funds that enforce it', async () => {
+  it('requires an individual member on receipts for funds that enforce it', async () => {
     const supabase = buildFinanceSupabase()
 
     await expect(
@@ -162,6 +169,25 @@ describe('validateDraftTransactionPayload', () => {
     ).rejects.toMatchObject({
       code: 'INDIVIDUAL_MEMBER_REQUIRED',
     })
+  })
+
+  it('allows payments from funds that require individual members on receipts', async () => {
+    const supabase = buildFinanceSupabase()
+
+    const result = await validateDraftTransactionPayload(supabase as never, {
+      district_id: 'district-1',
+      account_id: 'account-1',
+      fund_id: 'fund-building',
+      kind: 'payment',
+      counterparty: ' Vehicle Supplier ',
+      transaction_date: '2026-04-21',
+      currency: 'USD',
+      total_amount: 250,
+    })
+
+    expect(result.values.counterparty).toBe('Vehicle Supplier')
+    expect(result.values.effect_direction).toBe('out')
+    expect(result.values.member_id).toBeNull()
   })
 
   it('rejects standalone transfer drafts in the generic cashbook workflow', async () => {

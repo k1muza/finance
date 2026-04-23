@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { CashbookTransaction } from '@/types'
+import type { Budget, CashbookTransaction, Member } from '@/types'
 import {
+  buildBudgetComparisonRows,
+  buildBudgetComparisonSummaryByCurrency,
   buildCashbookFundBalances,
   buildCashbookTotalsByCurrency,
 } from '@/lib/finance/reporting'
@@ -62,6 +64,46 @@ function makeTransaction(
     counterparty_record: overrides.counterparty_record ?? null,
     assembly_member_snapshot: overrides.assembly_member_snapshot ?? null,
     region_member_snapshot: overrides.region_member_snapshot ?? null,
+    lines: overrides.lines ?? [],
+  }
+}
+
+function makeMember(overrides: Partial<Member>): Member {
+  return {
+    id: overrides.id ?? 'member-1',
+    district_id: overrides.district_id ?? 'district-1',
+    parent_id: overrides.parent_id ?? null,
+    type: overrides.type ?? 'individual',
+    name: overrides.name ?? 'Member One',
+    code: overrides.code ?? null,
+    title: overrides.title ?? 'saint',
+    phone: overrides.phone ?? null,
+    email: overrides.email ?? null,
+    address: overrides.address ?? null,
+    notes: overrides.notes ?? null,
+    is_active: overrides.is_active ?? true,
+    created_at: overrides.created_at ?? '2026-04-21T09:00:00Z',
+    updated_at: overrides.updated_at ?? '2026-04-21T10:00:00Z',
+    parent: overrides.parent ?? null,
+    children: overrides.children ?? [],
+  }
+}
+
+function makeBudget(overrides: Partial<Budget>): Budget {
+  return {
+    id: overrides.id ?? 'budget-1',
+    district_id: overrides.district_id ?? 'district-1',
+    client_generated_id: overrides.client_generated_id ?? null,
+    device_id: overrides.device_id ?? null,
+    name: overrides.name ?? 'Annual Budget',
+    start_date: overrides.start_date ?? '2026-04-01',
+    end_date: overrides.end_date ?? '2026-04-30',
+    status: overrides.status ?? 'active',
+    description: overrides.description ?? null,
+    created_by_user_id: overrides.created_by_user_id ?? null,
+    created_at: overrides.created_at ?? '2026-04-01T09:00:00Z',
+    updated_at: overrides.updated_at ?? '2026-04-01T10:00:00Z',
+    district: overrides.district ?? null,
     lines: overrides.lines ?? [],
   }
 }
@@ -160,5 +202,206 @@ describe('cashbook reporting helpers', () => {
     expect(totals.outByCurrency).toEqual({
       USD: 30,
     })
+  })
+
+  it('builds expense budget comparison rows using fund, period, currency, and member scope', () => {
+    const assembly = makeMember({
+      id: 'assembly-1',
+      type: 'assembly',
+      name: 'Central Assembly',
+    })
+    const individual = makeMember({
+      id: 'individual-1',
+      type: 'individual',
+      name: 'John Example',
+    })
+
+    const budget = makeBudget({
+      lines: [
+        {
+          id: 'line-general',
+          district_id: 'district-1',
+          budget_id: 'budget-1',
+          fund_id: 'fund-1',
+          line_description: 'General spending',
+          currency: 'USD',
+          amount: 100,
+          scope_member_id: null,
+          notes: null,
+          created_at: '2026-04-01T09:00:00Z',
+          updated_at: '2026-04-01T10:00:00Z',
+          fund: {
+            id: 'fund-1',
+            district_id: 'district-1',
+            name: 'General Fund',
+            code: null,
+            description: null,
+            is_restricted: false,
+            nature: 'mixed',
+            is_active: true,
+            requires_individual_member: false,
+            created_at: '2026-04-01T09:00:00Z',
+            updated_at: '2026-04-01T10:00:00Z',
+          },
+          scope_member: null,
+          budget: null,
+        },
+        {
+          id: 'line-expense-scope',
+          district_id: 'district-1',
+          budget_id: 'budget-1',
+          fund_id: 'fund-3',
+          line_description: 'Assembly welfare',
+          currency: 'USD',
+          amount: 40,
+          scope_member_id: 'assembly-1',
+          notes: null,
+          created_at: '2026-04-01T09:00:00Z',
+          updated_at: '2026-04-01T10:00:00Z',
+          fund: {
+            id: 'fund-3',
+            district_id: 'district-1',
+            name: 'Welfare Fund',
+            code: null,
+            description: null,
+            is_restricted: false,
+            nature: 'expense_only',
+            is_active: true,
+            requires_individual_member: false,
+            created_at: '2026-04-01T09:00:00Z',
+            updated_at: '2026-04-01T10:00:00Z',
+          },
+          scope_member: assembly,
+          budget: null,
+        },
+        {
+          id: 'line-member-expense',
+          district_id: 'district-1',
+          budget_id: 'budget-1',
+          fund_id: 'fund-2',
+          line_description: 'Pastoral support',
+          currency: 'USD',
+          amount: 50,
+          scope_member_id: 'individual-1',
+          notes: null,
+          created_at: '2026-04-01T09:00:00Z',
+          updated_at: '2026-04-01T10:00:00Z',
+          fund: {
+            id: 'fund-2',
+            district_id: 'district-1',
+            name: 'Tithes Fund',
+            code: null,
+            description: null,
+            is_restricted: true,
+            nature: 'expense_only',
+            is_active: true,
+            requires_individual_member: true,
+            created_at: '2026-04-01T09:00:00Z',
+            updated_at: '2026-04-01T10:00:00Z',
+          },
+          scope_member: individual,
+          budget: null,
+        },
+      ],
+    })
+
+    const rows = buildBudgetComparisonRows(budget, [
+      makeTransaction({
+        id: 'expense-budget-hit',
+        fund_id: 'fund-1',
+        currency: 'USD',
+        kind: 'payment',
+        effect_direction: 'out',
+        total_amount: 90,
+        transaction_date: '2026-04-10',
+      }),
+      makeTransaction({
+        id: 'expense-budget-scope-hit',
+        fund_id: 'fund-3',
+        currency: 'USD',
+        kind: 'payment',
+        effect_direction: 'out',
+        total_amount: 30,
+        transaction_date: '2026-04-12',
+        assembly_member_snapshot_id: 'assembly-1',
+      }),
+      makeTransaction({
+        id: 'expense-budget-miss',
+        fund_id: 'fund-3',
+        currency: 'USD',
+        kind: 'payment',
+        effect_direction: 'out',
+        total_amount: 12,
+        transaction_date: '2026-04-12',
+        assembly_member_snapshot_id: 'assembly-2',
+      }),
+      makeTransaction({
+        id: 'member-expense-hit',
+        fund_id: 'fund-2',
+        currency: 'USD',
+        kind: 'adjustment',
+        effect_direction: 'out',
+        total_amount: 60,
+        transaction_date: '2026-04-15',
+        member_id: 'individual-1',
+      }),
+      makeTransaction({
+        id: 'member-expense-miss',
+        fund_id: 'fund-2',
+        currency: 'USD',
+        kind: 'adjustment',
+        effect_direction: 'in',
+        total_amount: 70,
+        transaction_date: '2026-04-16',
+        member_id: 'individual-2',
+      }),
+      makeTransaction({
+        id: 'transfer-ignore',
+        fund_id: 'fund-1',
+        currency: 'USD',
+        kind: 'transfer',
+        effect_direction: 'out',
+        total_amount: 500,
+        transaction_date: '2026-04-18',
+        fund: null,
+      }),
+      makeTransaction({
+        id: 'outside-period',
+        fund_id: 'fund-1',
+        currency: 'USD',
+        kind: 'payment',
+        effect_direction: 'out',
+        total_amount: 999,
+        transaction_date: '2026-05-01',
+      }),
+    ])
+
+    expect(rows).toHaveLength(3)
+    expect(rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        budget_line_id: 'line-general',
+        actual_amount: 90,
+        variance_amount: 10,
+      }),
+      expect.objectContaining({
+        budget_line_id: 'line-expense-scope',
+        actual_amount: 30,
+        variance_amount: 10,
+      }),
+      expect.objectContaining({
+        budget_line_id: 'line-member-expense',
+        actual_amount: 60,
+        variance_amount: -10,
+      }),
+    ]))
+
+    expect(buildBudgetComparisonSummaryByCurrency(rows)).toEqual([
+      expect.objectContaining({
+        currency: 'USD',
+        budget_total: 190,
+        actual_total: 180,
+        variance_total: 10,
+      }),
+    ])
   })
 })

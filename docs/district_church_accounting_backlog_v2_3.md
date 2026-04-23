@@ -329,16 +329,16 @@ Done when:
 
 ## Phase 4: Budget model revamp
 
-### B5.1 `P1` Split budgets into headers and lines
+### B5.1 `P1` ✅ Split budgets into headers and lines
 
 Move from the current flat budget table to `budgets` plus `budget_lines`.
 
 Done when:
 - budget headers hold district, period, and lifecycle state
 - budget lines hold fund, currency, optional member scope, and amount
-- the old budget UI is migrated or retired cleanly
+- the old budget UI is replaced with header-aware budget management
 
-### B5.2 `P1` Add budget lifecycle states
+### B5.2 `P1` ✅ Add budget lifecycle states
 
 Implement `draft`, `active`, and `closed` with protected state changes.
 
@@ -347,16 +347,16 @@ Done when:
 - activation and closure use protected server routes
 - actuals compare against active or selected budget lines correctly
 
-### B5.3 `P1` Implement budget-vs-actual from posted transactions
+### B5.3 `P1` ✅ Implement budget-vs-actual from posted transactions
 
 Tie actuals to the same district, period, fund, and currency as the budget line.
 
 Done when:
 - actuals ignore drafts and other districts
 - variance is computed consistently
-- report results can be viewed per budget and line
+- report results can be viewed per selected budget and line
 
-### B5.4 `P2` Add budget member scoping if still needed
+### B5.4 `P2` ✅ Add budget member scoping if still needed
 
 Support optional member-level budgeting after the basic model is stable.
 
