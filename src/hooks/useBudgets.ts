@@ -116,6 +116,7 @@ export function useBudgets(filter: BudgetFilter = {}) {
       description: values.description?.trim() || null,
       client_generated_id: values.client_generated_id?.trim() || null,
       device_id: values.device_id?.trim() || null,
+      created_by_user_id: userId,
       status: 'draft',
     })
       .select('id')
