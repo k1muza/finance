@@ -49,8 +49,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="h-full" suppressHydrationWarning>
-      <body className="h-full overflow-hidden antialiased">
+    <html lang="en" className="h-full print:h-auto" suppressHydrationWarning>
+      <body className="h-full overflow-hidden antialiased print:h-auto print:overflow-visible print:bg-white">
         {process.env.NODE_ENV !== 'production' && (
           <Script id="dev-sw-cleanup" strategy="beforeInteractive">
             {devServiceWorkerCleanupScript}

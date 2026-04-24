@@ -107,7 +107,7 @@ function DistrictSettings({ districtId }: { districtId: string }) {
     if (!district) return
     setName(district.name)
     setAutoPostCashbookTransactions(Boolean(district.auto_post_cashbook_transactions))
-  }, [district]) // eslint-disable-line
+  }, [district])
 
   const hasChanges = name.trim() !== (district?.name ?? '')
     || autoPostCashbookTransactions !== Boolean(district?.auto_post_cashbook_transactions)

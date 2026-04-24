@@ -424,22 +424,21 @@ html {
     display: none !important;
   }
 
+  html[data-print-layout='fund-leaderboard'],
   body[data-print-layout='fund-leaderboard'] {
     background: #ffffff !important;
     color: #0f172a !important;
-  }
-
-  body[data-print-layout='fund-leaderboard'] aside,
-  body[data-print-layout='fund-leaderboard'] header {
-    display: none !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   body[data-print-layout='fund-leaderboard'] main {
     overflow: visible !important;
+    height: auto !important;
   }
 
   body[data-print-layout='fund-leaderboard'] [data-print-root='fund-leaderboard'] {
-    max-width: none !important;
-    padding: 0 !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
   }
 }

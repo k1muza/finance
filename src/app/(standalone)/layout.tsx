@@ -9,7 +9,7 @@ export default function StandaloneLayout({ children }: { children: React.ReactNo
     <ToastProvider>
       <SyncStatusController />
       <DistrictGuard>
-        <div className="h-screen overflow-y-auto bg-slate-950 print:bg-white">
+        <div className="h-screen overflow-y-auto bg-slate-950 print:h-auto print:overflow-visible print:bg-white">
           {children}
         </div>
       </DistrictGuard>

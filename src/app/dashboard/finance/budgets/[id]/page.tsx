@@ -359,16 +359,9 @@ export default function BudgetDetailPage() {
       <BudgetDetailView
         budget={budget}
         canManageBudgets={canManageBudgets}
-        canActivateBudgets={canActivateBudgets}
-        canCloseBudgets={canCloseBudgets}
-        onEditBudget={beginEditBudget}
-        onDeleteBudget={setConfirmDeleteBudget}
-        onActivateBudget={handleActivateBudget}
-        onCloseBudget={handleCloseBudget}
         onAddLine={beginAddLine}
         onEditLine={beginEditLine}
         onDeleteLine={setConfirmDeleteLine}
-        actionLoading={actionLoading}
       />
 
       <BudgetFormModal

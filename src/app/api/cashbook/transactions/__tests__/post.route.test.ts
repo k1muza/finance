@@ -44,7 +44,7 @@ function createPostRouteSupabase(transactionRows: Array<Record<string, unknown>>
       let updatePayload: Record<string, unknown> | null = null
 
       const builder = {
-        select(_columns?: string) {
+        select() {
           return builder
         },
 

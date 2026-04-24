@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { Download, Landmark, TrendingDown, TrendingUp } from 'lucide-react'
 import { useCashbook } from '@/hooks/useCashbook'
 import { useBudgets } from '@/hooks/useBudgets'
@@ -510,15 +510,6 @@ export default function ReportsPage() {
     status: 'posted',
   })
 
-  useEffect(() => {
-    if (selectedBudgetId && budgets.some((budget) => budget.id === selectedBudgetId)) {
-      return
-    }
-
-    const nextBudget = budgets.find((budget) => budget.status === 'active') ?? budgets[0] ?? null
-    setSelectedBudgetId(nextBudget?.id ?? null)
-  }, [budgets, selectedBudgetId])
-
   const showDistrictColumn = isAdmin && !districtId
   const districtName = districtId
     ? districts.find((d) => d.id === districtId)?.name ?? 'District'
@@ -560,9 +551,16 @@ export default function ReportsPage() {
       .reduce((total, budget) => total + (budget.lines?.length ?? 0), 0),
     [budgets],
   )
+  const effectiveSelectedBudgetId = useMemo(() => {
+    if (selectedBudgetId && budgets.some((budget) => budget.id === selectedBudgetId)) {
+      return selectedBudgetId
+    }
+
+    return budgets.find((budget) => budget.status === 'active')?.id ?? budgets[0]?.id ?? null
+  }, [budgets, selectedBudgetId])
   const selectedBudget = useMemo(
-    () => budgets.find((budget) => budget.id === selectedBudgetId) ?? null,
-    [budgets, selectedBudgetId],
+    () => budgets.find((budget) => budget.id === effectiveSelectedBudgetId) ?? null,
+    [budgets, effectiveSelectedBudgetId],
   )
   const budgetComparisonRows = useMemo(
     () => buildBudgetComparisonRows(selectedBudget, budgetOperationalTransactions),
@@ -812,7 +810,7 @@ export default function ReportsPage() {
           <TabsContent value="budget">
             <BudgetVsActualsSection
               budgets={budgets}
-              selectedBudgetId={selectedBudgetId}
+              selectedBudgetId={effectiveSelectedBudgetId}
               onSelectBudgetId={setSelectedBudgetId}
               rows={budgetComparisonRows}
               summaries={budgetComparisonSummary}

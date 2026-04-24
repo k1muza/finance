@@ -242,7 +242,7 @@ async function main() {
     }
   }
 
-  const contributionRows = rows.map((row, index) => {
+  const contributionRows = rows.map((row) => {
     const region = regionByName.get(normalizeKey(row.region))
     const assembly = assemblyByKey.get(buildAssemblyKey(row.assembly, region.id))
     const member = memberByKey.get(buildMemberKey(row.memberName, assembly.id))

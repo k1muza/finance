@@ -3,13 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import {
-  ArrowLeft,
-  Award,
-  Crown,
-  Medal,
-  Printer,
-} from 'lucide-react'
+import { ArrowLeft, Printer } from 'lucide-react'
 import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { Button } from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
@@ -25,6 +19,23 @@ import { formatCurrency } from '@/lib/utils/formatCurrency'
 import type { CashbookTransaction } from '@/types'
 
 type PeriodPreset = 'all_time' | 'this_year' | 'this_month' | 'custom'
+
+type SummaryTone = 'sky' | 'emerald' | 'amber' | 'rose'
+
+type RegionRankingRow = {
+  region: string
+  participantCount: number
+  totalIncoming: number
+}
+
+type ReportSection = {
+  group: FundLeaderboardCurrencyGroup
+  contributors: FundLeaderboardEntry[]
+  contributorCount: number
+  averageGift: number
+  regionRows: RegionRankingRow[]
+  topRegion: RegionRankingRow | null
+}
 
 function toIsoDate(date: Date) {
   return date.toISOString().split('T')[0]
@@ -50,7 +61,7 @@ function getPresetRange(preset: Exclude<PeriodPreset, 'custom'>) {
 }
 
 function formatDate(iso: string | null) {
-  if (!iso) return '—'
+  if (!iso) return 'Not set'
   return new Date(iso).toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
@@ -60,81 +71,230 @@ function formatDate(iso: string | null) {
 
 function activeRangeLabel(preset: PeriodPreset, customFrom: string, customTo: string) {
   if (preset !== 'custom') return getPresetRange(preset).label
-  if (customFrom && customTo) return `${formatDate(customFrom)} – ${formatDate(customTo)}`
+  if (customFrom && customTo) return `${formatDate(customFrom)} to ${formatDate(customTo)}`
   if (customFrom) return `From ${formatDate(customFrom)}`
   if (customTo) return `Up to ${formatDate(customTo)}`
   return 'Custom period'
 }
 
-function PodiumCard({ entry, rank, currency }: { entry: FundLeaderboardEntry; rank: 1 | 2 | 3; currency: string }) {
-  const icons = { 1: Crown, 2: Medal, 3: Award }
-  const Icon = icons[rank]
+function getOrdinalRank(rank: number) {
+  const mod100 = rank % 100
+  if (mod100 >= 11 && mod100 <= 13) return `${rank}th`
+
+  const mod10 = rank % 10
+  if (mod10 === 1) return `${rank}st`
+  if (mod10 === 2) return `${rank}nd`
+  if (mod10 === 3) return `${rank}rd`
+  return `${rank}th`
+}
+
+function buildRegionRankings(group: FundLeaderboardCurrencyGroup) {
+  const regionMap = new Map<string, RegionRankingRow>()
+
+  for (const entry of group.incoming_leaders) {
+    const region = entry.participant_region?.trim() || 'Unassigned'
+    const existing = regionMap.get(region)
+
+    if (existing) {
+      existing.participantCount += 1
+      existing.totalIncoming += entry.incoming_total
+      continue
+    }
+
+    regionMap.set(region, {
+      region,
+      participantCount: 1,
+      totalIncoming: entry.incoming_total,
+    })
+  }
+
+  return [...regionMap.values()].sort((a, b) => (
+    b.totalIncoming - a.totalIncoming
+    || b.participantCount - a.participantCount
+    || a.region.localeCompare(b.region)
+  ))
+}
+
+function collectDuplicateNames(sections: ReportSection[]) {
+  const duplicates = new Map<string, string>()
+
+  for (const section of sections) {
+    const nameCounts = new Map<string, { label: string; count: number }>()
+
+    for (const entry of section.contributors) {
+      const key = entry.participant_name.trim().toLowerCase()
+      const existing = nameCounts.get(key)
+      if (existing) {
+        existing.count += 1
+      } else {
+        nameCounts.set(key, { label: entry.participant_name.trim(), count: 1 })
+      }
+    }
+
+    for (const { label, count } of nameCounts.values()) {
+      if (count > 1) duplicates.set(label.toLowerCase(), label)
+    }
+  }
+
+  return [...duplicates.values()].sort((a, b) => a.localeCompare(b))
+}
+
+function buildReportNotes(sections: ReportSection[]) {
+  const notes = ['Rankings are based on posted incoming transactions for the selected fund and reporting period.']
+
+  if (sections.length > 1) {
+    notes.push('Totals stay separated by currency. This report does not convert or merge values across currencies.')
+  }
+
+  if (sections.some((section) => section.group.total_outgoing > 0)) {
+    notes.push('Outgoing entries do not affect contributor rankings or region totals shown in this report.')
+  }
+
+  if (sections.some((section) => section.regionRows.some((row) => row.region === 'Unassigned'))) {
+    notes.push('Contributors without a recorded region snapshot are grouped under "Unassigned".')
+  }
+
+  const duplicateNames = collectDuplicateNames(sections)
+  if (duplicateNames.length > 0) {
+    const preview = duplicateNames.slice(0, 3).join(', ')
+    const suffix = duplicateNames.length > 3 ? ', and others' : ''
+    notes.push(`Repeated display names (${preview}${suffix}) may reflect separate member snapshots and stay ranked independently.`)
+  }
+
+  return notes
+}
+
+function SummaryCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone: SummaryTone
+}) {
+  const toneStyles: Record<SummaryTone, string> = {
+    sky: 'border-sky-100 bg-sky-50/90',
+    emerald: 'border-emerald-100 bg-emerald-50/90',
+    amber: 'border-amber-100 bg-amber-50/90',
+    rose: 'border-rose-100 bg-rose-50/90',
+  }
 
   return (
-    <article className="relative flex flex-col border-t-4 border-slate-900 bg-white p-4 pt-6 shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
-      <div className="absolute top-0 right-0 p-2 text-4xl font-black text-slate-100 select-none">
-        {rank}
-      </div>
-
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-900">
-          <Icon className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Rank {rank}</p>
-          <h3 className="text-lg font-bold leading-tight text-slate-950">{entry.participant_name}</h3>
-        </div>
-      </div>
-
-      <div className="mt-auto border-t border-slate-100 pt-4">
-        <p className="text-[10px] uppercase tracking-wider text-slate-400">Total Contribution</p>
-        <p className="text-2xl font-black text-slate-900 leading-none">
-          {formatCurrency(entry.incoming_total, currency)}
-        </p>
-        <p className="mt-1 text-[11px] text-slate-500 italic">
-          {entry.contribution_count} transaction{entry.contribution_count === 1 ? '' : 's'}
-        </p>
-      </div>
+    <article
+      data-print-card
+      className={`print-color-exact rounded-[5px] border px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] ${toneStyles[tone]}`}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">{label}</p>
+      <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">{value}</p>
     </article>
   )
 }
 
-function LeaderboardTable({ group }: { group: FundLeaderboardCurrencyGroup }) {
+function RegionRankingsSection({
+  section,
+}: {
+  section: ReportSection
+}) {
   return (
-    <section className="print-break-avoid mt-8">
-      <div className="mb-4 flex items-end justify-between border-b-2 border-slate-900 pb-2">
-        <h2 className="text-lg font-bold uppercase tracking-tighter">Full Ranking Report</h2>
-        <span className="text-sm font-medium text-slate-600">
-          Total: {formatCurrency(group.total_incoming, group.currency)}
-        </span>
+    <section className="print-break-avoid space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Region Rankings</p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Contribution spread by region</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Ranked by total incoming contributions in {section.group.currency}.
+          </p>
+        </div>
+        <div className="print-color-exact inline-flex rounded-[5px] border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+          {section.group.currency} currency view
+        </div>
       </div>
 
-      <table className="w-full border-collapse text-left">
-        <thead>
-          <tr className="border-b border-slate-300 text-[11px] uppercase tracking-wider text-slate-500">
-            <th className="py-2 font-bold w-16">Rank</th>
-            <th className="py-2 font-bold">Name</th>
-            <th className="py-2 font-bold">Assembly · Region</th>
-            <th className="py-2 font-bold text-right">Count</th>
-            <th className="py-2 font-bold text-right">Amount ({group.currency})</th>
-          </tr>
-        </thead>
-        <tbody className="text-sm">
-          {group.entries.map((entry, index) => (
-            <tr key={entry.participant_key} className="border-b border-slate-100 last:border-0">
-              <td className="py-3 font-mono font-bold text-slate-400">#{(index + 1).toString().padStart(2, '0')}</td>
-              <td className="py-3 font-bold text-slate-900">{entry.participant_name}</td>
-              <td className="py-3 text-slate-500 text-xs">
-                {[entry.participant_context, entry.participant_region].filter(Boolean).join(' · ')}
-              </td>
-              <td className="py-3 text-right text-slate-500">{entry.contribution_count}</td>
-              <td className="py-3 text-right font-bold text-slate-950">
-                {formatCurrency(entry.incoming_total, group.currency)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {section.regionRows.length === 0 ? (
+        <div className="rounded-[5px] border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+          No regional contribution data is available for this currency.
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-[5px] border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+          <table className="w-full border-collapse text-left">
+            <thead className="print-color-exact bg-slate-100 text-[11px] uppercase tracking-[0.18em] text-slate-600">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Rank</th>
+                <th className="px-4 py-3 font-semibold">Region</th>
+                <th className="px-4 py-3 text-right font-semibold">Contributors</th>
+                <th className="px-4 py-3 text-right font-semibold">Total</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm text-slate-700">
+              {section.regionRows.map((row, index) => (
+                <tr key={row.region} className="border-t border-slate-100 odd:bg-white even:bg-slate-50/60">
+                  <td className="px-4 py-3 font-medium text-slate-500">{getOrdinalRank(index + 1)}</td>
+                  <td className="px-4 py-3 font-semibold text-slate-900">{row.region}</td>
+                  <td className="px-4 py-3 text-right">{row.participantCount}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                    {formatCurrency(row.totalIncoming, section.group.currency)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function ContributorsSection({
+  section,
+}: {
+  section: ReportSection
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Individual Contributors</p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Sorted by contribution amount</h2>
+          <p className="mt-1 text-sm text-slate-600">Highest totals appear first for this currency group.</p>
+        </div>
+        <div className="text-sm text-slate-500">
+          {section.contributorCount} contributor{section.contributorCount === 1 ? '' : 's'}
+        </div>
+      </div>
+
+      {section.contributors.length === 0 ? (
+        <div className="rounded-[5px] border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+          No posted contribution activity to rank for this currency.
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-[5px] border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+          <table className="w-full border-collapse text-left">
+            <thead className="print-color-exact bg-slate-100 text-[11px] uppercase tracking-[0.18em] text-slate-600">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Rank</th>
+                <th className="px-4 py-3 font-semibold">Name</th>
+                <th className="px-4 py-3 font-semibold">Region</th>
+                <th className="px-4 py-3 text-right font-semibold">Amount</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm text-slate-700">
+              {section.contributors.map((entry, index) => (
+                <tr key={entry.participant_key} className="border-t border-slate-100 odd:bg-white even:bg-slate-50/60">
+                  <td className="px-4 py-3 font-medium text-slate-500">{getOrdinalRank(index + 1)}</td>
+                  <td className="px-4 py-3">
+                    <p className="font-semibold text-slate-900">{entry.participant_name}</p>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{entry.participant_region || 'Unassigned'}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                    {formatCurrency(entry.incoming_total, section.group.currency)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   )
 }
@@ -150,6 +310,7 @@ export default function FundLeaderboardPage() {
   const [preset] = useState<PeriodPreset>('all_time')
   const [customFrom] = useState(firstOfYear())
   const [customTo] = useState(toIsoDate(new Date()))
+  const [reportDate] = useState(() => toIsoDate(new Date()))
 
   const activeRange = useMemo(() => {
     if (preset === 'custom') return { dateFrom: customFrom || null, dateTo: customTo || null }
@@ -161,32 +322,59 @@ export default function FundLeaderboardPage() {
   const leaderboard = useMemo(() => buildFundLeaderboard(transactions), [transactions])
   const rangeLabel = activeRangeLabel(preset, customFrom, customTo)
 
+  const sections = useMemo<ReportSection[]>(() => (
+    leaderboard.map((group) => {
+      const contributors = group.incoming_leaders
+      const contributionCount = contributors.reduce((sum, entry) => sum + entry.contribution_count, 0)
+      const averageGift = contributionCount > 0 ? group.total_incoming / contributionCount : 0
+      const regionRows = buildRegionRankings(group)
+
+      return {
+        group,
+        contributors,
+        contributorCount: contributors.length,
+        averageGift,
+        regionRows,
+        topRegion: regionRows[0] ?? null,
+      }
+    })
+  ), [leaderboard])
+
+  const reportNotes = useMemo(() => buildReportNotes(sections), [sections])
+  const hasContributors = sections.some((section) => section.contributors.length > 0)
+
   useEffect(() => {
     document.body.dataset.printLayout = 'fund-leaderboard'
-    return () => { delete document.body.dataset.printLayout }
+    document.documentElement.dataset.printLayout = 'fund-leaderboard'
+    return () => {
+      delete document.body.dataset.printLayout
+      delete document.documentElement.dataset.printLayout
+    }
   }, [])
 
   useEffect(() => {
     if (!id || !districtId) return
 
     let cancelled = false
-    setLoading(true)
 
-    let query = supabase
-      .from('cashbook_transactions')
-      .select(
-        '*, member:members!cashbook_transactions_member_id_fkey(id,name,type,title,parent_id), counterparty_record:counterparties(id,name,type), region_member_snapshot:members!cashbook_transactions_region_member_snapshot_id_fkey(id,name)',
-      )
-      .eq('district_id', districtId)
-      .eq('fund_id', id)
-      .eq('status', 'posted')
-      .order('transaction_date', { ascending: false })
-      .order('created_at', { ascending: false })
+    async function fetchTransactions() {
+      setLoading(true)
 
-    if (activeRange.dateFrom) query = query.gte('transaction_date', activeRange.dateFrom)
-    if (activeRange.dateTo) query = query.lte('transaction_date', activeRange.dateTo)
+      let query = supabase
+        .from('cashbook_transactions')
+        .select(
+          '*, member:members!cashbook_transactions_member_id_fkey(id,name,type,title,parent_id), counterparty_record:counterparties(id,name,type), region_member_snapshot:members!cashbook_transactions_region_member_snapshot_id_fkey(id,name)',
+        )
+        .eq('district_id', districtId)
+        .eq('fund_id', id)
+        .eq('status', 'posted')
+        .order('transaction_date', { ascending: false })
+        .order('created_at', { ascending: false })
 
-    query.then(({ data, error: queryError }) => {
+      if (activeRange.dateFrom) query = query.gte('transaction_date', activeRange.dateFrom)
+      if (activeRange.dateTo) query = query.lte('transaction_date', activeRange.dateTo)
+
+      const { data, error: queryError } = await query
       if (cancelled) return
       if (queryError) {
         setTransactions([])
@@ -196,7 +384,9 @@ export default function FundLeaderboardPage() {
         setError(null)
       }
       setLoading(false)
-    })
+    }
+
+    fetchTransactions()
 
     return () => { cancelled = true }
   }, [activeRange.dateFrom, activeRange.dateTo, districtId, id, supabase])
@@ -216,12 +406,12 @@ export default function FundLeaderboardPage() {
       <div className="mx-auto max-w-4xl space-y-4 p-6">
         <Link
           href="/dashboard/finance/funds"
-          className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-slate-200"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to funds
         </Link>
-        <p className="text-slate-500 text-sm">Fund not found.</p>
+        <p className="text-sm text-slate-500">Fund not found.</p>
       </div>
     )
   }
@@ -230,89 +420,163 @@ export default function FundLeaderboardPage() {
     <>
       <style>{`
         @media print {
-          @page { size: A4 portrait; margin: 15mm; }
-          body { background: white !important; font-size: 12pt; }
+          @page { size: A4 portrait; margin: 0; }
+          html[data-print-layout='fund-leaderboard'],
+          body[data-print-layout='fund-leaderboard'] { background: #ffffff !important; }
+          html[data-print-layout='fund-leaderboard'],
+          body[data-print-layout='fund-leaderboard'] {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
           .print-hidden { display: none !important; }
-          .print-break-avoid { break-inside: avoid; }
+          .print-break-avoid { break-inside: avoid; page-break-inside: avoid; }
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body[data-print-layout='fund-leaderboard'] [data-print-root='fund-leaderboard'] {
+            padding: 12mm !important;
+            max-width: none !important;
+            min-height: 100vh !important;
+            box-sizing: border-box !important;
+            -webkit-box-decoration-break: clone;
+            box-decoration-break: clone;
+          }
+          body[data-print-layout='fund-leaderboard'] [data-print-header-grid] {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) 220px !important;
+            align-items: end !important;
+          }
+          body[data-print-layout='fund-leaderboard'] [data-print-summary-grid] {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+          }
+          body[data-print-layout='fund-leaderboard'] [data-print-card] {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
         }
       `}</style>
 
-      <div data-print-root="fund-leaderboard" className="mx-auto max-w-5xl bg-white p-4 sm:p-10 text-slate-950">
-
-        <div className="print-hidden mb-8 flex justify-between items-center">
-          <Link href={`/dashboard/finance/funds/${id}`} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors">
-            <ArrowLeft className="h-4 w-4" /> Back
-          </Link>
-          <Button onClick={() => window.print()} className="gap-2">
-            <Printer className="h-4 w-4" /> Print Report
-          </Button>
-        </div>
-
-        <header className="border-b-4 border-slate-900 pb-6 mb-8">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500 mb-1">Financial Report</p>
-              <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">{fund.name}</h1>
-              <p className="mt-2 text-slate-600 max-w-xl text-sm italic">
-                {fund.description || 'Contributor Ranking and Activity Summary'}
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="inline-block bg-slate-900 text-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest mb-2">
-                Official Document
-              </div>
-              <p className="text-xs font-medium text-slate-500">Report Date</p>
-              <p className="text-sm font-bold">{formatDate(toIsoDate(new Date()))}</p>
-            </div>
+      <div
+        data-print-root="fund-leaderboard"
+        className="print-color-exact mx-auto max-w-5xl bg-[linear-gradient(180deg,#f8fbff_0%,#fcfdff_22%,#ffffff_40%)] px-4 py-4 text-slate-950 sm:px-6 sm:py-8"
+      >
+        <div className="space-y-8">
+          <div className="print-hidden flex items-center justify-between gap-4">
+            <Link
+              href={`/dashboard/finance/funds/${id}`}
+              className="inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-slate-800"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Link>
+            <Button onClick={() => window.print()} className="gap-2 rounded-[5px]">
+              <Printer className="h-4 w-4" />
+              Print Report
+            </Button>
           </div>
-        </header>
 
-        {error && (
-          <p className="mb-6 rounded border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {error}
-          </p>
-        )}
-
-        <div className="grid grid-cols-3 gap-0 border border-slate-200 mb-10">
-          <div className="border-r border-slate-200 p-4">
-            <span className="text-[10px] font-bold uppercase text-slate-400">Time Period</span>
-            <p className="text-sm font-bold">{rangeLabel}</p>
-          </div>
-          <div className="border-r border-slate-200 p-4">
-            <span className="text-[10px] font-bold uppercase text-slate-400">Total Participants</span>
-            <p className="text-sm font-bold">{leaderboard[0]?.participant_count ?? 0}</p>
-          </div>
-          <div className="p-4 bg-slate-50">
-            <span className="text-[10px] font-bold uppercase text-slate-400">Total Raised</span>
-            <p className="text-sm font-black text-slate-900">
-              {leaderboard[0] ? formatCurrency(leaderboard[0].total_incoming, leaderboard[0].currency) : '—'}
-            </p>
-          </div>
-        </div>
-
-        {leaderboard.length === 0 ? (
-          <p className="py-16 text-center text-sm text-slate-400">No posted activity to display.</p>
-        ) : (
-          leaderboard.map((group) => (
-            <div key={group.currency} className="space-y-12">
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 text-center">Top Contributors</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  {group.entries[1] && <PodiumCard entry={group.entries[1]} rank={2} currency={group.currency} />}
-                  {group.entries[0] && <PodiumCard entry={group.entries[0]} rank={1} currency={group.currency} />}
-                  {group.entries[2] && <PodiumCard entry={group.entries[2]} rank={3} currency={group.currency} />}
+          <header className="print-color-exact rounded-[5px] border border-slate-200 bg-white/90 px-5 py-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)] sm:px-7">
+            <div data-print-header-grid className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-sky-700">Fund Contributions Leaderboard</p>
+                <div>
+                  <h1 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">{fund.name}</h1>
+                  <p className="mt-2 max-w-2xl text-sm text-slate-600">
+                    {fund.description || 'Structured contribution summary with region rankings and individual contributor totals.'}
+                  </p>
                 </div>
               </div>
 
-              <LeaderboardTable group={group} />
+              <div className="grid gap-3 text-sm text-slate-600 sm:min-w-[220px]">
+                <div className="rounded-[5px] border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Period</p>
+                    <p className="font-semibold text-slate-900 text-right whitespace-nowrap">{rangeLabel}</p>
+                  </div>
+                </div>
+                <div className="rounded-[5px] border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Report Date</p>
+                    <p className="font-semibold text-slate-900 text-right whitespace-nowrap">{formatDate(reportDate)}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-          ))
-        )}
+          </header>
 
-        <footer className="mt-12 border-t border-slate-200 pt-6 text-[10px] text-slate-400 uppercase tracking-widest text-center">
-          End of Report · Verified Transaction Records Only
-        </footer>
+          {error && (
+            <p className="rounded-[5px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {error}
+            </p>
+          )}
+
+          {!hasContributors ? (
+            <div className="rounded-[5px] border border-slate-200 bg-white px-4 py-16 text-center text-sm text-slate-500 shadow-[0_16px_40px_rgba(15,23,42,0.04)]">
+              No posted contribution activity is available for this fund in the selected period.
+            </div>
+          ) : (
+            sections.map((section) => (
+              <section key={section.group.currency} className="space-y-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Report Section</p>
+                    <h2 className="mt-1 text-xl font-semibold tracking-tight text-slate-950">{section.group.currency} contribution summary</h2>
+                  </div>
+                <div className="rounded-[5px] border border-slate-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+                  {section.group.transaction_count} transaction{section.group.transaction_count === 1 ? '' : 's'}
+                </div>
+              </div>
+
+                <div data-print-summary-grid className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <SummaryCard
+                    label="Total Raised"
+                    value={formatCurrency(section.group.total_incoming, section.group.currency)}
+                    tone="sky"
+                  />
+                  <SummaryCard
+                    label="Contributors"
+                    value={section.contributorCount.toString()}
+                    tone="emerald"
+                  />
+                  <SummaryCard
+                    label="Average Gift"
+                    value={section.contributorCount > 0 ? formatCurrency(section.averageGift, section.group.currency) : 'Not available'}
+                    tone="amber"
+                  />
+                  <SummaryCard
+                    label="Top Region"
+                    value={section.topRegion?.region ?? 'No region data'}
+                    tone="rose"
+                  />
+                </div>
+
+                <RegionRankingsSection section={section} />
+                <ContributorsSection section={section} />
+              </section>
+            ))
+          )}
+
+          {hasContributors && (
+            <section className="print-break-avoid space-y-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Notes</p>
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Report assumptions and callouts</h2>
+              </div>
+              <div className="print-color-exact rounded-[5px] border border-amber-200 bg-amber-50/80 px-5 py-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                <ul className="space-y-2 text-sm text-slate-700">
+                  {reportNotes.map((note) => (
+                    <li key={note} className="flex gap-3">
+                      <span className="mt-[0.42rem] h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden="true" />
+                      <span>{note}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          )}
+
+          <footer className="border-t border-slate-200 pt-5 text-center text-[11px] uppercase tracking-[0.22em] text-slate-400">
+            End of report - verified posted transaction records only
+          </footer>
+        </div>
       </div>
     </>
   )

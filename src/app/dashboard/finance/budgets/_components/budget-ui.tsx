@@ -417,29 +417,15 @@ export function BudgetActions({
 export function BudgetDetailView({
   budget,
   canManageBudgets,
-  canActivateBudgets,
-  canCloseBudgets,
-  onEditBudget,
-  onDeleteBudget,
-  onActivateBudget,
-  onCloseBudget,
   onAddLine,
   onEditLine,
   onDeleteLine,
-  actionLoading,
 }: {
   budget: Budget | null
   canManageBudgets: boolean
-  canActivateBudgets: boolean
-  canCloseBudgets: boolean
-  onEditBudget: (budget: Budget) => void
-  onDeleteBudget: (budget: Budget) => void
-  onActivateBudget: (budget: Budget) => void
-  onCloseBudget: (budget: Budget) => void
   onAddLine: () => void
   onEditLine: (line: BudgetLine) => void
   onDeleteLine: (line: BudgetLine) => void
-  actionLoading: string | null
 }) {
   if (!budget) {
     return (
