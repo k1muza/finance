@@ -136,8 +136,8 @@ function normalizePartyName(value: string) {
 
 function resolveFundLeaderboardParticipant(transaction: CashbookTransaction) {
   const memberName = normalizePartyName(
-    transaction.member_name_snapshot
-    ?? transaction.member?.name
+    transaction.member?.name
+    ?? transaction.member_name_snapshot
     ?? '',
   )
 

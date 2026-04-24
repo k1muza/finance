@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, Printer } from 'lucide-react'
+import { ArrowLeft, Award, Crown, Medal, Printer } from 'lucide-react'
 import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { Button } from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
@@ -88,6 +88,39 @@ function getOrdinalRank(rank: number) {
   return `${rank}th`
 }
 
+function getInitials(name: string) {
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+
+  if (parts.length === 0) return 'NA'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase()
+}
+
+function amountsMatch(a: number, b: number) {
+  return Math.abs(a - b) < 0.000001
+}
+
+function getCompetitionRank<T>(
+  items: T[],
+  index: number,
+  getValue: (item: T) => number,
+) {
+  if (index <= 0) return 1
+
+  let rank = 1
+  for (let pointer = 1; pointer <= index; pointer += 1) {
+    if (!amountsMatch(getValue(items[pointer - 1]), getValue(items[pointer]))) {
+      rank += 1
+    }
+  }
+
+  return rank
+}
+
 function buildRegionRankings(group: FundLeaderboardCurrencyGroup) {
   const regionMap = new Map<string, RegionRankingRow>()
 
@@ -113,55 +146,6 @@ function buildRegionRankings(group: FundLeaderboardCurrencyGroup) {
     || b.participantCount - a.participantCount
     || a.region.localeCompare(b.region)
   ))
-}
-
-function collectDuplicateNames(sections: ReportSection[]) {
-  const duplicates = new Map<string, string>()
-
-  for (const section of sections) {
-    const nameCounts = new Map<string, { label: string; count: number }>()
-
-    for (const entry of section.contributors) {
-      const key = entry.participant_name.trim().toLowerCase()
-      const existing = nameCounts.get(key)
-      if (existing) {
-        existing.count += 1
-      } else {
-        nameCounts.set(key, { label: entry.participant_name.trim(), count: 1 })
-      }
-    }
-
-    for (const { label, count } of nameCounts.values()) {
-      if (count > 1) duplicates.set(label.toLowerCase(), label)
-    }
-  }
-
-  return [...duplicates.values()].sort((a, b) => a.localeCompare(b))
-}
-
-function buildReportNotes(sections: ReportSection[]) {
-  const notes = ['Rankings are based on posted incoming transactions for the selected fund and reporting period.']
-
-  if (sections.length > 1) {
-    notes.push('Totals stay separated by currency. This report does not convert or merge values across currencies.')
-  }
-
-  if (sections.some((section) => section.group.total_outgoing > 0)) {
-    notes.push('Outgoing entries do not affect contributor rankings or region totals shown in this report.')
-  }
-
-  if (sections.some((section) => section.regionRows.some((row) => row.region === 'Unassigned'))) {
-    notes.push('Contributors without a recorded region snapshot are grouped under "Unassigned".')
-  }
-
-  const duplicateNames = collectDuplicateNames(sections)
-  if (duplicateNames.length > 0) {
-    const preview = duplicateNames.slice(0, 3).join(', ')
-    const suffix = duplicateNames.length > 3 ? ', and others' : ''
-    notes.push(`Repeated display names (${preview}${suffix}) may reflect separate member snapshots and stay ranked independently.`)
-  }
-
-  return notes
 }
 
 function SummaryCard({
@@ -191,6 +175,37 @@ function SummaryCard({
   )
 }
 
+function TopContributorDecoration({ rank }: { rank: number }) {
+  if (rank < 1 || rank > 3) return null
+
+  const decoration = {
+    1: {
+      icon: Crown,
+      className: 'border-amber-200 bg-amber-50 text-amber-700',
+    },
+    2: {
+      icon: Medal,
+      className: 'border-slate-200 bg-slate-100 text-slate-700',
+    },
+    3: {
+      icon: Award,
+      className: 'border-orange-200 bg-orange-50 text-orange-700',
+    },
+  } as const
+
+  const { icon: Icon, className } = decoration[rank as 1 | 2 | 3]
+
+  return (
+    <span
+      aria-label={`Top contributor rank ${rank}`}
+      title={`Top contributor rank ${rank}`}
+      className={`print-color-exact inline-flex h-5 w-5 items-center justify-center rounded-full border shadow-[0_4px_10px_rgba(15,23,42,0.12)] ${className}`}
+    >
+      <Icon className="h-2.5 w-2.5" />
+    </span>
+  )
+}
+
 function RegionRankingsSection({
   section,
 }: {
@@ -201,10 +216,6 @@ function RegionRankingsSection({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Region Rankings</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Contribution spread by region</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Ranked by total incoming contributions in {section.group.currency}.
-          </p>
         </div>
         <div className="print-color-exact inline-flex rounded-[5px] border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
           {section.group.currency} currency view
@@ -255,10 +266,8 @@ function ContributorsSection({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Individual Contributors</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Sorted by contribution amount</h2>
-          <p className="mt-1 text-sm text-slate-600">Highest totals appear first for this currency group.</p>
         </div>
-        <div className="text-sm text-slate-500">
+        <div className="rounded-[5px] border border-slate-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
           {section.contributorCount} contributor{section.contributorCount === 1 ? '' : 's'}
         </div>
       </div>
@@ -279,18 +288,38 @@ function ContributorsSection({
               </tr>
             </thead>
             <tbody className="text-sm text-slate-700">
-              {section.contributors.map((entry, index) => (
-                <tr key={entry.participant_key} className="border-t border-slate-100 odd:bg-white even:bg-slate-50/60">
-                  <td className="px-4 py-3 font-medium text-slate-500">{getOrdinalRank(index + 1)}</td>
-                  <td className="px-4 py-3">
-                    <p className="font-semibold text-slate-900">{entry.participant_name}</p>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{entry.participant_region || 'Unassigned'}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                    {formatCurrency(entry.incoming_total, section.group.currency)}
-                  </td>
-                </tr>
-              ))}
+              {section.contributors.map((entry, index) => {
+                const displayRank = getCompetitionRank(
+                  section.contributors,
+                  index,
+                  (item) => item.incoming_total,
+                )
+
+                return (
+                  <tr key={entry.participant_key} className="border-t border-slate-100 odd:bg-white even:bg-slate-50/60">
+                    <td className="px-4 py-3 font-medium text-slate-500">{getOrdinalRank(displayRank)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="relative inline-flex shrink-0">
+                          <span className="print-color-exact inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">
+                            {getInitials(entry.participant_name)}
+                          </span>
+                          <span className="absolute -right-1 -top-1 z-10">
+                            <TopContributorDecoration rank={displayRank} />
+                          </span>
+                        </span>
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <p className="truncate font-semibold text-slate-900">{entry.participant_name}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{entry.participant_region || 'Unassigned'}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                      {formatCurrency(entry.incoming_total, section.group.currency)}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -340,7 +369,6 @@ export default function FundLeaderboardPage() {
     })
   ), [leaderboard])
 
-  const reportNotes = useMemo(() => buildReportNotes(sections), [sections])
   const hasContributors = sections.some((section) => section.contributors.length > 0)
 
   useEffect(() => {
@@ -516,14 +544,11 @@ export default function FundLeaderboardPage() {
             sections.map((section) => (
               <section key={section.group.currency} className="space-y-6">
                 <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Report Section</p>
-                    <h2 className="mt-1 text-xl font-semibold tracking-tight text-slate-950">{section.group.currency} contribution summary</h2>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Summary</p>
+                  <div className="rounded-[5px] border border-slate-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+                    {section.group.transaction_count} transaction{section.group.transaction_count === 1 ? '' : 's'}
                   </div>
-                <div className="rounded-[5px] border border-slate-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
-                  {section.group.transaction_count} transaction{section.group.transaction_count === 1 ? '' : 's'}
                 </div>
-              </div>
 
                 <div data-print-summary-grid className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <SummaryCard
@@ -537,7 +562,7 @@ export default function FundLeaderboardPage() {
                     tone="emerald"
                   />
                   <SummaryCard
-                    label="Average Gift"
+                    label="Average Contribution"
                     value={section.contributorCount > 0 ? formatCurrency(section.averageGift, section.group.currency) : 'Not available'}
                     tone="amber"
                   />
@@ -548,29 +573,10 @@ export default function FundLeaderboardPage() {
                   />
                 </div>
 
-                <RegionRankingsSection section={section} />
                 <ContributorsSection section={section} />
+                <RegionRankingsSection section={section} />
               </section>
             ))
-          )}
-
-          {hasContributors && (
-            <section className="print-break-avoid space-y-4">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Notes</p>
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Report assumptions and callouts</h2>
-              </div>
-              <div className="print-color-exact rounded-[5px] border border-amber-200 bg-amber-50/80 px-5 py-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-                <ul className="space-y-2 text-sm text-slate-700">
-                  {reportNotes.map((note) => (
-                    <li key={note} className="flex gap-3">
-                      <span className="mt-[0.42rem] h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden="true" />
-                      <span>{note}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </section>
           )}
 
           <footer className="border-t border-slate-200 pt-5 text-center text-[11px] uppercase tracking-[0.22em] text-slate-400">

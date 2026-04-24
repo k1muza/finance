@@ -217,6 +217,11 @@ describe('cashbook reporting helpers', () => {
         member_name_snapshot: 'John Example',
         member_type_snapshot: 'individual',
         member_parent_name_snapshot: 'Central Assembly',
+        member: makeMember({
+          id: 'individual-1',
+          type: 'individual',
+          name: 'John Renamed',
+        }),
       }),
       makeTransaction({
         id: 'member-receipt-2',
@@ -228,6 +233,11 @@ describe('cashbook reporting helpers', () => {
         member_name_snapshot: 'John Example',
         member_type_snapshot: 'individual',
         member_parent_name_snapshot: 'Central Assembly',
+        member: makeMember({
+          id: 'individual-1',
+          type: 'individual',
+          name: 'John Renamed',
+        }),
       }),
       makeTransaction({
         id: 'supplier-payment',
@@ -301,7 +311,7 @@ describe('cashbook reporting helpers', () => {
 
     expect(rows[0].incoming_leaders[0]).toMatchObject({
       participant_key: 'member:individual-1',
-      participant_name: 'John Example',
+      participant_name: 'John Renamed',
       participant_kind: 'member',
       participant_type_label: 'Individual',
       participant_context: 'Central Assembly',
