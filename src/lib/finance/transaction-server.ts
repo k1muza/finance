@@ -51,6 +51,11 @@ type CounterpartyRecord = {
   is_active: boolean
 }
 
+type DistrictWorkflowSettings = {
+  id: string
+  auto_post_cashbook_transactions: boolean
+}
+
 export interface TransactionDraftPayload {
   district_id: string
   account_id: string
@@ -595,4 +600,108 @@ export async function buildPostingSnapshots(
   }
 
   return derived.snapshots
+}
+
+export async function loadDistrictWorkflowSettings(
+  supabase: ServerSupabase,
+  districtId: string,
+) {
+  const { data: district, error } = await supabase
+    .from('districts')
+    .select('id, auto_post_cashbook_transactions')
+    .eq('id', districtId)
+    .maybeSingle()
+
+  if (error || !district) {
+    throw new ApiRouteError('DISTRICT_NOT_FOUND', 'District not found.', 404)
+  }
+
+  return district as DistrictWorkflowSettings
+}
+
+interface PostableTransactionRecord {
+  district_id: string
+  account_id: string
+  fund_id: string | null
+  member_id: string | null
+  counterparty_id: string | null
+  kind: TransactionKind
+  effect_direction: CashbookEffectDirection
+  transaction_date: string
+  counterparty: string | null
+  narration: string | null
+  currency: Currency
+  total_amount: number
+}
+
+interface BuildPostedTransactionUpdateOptions {
+  includeWorkflowActors?: boolean
+  now?: string
+}
+
+export async function buildPostedTransactionUpdate(
+  supabase: ServerSupabase,
+  txn: PostableTransactionRecord,
+  actorUserId: string,
+  options: BuildPostedTransactionUpdateOptions = {},
+) {
+  await validateDraftTransactionPayload(
+    supabase,
+    {
+      district_id: txn.district_id,
+      account_id: txn.account_id,
+      fund_id: txn.fund_id,
+      member_id: txn.member_id,
+      counterparty_id: txn.counterparty_id,
+      kind: txn.kind,
+      effect_direction: txn.effect_direction,
+      transaction_date: txn.transaction_date,
+      counterparty: txn.counterparty,
+      narration: txn.narration,
+      currency: txn.currency,
+      total_amount: txn.total_amount,
+    },
+    {
+      allowStandaloneTransfer: txn.kind === 'transfer',
+    },
+  )
+
+  const snapshots = await buildPostingSnapshots(
+    supabase,
+    txn.district_id,
+    txn.member_id,
+  )
+
+  const { data: refData, error: refError } = await supabase
+    .rpc('next_transaction_number', { p_district_id: txn.district_id })
+
+  if (refError || !refData) {
+    throw new ApiRouteError(
+      'REFERENCE_NUMBER_FAILED',
+      refError?.message ?? 'Failed to generate reference number.',
+      500,
+    )
+  }
+
+  const now = options.now ?? new Date().toISOString()
+
+  return {
+    status: 'posted' as const,
+    reference_number: refData as string,
+    posted_by: actorUserId,
+    posted_at: now,
+    member_name_snapshot: snapshots.memberNameSnapshot,
+    member_type_snapshot: snapshots.memberTypeSnapshot,
+    member_parent_name_snapshot: snapshots.memberParentNameSnapshot,
+    assembly_member_snapshot_id: snapshots.assemblyMemberSnapshotId,
+    region_member_snapshot_id: snapshots.regionMemberSnapshotId,
+    ...(options.includeWorkflowActors
+      ? {
+          submitted_by: actorUserId,
+          submitted_at: now,
+          approved_by: actorUserId,
+          approved_at: now,
+        }
+      : {}),
+  }
 }

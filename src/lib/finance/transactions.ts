@@ -15,7 +15,7 @@ export const TRANSACTION_ALLOWED_TRANSITIONS: Record<
   readonly TransactionStatus[]
 > = {
   draft: ['submitted', 'voided'],
-  submitted: ['approved'],
+  submitted: ['approved', 'voided'],
   approved: ['posted'],
   posted: ['reversed'],
   reversed: [],

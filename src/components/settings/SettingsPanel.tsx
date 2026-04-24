@@ -28,6 +28,7 @@ import { useCurrencies } from '@/hooks/useCurrencies'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useOpeningBalances } from '@/hooks/useOpeningBalances'
 import { useFunds } from '@/hooks/useFunds'
+import { usePermissions } from '@/hooks/usePermissions'
 import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import {
   ACCOUNT_STATUS_LABELS,
@@ -95,13 +96,21 @@ function DistrictSettings({ districtId }: { districtId: string }) {
   const district = districts.find((d) => d.id === districtId)
 
   const [name, setName] = useState(district?.name ?? '')
+  const [autoPostCashbookTransactions, setAutoPostCashbookTransactions] = useState(
+    Boolean(district?.auto_post_cashbook_transactions),
+  )
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (district) setName(district.name)
-  }, [district?.name]) // eslint-disable-line
+    if (!district) return
+    setName(district.name)
+    setAutoPostCashbookTransactions(Boolean(district.auto_post_cashbook_transactions))
+  }, [district]) // eslint-disable-line
+
+  const hasChanges = name.trim() !== (district?.name ?? '')
+    || autoPostCashbookTransactions !== Boolean(district?.auto_post_cashbook_transactions)
 
   const handleSave = async () => {
     if (!name.trim()) return
@@ -109,9 +118,12 @@ function DistrictSettings({ districtId }: { districtId: string }) {
     setError(null)
     setSaved(false)
     try {
-      await update(districtId, { name: name.trim() })
+      await update(districtId, {
+        name: name.trim(),
+        auto_post_cashbook_transactions: autoPostCashbookTransactions,
+      })
       setSaved(true)
-      toast.success('District updated')
+      toast.success('District settings updated')
       setTimeout(() => setSaved(false), 3000)
     } catch (e) {
       setError(String(e))
@@ -135,14 +147,42 @@ function DistrictSettings({ districtId }: { districtId: string }) {
             placeholder="District name"
           />
         </div>
-        <Button onClick={handleSave} disabled={saving || !name.trim() || name.trim() === district?.name} loading={saving}>
+        <Button onClick={handleSave} disabled={saving || !name.trim() || !hasChanges} loading={saving}>
           Save
         </Button>
+      </div>
+      <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-4 space-y-3">
+        <div>
+          <p className="text-sm font-medium text-slate-100">Cashbook Workflow</p>
+          <p className="mt-1 text-sm text-slate-400">
+            Let a single accountant save receipts, payments, and adjustments straight to posted when dual control is not practical.
+          </p>
+        </div>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={autoPostCashbookTransactions}
+            onChange={(e) => setAutoPostCashbookTransactions(e.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
+          />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-slate-200">Auto-post new cashbook transactions</p>
+            <p className="text-xs text-slate-400">
+              New cashbook entries skip the normal draft workflow and are posted immediately under the current user.
+            </p>
+          </div>
+        </label>
+        {autoPostCashbookTransactions && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            Posted records are immutable. Fix mistakes by reversing them, not by deleting or editing them.
+          </div>
+        )}
       </div>
       {saved && (
         <div className="flex items-center gap-2 text-sm text-green-400">
           <CheckCircle className="h-4 w-4 shrink-0" />
-          District name updated
+          District settings updated
         </div>
       )}
       {error && (
@@ -1081,6 +1121,8 @@ function DangerZone() {
 
 export function SettingsPanel() {
   const { districtId, isAdmin } = useAuth()
+  const { can } = usePermissions()
+  const canManageDistrictSettings = districtId ? can('district.settings.manage') : false
 
   return (
     <div className="space-y-6">
@@ -1088,7 +1130,7 @@ export function SettingsPanel() {
         <SelectDistrictHint description="Choose a district from the top bar to manage district settings." />
       )}
 
-      {isAdmin && districtId && <DistrictSettings key={`ds-${districtId}`} districtId={districtId} />}
+      {canManageDistrictSettings && districtId && <DistrictSettings key={`ds-${districtId}`} districtId={districtId} />}
 
       {isAdmin && <DangerZone />}
     </div>

@@ -408,3 +408,38 @@ html {
 ::-webkit-scrollbar-track { background: var(--surface-canvas); }
 ::-webkit-scrollbar-thumb { background: var(--color-slate-700); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-slate-600); }
+
+.print-color-exact {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.print-break-avoid {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+@media print {
+  .print-hidden {
+    display: none !important;
+  }
+
+  body[data-print-layout='fund-leaderboard'] {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  body[data-print-layout='fund-leaderboard'] aside,
+  body[data-print-layout='fund-leaderboard'] header {
+    display: none !important;
+  }
+
+  body[data-print-layout='fund-leaderboard'] main {
+    overflow: visible !important;
+  }
+
+  body[data-print-layout='fund-leaderboard'] [data-print-root='fund-leaderboard'] {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+}

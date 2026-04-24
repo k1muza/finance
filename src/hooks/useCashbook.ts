@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { performCashbookBulkAction, submitCashbookTransactions } from '@/lib/finance/cashbook-client'
+import type { CashbookBulkAction } from '@/lib/finance/cashbook-bulk-actions'
 import { useAuth } from '@/contexts/AuthContext'
 import { CashbookTransaction, TransactionKind, TransactionStatus } from '@/types'
 
@@ -44,29 +46,61 @@ export function useCashbook(filter: CashbookFilter = {}) {
     setLoading(true)
     setError(null)
 
-    let query = supabase
-      .from('cashbook_transactions')
-      .select(
-        '*, account:accounts(id,name,type,currency,status), fund:funds(id,name), member:members!cashbook_transactions_member_id_fkey(id,name,type,title,parent_id), counterparty_record:counterparties(id,name,type)',
-      )
-      .order('transaction_date', { ascending: false })
-      .order('created_at', { ascending: false })
+    try {
+      if (filter.district_id) {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          setData([])
+          setError(null)
+          setLoading(false)
+          return
+        }
 
-    if (filter.district_id) query = query.eq('district_id', filter.district_id)
-    if (filter.account_id) query = query.eq('account_id', filter.account_id)
-    if (filter.status) query = query.eq('status', filter.status)
-    if (filter.kind) query = query.eq('kind', filter.kind)
-    if (filter.date_from) query = query.gte('transaction_date', filter.date_from)
-    if (filter.date_to) query = query.lte('transaction_date', filter.date_to)
+        const params = new URLSearchParams({ district_id: filter.district_id })
+        if (filter.account_id) params.set('account_id', filter.account_id)
+        if (filter.status) params.set('status', filter.status)
+        if (filter.kind) params.set('kind', filter.kind)
+        if (filter.date_from) params.set('date_from', filter.date_from)
+        if (filter.date_to) params.set('date_to', filter.date_to)
 
-    const { data: rows, error: err } = await query
-    if (err) {
-      setError(err.message)
-      setData([])
-    } else {
+        const res = await fetch(`/api/cashbook/transactions?${params.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        })
+
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error ?? 'Failed to load cashbook transactions')
+
+        setData((json.data ?? []) as CashbookTransaction[])
+        setLoading(false)
+        return
+      }
+
+      let query = supabase
+        .from('cashbook_transactions')
+        .select(
+          '*, account:accounts(id,name,type,currency,status), fund:funds(id,name), member:members!cashbook_transactions_member_id_fkey(id,name,type,title,parent_id), counterparty_record:counterparties(id,name,type)',
+        )
+        .order('transaction_date', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      if (filter.account_id) query = query.eq('account_id', filter.account_id)
+      if (filter.status) query = query.eq('status', filter.status)
+      if (filter.kind) query = query.eq('kind', filter.kind)
+      if (filter.date_from) query = query.gte('transaction_date', filter.date_from)
+      if (filter.date_to) query = query.lte('transaction_date', filter.date_to)
+
+      const { data: rows, error: err } = await query
+      if (err) throw new Error(err.message)
+
       setData((rows ?? []) as CashbookTransaction[])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+      setData([])
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [ // eslint-disable-line
     authLoading,
     userId,
@@ -110,6 +144,16 @@ export function useCashbook(filter: CashbookFilter = {}) {
   }
 
   const submit = (id: string) => callLifecycle(id, 'submit')
+  const runBulkAction = async (action: CashbookBulkAction, ids: string[]) => {
+    const result = await performCashbookBulkAction(ids, action)
+    await refetch()
+    return result
+  }
+  const submitMany = async (ids: string[]) => {
+    const result = await submitCashbookTransactions(ids)
+    await refetch()
+    return result.data
+  }
   const approve = (id: string) => callLifecycle(id, 'approve')
   const post = (id: string) => callLifecycle(id, 'post')
   const voidDraft = (id: string) => callLifecycle(id, 'void')
@@ -204,5 +248,19 @@ export function useCashbook(filter: CashbookFilter = {}) {
     return json.data
   }
 
-  return { data, loading, error, refresh: refetch, createDraft, updateDraft, submit, approve, post, voidDraft, reverse }
+  return {
+    data,
+    loading,
+    error,
+    refresh: refetch,
+    createDraft,
+    updateDraft,
+    submit,
+    runBulkAction,
+    submitMany,
+    approve,
+    post,
+    voidDraft,
+    reverse,
+  }
 }

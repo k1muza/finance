@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireDistrictAction } from '@/lib/auth/server'
 import {
+  buildPostedTransactionUpdate,
   hydrateTransactionParties,
+  loadDistrictWorkflowSettings,
   validateDraftTransactionPayload,
 } from '@/lib/finance/transaction-server'
 import { ApiRouteError, toErrorResponse } from '@/lib/server/errors'
@@ -110,6 +112,10 @@ export async function POST(req: NextRequest) {
     )
 
     const validated = await validateDraftTransactionPayload(supabase, body)
+    const districtSettings = await loadDistrictWorkflowSettings(
+      supabase,
+      validated.values.district_id,
+    )
 
     if (validated.values.client_generated_id) {
       const { data: existing, error: existingError } = await supabase
@@ -138,7 +144,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { data: txn, error: txnError } = await supabase
+    const { data: createdTxn, error: txnError } = await supabase
       .from('cashbook_transactions')
       .insert({
         ...validated.values,
@@ -150,7 +156,7 @@ export async function POST(req: NextRequest) {
       )
       .single()
 
-    if (txnError || !txn) {
+    if (txnError || !createdTxn) {
       throw new ApiRouteError(
         'TRANSACTION_CREATE_FAILED',
         txnError?.message ?? 'Failed to create transaction.',
@@ -160,7 +166,7 @@ export async function POST(req: NextRequest) {
 
     if (body.lines && body.lines.length > 0) {
       const lineRows = body.lines.map((line) => ({
-        transaction_id: txn.id,
+        transaction_id: createdTxn.id,
         account_id: line.account_id,
         fund_id: line.fund_id ?? null,
         category: line.category ?? null,
@@ -180,6 +186,52 @@ export async function POST(req: NextRequest) {
           500,
         )
       }
+    }
+
+    let txn = createdTxn
+
+    if (districtSettings.auto_post_cashbook_transactions) {
+      const postedValues = await buildPostedTransactionUpdate(
+        supabase,
+        {
+          district_id: txn.district_id,
+          account_id: txn.account_id,
+          fund_id: txn.fund_id,
+          member_id: txn.member_id,
+          counterparty_id: txn.counterparty_id,
+          kind: txn.kind,
+          effect_direction: txn.effect_direction,
+          transaction_date: txn.transaction_date,
+          counterparty: txn.counterparty,
+          narration: txn.narration,
+          currency: txn.currency,
+          total_amount: txn.total_amount,
+        },
+        actor.user.id,
+        {
+          includeWorkflowActors: true,
+        },
+      )
+
+      const { data: postedTxn, error: autoPostError } = await supabase
+        .from('cashbook_transactions')
+        .update(postedValues)
+        .eq('id', txn.id)
+        .eq('status', 'draft')
+        .select(
+          '*, account:accounts(id,name,type,currency,status), fund:funds(id,name)',
+        )
+        .single()
+
+      if (autoPostError || !postedTxn) {
+        throw new ApiRouteError(
+          'TRANSACTION_AUTO_POST_FAILED',
+          autoPostError?.message ?? 'Failed to auto-post transaction.',
+          500,
+        )
+      }
+
+      txn = postedTxn
     }
 
     const [hydratedTxn] = await hydrateTransactionParties(supabase, [txn])

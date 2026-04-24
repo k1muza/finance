@@ -88,6 +88,7 @@ describe('workflow transitions', () => {
   it('allows the richer approval workflow intentionally used by the app', () => {
     expect(canTransitionTransaction('draft', 'submitted')).toBe(true)
     expect(canTransitionTransaction('submitted', 'approved')).toBe(true)
+    expect(canTransitionTransaction('submitted', 'voided')).toBe(true)
     expect(canTransitionTransaction('approved', 'posted')).toBe(true)
     expect(canTransitionTransaction('posted', 'reversed')).toBe(true)
     expect(canTransitionTransaction('draft', 'voided')).toBe(true)
@@ -95,6 +96,7 @@ describe('workflow transitions', () => {
 
   it('blocks skipped or backward transitions', () => {
     expect(canTransitionTransaction('submitted', 'posted')).toBe(false)
+    expect(canTransitionTransaction('approved', 'voided')).toBe(false)
     expect(canTransitionTransaction('posted', 'approved')).toBe(false)
     expect(canTransitionTransaction('reversed', 'posted')).toBe(false)
     expect(canTransitionTransaction('voided', 'draft')).toBe(false)

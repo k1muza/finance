@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
+  buildPostedTransactionUpdate,
   buildPostingSnapshots,
   validateDraftTransactionPayload,
 } from '@/lib/finance/transaction-server'
@@ -271,6 +272,56 @@ describe('buildPostingSnapshots', () => {
       buildPostingSnapshots(supabase as never, 'district-1', 'individual-1'),
     ).rejects.toMatchObject({
       code: 'MEMBER_HIERARCHY_INVALID',
+    })
+  })
+})
+
+describe('buildPostedTransactionUpdate', () => {
+  it('builds posting metadata and can backfill the skipped workflow actors', async () => {
+    const supabase = Object.assign(buildFinanceSupabase(), {
+      rpc: vi.fn().mockResolvedValue({
+        data: 'TXN-2026-0001',
+        error: null,
+      }),
+    })
+
+    const result = await buildPostedTransactionUpdate(
+      supabase as never,
+      {
+        district_id: 'district-1',
+        account_id: 'account-1',
+        fund_id: 'fund-tithes',
+        member_id: 'individual-1',
+        counterparty_id: null,
+        kind: 'receipt',
+        effect_direction: 'in',
+        transaction_date: '2026-04-21',
+        counterparty: null,
+        narration: 'Sunday tithe',
+        currency: 'USD',
+        total_amount: 100,
+      },
+      'user-1',
+      {
+        includeWorkflowActors: true,
+        now: '2026-04-23T10:00:00.000Z',
+      },
+    )
+
+    expect(result).toMatchObject({
+      status: 'posted',
+      reference_number: 'TXN-2026-0001',
+      submitted_by: 'user-1',
+      approved_by: 'user-1',
+      posted_by: 'user-1',
+      member_name_snapshot: 'John Example',
+      member_type_snapshot: 'individual',
+      member_parent_name_snapshot: 'Central Assembly',
+      assembly_member_snapshot_id: 'assembly-1',
+      region_member_snapshot_id: 'region-1',
+    })
+    expect(supabase.rpc).toHaveBeenCalledWith('next_transaction_number', {
+      p_district_id: 'district-1',
     })
   })
 })

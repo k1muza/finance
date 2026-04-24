@@ -5,6 +5,7 @@ import {
   buildBudgetComparisonSummaryByCurrency,
   buildCashbookFundBalances,
   buildCashbookTotalsByCurrency,
+  buildFundLeaderboard,
 } from '@/lib/finance/reporting'
 
 function makeTransaction(
@@ -201,6 +202,138 @@ describe('cashbook reporting helpers', () => {
     })
     expect(totals.outByCurrency).toEqual({
       USD: 30,
+    })
+  })
+
+  it('builds per-currency fund leaderboard rankings for members, counterparties, and fallback names', () => {
+    const rows = buildFundLeaderboard([
+      makeTransaction({
+        id: 'member-receipt-1',
+        currency: 'USD',
+        kind: 'receipt',
+        effect_direction: 'in',
+        total_amount: 125,
+        member_id: 'individual-1',
+        member_name_snapshot: 'John Example',
+        member_type_snapshot: 'individual',
+        member_parent_name_snapshot: 'Central Assembly',
+      }),
+      makeTransaction({
+        id: 'member-receipt-2',
+        currency: 'USD',
+        kind: 'receipt',
+        effect_direction: 'in',
+        total_amount: 75,
+        member_id: 'individual-1',
+        member_name_snapshot: 'John Example',
+        member_type_snapshot: 'individual',
+        member_parent_name_snapshot: 'Central Assembly',
+      }),
+      makeTransaction({
+        id: 'supplier-payment',
+        currency: 'USD',
+        kind: 'payment',
+        effect_direction: 'out',
+        total_amount: 90,
+        counterparty_id: 'supplier-1',
+        counterparty_record: {
+          id: 'supplier-1',
+          district_id: 'district-1',
+          type: 'supplier',
+          name: 'Stationery Shop',
+          code: null,
+          phone: null,
+          email: null,
+          address: null,
+          notes: null,
+          is_active: true,
+          created_at: '2026-04-21T09:00:00Z',
+        },
+      }),
+      makeTransaction({
+        id: 'fallback-payment',
+        currency: 'USD',
+        kind: 'payment',
+        effect_direction: 'out',
+        total_amount: 35,
+        counterparty: ' Community Choir ',
+      }),
+      makeTransaction({
+        id: 'draft-ignore',
+        currency: 'USD',
+        kind: 'receipt',
+        effect_direction: 'in',
+        total_amount: 999,
+        status: 'draft',
+        member_id: 'individual-2',
+        member_name_snapshot: 'Ignored Draft',
+      }),
+      makeTransaction({
+        id: 'transfer-ignore',
+        currency: 'USD',
+        kind: 'transfer',
+        effect_direction: 'out',
+        total_amount: 999,
+        fund_id: null,
+        fund: null,
+      }),
+      makeTransaction({
+        id: 'zar-receipt',
+        currency: 'ZAR',
+        kind: 'receipt',
+        effect_direction: 'in',
+        total_amount: 600,
+        member_id: 'region-1',
+        member_name_snapshot: 'Northern Region',
+        member_type_snapshot: 'region',
+      }),
+    ])
+
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toMatchObject({
+      currency: 'USD',
+      transaction_count: 4,
+      participant_count: 3,
+      total_incoming: 200,
+      total_outgoing: 125,
+      net_total: 75,
+    })
+
+    expect(rows[0].incoming_leaders[0]).toMatchObject({
+      participant_key: 'member:individual-1',
+      participant_name: 'John Example',
+      participant_kind: 'member',
+      participant_type_label: 'Individual',
+      participant_context: 'Central Assembly',
+      incoming_total: 200,
+      outgoing_total: 0,
+      total_volume: 200,
+      transaction_count: 2,
+    })
+
+    expect(rows[0].outgoing_leaders[0]).toMatchObject({
+      participant_key: 'counterparty:supplier-1',
+      participant_name: 'Stationery Shop',
+      participant_kind: 'counterparty',
+      participant_type_label: 'Supplier',
+      participant_context: 'Registered',
+      outgoing_total: 90,
+    })
+
+    expect(rows[0].entries[2]).toMatchObject({
+      participant_key: 'freeform:community choir',
+      participant_name: 'Community Choir',
+      participant_kind: 'freeform',
+      outgoing_total: 35,
+    })
+
+    expect(rows[1]).toMatchObject({
+      currency: 'ZAR',
+      transaction_count: 1,
+      participant_count: 1,
+      total_incoming: 600,
+      total_outgoing: 0,
+      net_total: 600,
     })
   })
 

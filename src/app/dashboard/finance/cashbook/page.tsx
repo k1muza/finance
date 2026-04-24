@@ -9,6 +9,7 @@ import { useCounterparties } from '@/hooks/useCounterparties'
 import { useCashbook } from '@/hooks/useCashbook'
 import { useOpeningBalances } from '@/hooks/useOpeningBalances'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useDistricts } from '@/hooks/useDistricts'
 import { useToast } from '@/components/ui/Toast'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -18,6 +19,12 @@ import { SlideOver } from '@/components/ui/SlideOver'
 import { Modal } from '@/components/ui/Modal'
 import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
+import {
+  CASHBOOK_BULK_ACTION_SUCCESS_LABELS,
+  buildCashbookBulkActionOptions,
+  getCashbookBulkActionTransactionIds,
+  type CashbookBulkAction,
+} from '@/lib/finance/cashbook-bulk-actions'
 import {
   defaultEffectDirectionForTransactionKind,
   isIncomingTransactionEffect,
@@ -153,6 +160,7 @@ interface NewTransactionFormProps {
   counterparties: Counterparty[]
   districtId: string
   defaultAccountId: string
+  autoPostTransactions: boolean
   onSaved: () => void
   onClose: () => void
 }
@@ -164,6 +172,7 @@ function NewTransactionForm({
   counterparties,
   districtId,
   defaultAccountId,
+  autoPostTransactions,
   onSaved,
   onClose,
 }: NewTransactionFormProps) {
@@ -236,7 +245,11 @@ function NewTransactionForm({
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Failed to save')
-      toast.success('Transaction saved as draft')
+      toast.success(
+        autoPostTransactions
+          ? 'Transaction posted'
+          : 'Transaction saved as draft',
+      )
       onSaved()
     } catch (e) {
       setError(String(e))
@@ -383,9 +396,18 @@ function NewTransactionForm({
         </div>
       )}
 
+      {autoPostTransactions && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+          <Stamp className="mt-0.5 h-4 w-4 shrink-0" />
+          Saving will post this transaction immediately. Corrections after that must use reversal.
+        </div>
+      )}
+
       <div className="flex justify-end gap-2 pt-2 border-t border-slate-700">
         <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
-        <Button onClick={handleSave} loading={saving}>Save draft</Button>
+        <Button onClick={handleSave} loading={saving}>
+          {autoPostTransactions ? 'Post transaction' : 'Save draft'}
+        </Button>
       </div>
     </div>
   )
@@ -711,7 +733,7 @@ function TransactionDetail({ txnId, userId, onTableRefresh, onReverseRequest }: 
   const canSubmit = data.status === 'draft' && can('transactions.draft')
   const canApprove = data.status === 'submitted' && !isSelf && can('transactions.approve')
   const canPost = data.status === 'approved' && can('transactions.post')
-  const canVoid = data.status === 'draft' && can('transactions.draft')
+  const canVoid = (data.status === 'draft' || data.status === 'submitted') && can('transactions.draft')
   const canReverse = data.status === 'posted'
     && data.kind !== 'reversal'
     && !data.source_transaction_id
@@ -966,20 +988,27 @@ export default function CashbookPage() {
   const [newTxnOpen, setNewTxnOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [editTarget, setEditTarget] = useState<CashbookTransaction | null>(null)
+  const [bulkAction, setBulkAction] = useState<CashbookBulkAction | ''>('')
+  const [selectedTransactionIds, setSelectedTransactionIds] = useState<string[]>([])
+  const [bulkSubmitting, setBulkSubmitting] = useState(false)
 
   const [reverseTarget, setReverseTarget] = useState<CashbookTransaction | null>(null)
   const [reverseNarration, setReverseNarration] = useState('')
   const [reverseLoading, setReverseLoading] = useState(false)
 
+
   const selectedFundId = cashbookFilterDraft?.selectedFundId ?? null
 
   const { data: accounts, loading: accountsLoading } = useAccounts({ district_id: districtId })
+  const { data: districts } = useDistricts()
   const { data: funds } = useFunds({ district_id: districtId })
   const { data: members } = useMembers({ district_id: districtId })
   const { data: counterparties } = useCounterparties({ district_id: districtId })
   const { data: openingBalances } = useOpeningBalances({ account_id: selectedAccountId || null, district_id: districtId })
+  const currentDistrict = districts.find((district) => district.id === districtId)
+  const autoPostTransactions = Boolean(currentDistrict?.auto_post_cashbook_transactions)
 
-  const { data: transactions, loading: txnLoading, reverse, refresh } = useCashbook({
+  const { data: transactions, loading: txnLoading, reverse, refresh, runBulkAction } = useCashbook({
     district_id: districtId,
     account_id: selectedAccountId || null,
     kind: kindFilter || null,
@@ -1027,6 +1056,10 @@ export default function CashbookPage() {
     setCashbookActiveAccountId,
   ])
 
+  useEffect(() => {
+    setSelectedTransactionIds([])
+  }, [districtId, selectedAccountId, selectedFundId, kindFilter, search, dateFrom, dateTo, bulkAction])
+
   // ── balance calculations ──────────────────────────────────────────────────
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId)
   const selectedFund = funds.find((fund) => fund.id === selectedFundId) ?? null
@@ -1072,10 +1105,65 @@ export default function CashbookPage() {
   const resultLabel = filtered.length === transactions.length
     ? `${filtered.length} transaction${filtered.length === 1 ? '' : 's'}`
     : `${filtered.length} of ${transactions.length} transactions`
+  const bulkActionContext = {
+    autoPostTransactions,
+    canDraftTransactions,
+    canReverseTransactions,
+  }
+  const bulkActionOptions = buildCashbookBulkActionOptions(filtered, bulkActionContext)
+  const showBulkControls = bulkActionOptions.length > 0
+  const actionableTransactionIds = bulkAction
+    ? getCashbookBulkActionTransactionIds(filtered, bulkAction, bulkActionContext)
+    : []
+  const allVisibleActionableSelected = bulkAction !== ''
+    && actionableTransactionIds.length > 0
+    && actionableTransactionIds.every((id) => selectedTransactionIds.includes(id))
+  const hasSelectedTransactions = selectedTransactionIds.length > 0
+
+  useEffect(() => {
+    const nextAction = bulkActionOptions[0]?.value ?? ''
+    if (!nextAction) {
+      if (bulkAction !== '') setBulkAction('')
+      return
+    }
+
+    if (!bulkActionOptions.some((option) => option.value === bulkAction)) {
+      setBulkAction(nextAction)
+    }
+  }, [bulkAction, bulkActionOptions])
 
   const resetFilters = () => {
     if (!districtId) return
     clearCashbookFilterDraft(districtId)
+  }
+
+  const toggleTransactionSelection = (transactionId: string) => {
+    setSelectedTransactionIds((current) =>
+      current.includes(transactionId)
+        ? current.filter((id) => id !== transactionId)
+        : [...current, transactionId],
+    )
+  }
+
+  const toggleAllActionableTransactions = () => {
+    setSelectedTransactionIds(allVisibleActionableSelected ? [] : actionableTransactionIds)
+  }
+
+  const handleBulkAction = async () => {
+    if (!bulkAction || selectedTransactionIds.length === 0) return
+
+    setBulkSubmitting(true)
+    try {
+      const result = await runBulkAction(bulkAction, selectedTransactionIds)
+      toast.success(
+        `${CASHBOOK_BULK_ACTION_SUCCESS_LABELS[bulkAction]} ${result.count} transaction${result.count === 1 ? '' : 's'}`,
+      )
+      setSelectedTransactionIds([])
+    } catch (error) {
+      toast.error(String(error))
+    } finally {
+      setBulkSubmitting(false)
+    }
   }
 
   const handleReverse = async () => {
@@ -1111,7 +1199,11 @@ export default function CashbookPage() {
             <BookOpen className="h-6 w-6 text-cyan-400" />
             Cashbook
           </h1>
-          <p className="text-sm text-slate-400 mt-1">Daily transaction register — draft, submit, approve, and post.</p>
+          <p className="text-sm text-slate-400 mt-1">
+            {autoPostTransactions
+              ? 'Daily transaction register — new entries post immediately while auto-post is enabled.'
+              : 'Daily transaction register — draft, submit, approve, and post.'}
+          </p>
         </div>
         <Button onClick={() => setNewTxnOpen(true)} disabled={!selectedAccountId || !canDraftTransactions}>
           <PlusCircle className="h-4 w-4" />
@@ -1344,6 +1436,33 @@ export default function CashbookPage() {
               </div>
             </div>
           </div>
+
+          {showBulkControls && (
+            <div className="mt-4 grid gap-3 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-3 lg:grid-cols-[220px_minmax(0,1fr)_auto] lg:items-center">
+              <Select
+                id="cashbook-bulk-action"
+                value={bulkAction}
+                onChange={(e) => setBulkAction(e.target.value as CashbookBulkAction | '')}
+                options={bulkActionOptions}
+                placeholder="Choose action"
+              />
+              <p className="text-xs text-slate-400 lg:px-2">
+                {!bulkAction
+                  ? 'Choose an action to enable row selection.'
+                  : hasSelectedTransactions
+                    ? `${selectedTransactionIds.length} transaction${selectedTransactionIds.length === 1 ? '' : 's'} selected for ${CASHBOOK_BULK_ACTION_SUCCESS_LABELS[bulkAction].toLowerCase()}.`
+                    : `${actionableTransactionIds.length} visible transaction${actionableTransactionIds.length === 1 ? '' : 's'} can be ${CASHBOOK_BULK_ACTION_SUCCESS_LABELS[bulkAction].toLowerCase()}.`}
+              </p>
+              <Button
+                size="sm"
+                onClick={handleBulkAction}
+                loading={bulkSubmitting}
+                disabled={!bulkAction || !hasSelectedTransactions}
+              >
+                Apply action
+              </Button>
+            </div>
+          )}
         </div>
 
         {txnLoading ? (
@@ -1361,6 +1480,23 @@ export default function CashbookPage() {
             <table className="w-full min-w-[760px] text-sm">
               <thead>
                 <tr className="border-b border-slate-700">
+                  {showBulkControls && (
+                    <th className="w-12 px-4 py-3">
+                      <input
+                        ref={(input) => {
+                          if (input) {
+                            input.indeterminate = hasSelectedTransactions && !allVisibleActionableSelected
+                          }
+                        }}
+                        type="checkbox"
+                        checked={allVisibleActionableSelected}
+                        onChange={() => toggleAllActionableTransactions()}
+                        aria-label="Select all visible transactions for the chosen action"
+                        disabled={!bulkAction || actionableTransactionIds.length === 0}
+                        className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
+                      />
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-left font-medium text-slate-400">Date</th>
                   <th className="px-4 py-3 text-left font-medium text-slate-400">Ref</th>
                   <th className="px-4 py-3 text-left font-medium text-slate-400">Kind</th>
@@ -1375,8 +1511,23 @@ export default function CashbookPage() {
                 {filtered.map((txn) => {
                   const isIn = isIncomingTransactionEffect(txn)
                   const isOut = isOutgoingTransactionEffect(txn)
+                  const isSelected = selectedTransactionIds.includes(txn.id)
+                  const isActionableForBulkAction = bulkAction !== '' && actionableTransactionIds.includes(txn.id)
                   return (
                     <tr key={txn.id} className="border-b border-slate-700/50 transition-colors last:border-0 hover:bg-slate-700/20">
+                      {showBulkControls && (
+                        <td className="px-4 py-3.5">
+                          {isActionableForBulkAction ? (
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleTransactionSelection(txn.id)}
+                              aria-label={`Select transaction ${txn.reference_number ?? txn.id}`}
+                              className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
+                            />
+                          ) : null}
+                        </td>
+                      )}
                       <td className="whitespace-nowrap px-4 py-3.5 text-slate-300">{formatDate(txn.transaction_date)}</td>
                       <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs text-slate-500">
                         {txn.reference_number ?? <span className="text-slate-700">—</span>}
@@ -1442,6 +1593,7 @@ export default function CashbookPage() {
           counterparties={counterparties}
           districtId={districtId}
           defaultAccountId={selectedAccountId}
+          autoPostTransactions={autoPostTransactions}
           onSaved={() => { setNewTxnOpen(false); void refresh() }}
           onClose={() => setNewTxnOpen(false)}
         />

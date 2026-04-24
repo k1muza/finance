@@ -21,6 +21,7 @@ export interface District {
   slug?: string | null
   country?: string | null
   default_currency?: Currency | null
+  auto_post_cashbook_transactions?: boolean
   is_active?: boolean
   created_by?: string | null
   created_at: string

@@ -7,6 +7,10 @@ import type {
   MemberType,
 } from '@/types'
 import {
+  COUNTERPARTY_TYPE_LABELS,
+  MEMBER_TYPE_LABELS,
+} from '@/types'
+import {
   isIncomingTransactionEffect,
   isOutgoingTransactionEffect,
   shouldIncludeInFundReporting,
@@ -87,6 +91,242 @@ export interface FundBalanceRow {
   income_total: number
   expense_total: number
   net_balance: number
+}
+
+export type FundLeaderboardParticipantKind =
+  | 'member'
+  | 'counterparty'
+  | 'freeform'
+  | 'unknown'
+
+export interface FundLeaderboardEntry {
+  participant_key: string
+  participant_name: string
+  participant_kind: FundLeaderboardParticipantKind
+  participant_type_label: string
+  participant_context: string | null
+  participant_region: string | null
+  member_type: MemberType | null
+  incoming_total: number
+  outgoing_total: number
+  net_total: number
+  total_volume: number
+  transaction_count: number
+  contribution_count: number
+  expense_count: number
+  last_transaction_date: string | null
+}
+
+export interface FundLeaderboardCurrencyGroup {
+  currency: Currency
+  transaction_count: number
+  participant_count: number
+  total_incoming: number
+  total_outgoing: number
+  net_total: number
+  incoming_leaders: FundLeaderboardEntry[]
+  outgoing_leaders: FundLeaderboardEntry[]
+  activity_leaders: FundLeaderboardEntry[]
+  entries: FundLeaderboardEntry[]
+}
+
+function normalizePartyName(value: string) {
+  return value.trim().replace(/\s+/g, ' ')
+}
+
+function resolveFundLeaderboardParticipant(transaction: CashbookTransaction) {
+  const memberName = normalizePartyName(
+    transaction.member_name_snapshot
+    ?? transaction.member?.name
+    ?? '',
+  )
+
+  if (memberName) {
+    const memberType = (
+      transaction.member_type_snapshot
+      ?? transaction.member?.type
+      ?? null
+    ) as MemberType | null
+    const parentName = normalizePartyName(transaction.member_parent_name_snapshot ?? '')
+    const regionName = normalizePartyName(
+      (transaction.region_member_snapshot as { name?: string } | null)?.name ?? '',
+    )
+
+    return {
+      key: transaction.member_id
+        ? `member:${transaction.member_id}`
+        : `member_snapshot:${memberType ?? 'unknown'}:${memberName.toLowerCase()}:${parentName.toLowerCase()}`,
+      name: memberName,
+      kind: 'member' as const,
+      typeLabel: memberType ? MEMBER_TYPE_LABELS[memberType] : 'Member',
+      context: parentName || null,
+      region: regionName || null,
+      memberType,
+    }
+  }
+
+  const registeredCounterparty = normalizePartyName(transaction.counterparty_record?.name ?? '')
+  if (registeredCounterparty) {
+    return {
+      key: transaction.counterparty_id
+        ? `counterparty:${transaction.counterparty_id}`
+        : `counterparty_name:${registeredCounterparty.toLowerCase()}`,
+      name: registeredCounterparty,
+      kind: 'counterparty' as const,
+      typeLabel: transaction.counterparty_record?.type
+        ? COUNTERPARTY_TYPE_LABELS[transaction.counterparty_record.type]
+        : 'Counterparty',
+      context: 'Registered',
+      region: null,
+      memberType: null,
+    }
+  }
+
+  const freeformCounterparty = normalizePartyName(transaction.counterparty ?? '')
+  if (freeformCounterparty) {
+    return {
+      key: `freeform:${freeformCounterparty.toLowerCase()}`,
+      name: freeformCounterparty,
+      kind: 'freeform' as const,
+      typeLabel: 'Recorded name',
+      context: null,
+      region: null,
+      memberType: null,
+    }
+  }
+
+  return {
+    key: 'unknown:unspecified',
+    name: 'Unspecified party',
+    kind: 'unknown' as const,
+    typeLabel: 'Unknown',
+    context: null,
+    region: null,
+    memberType: null,
+  }
+}
+
+function compareLeaderboardActivity(a: FundLeaderboardEntry, b: FundLeaderboardEntry) {
+  return (
+    b.total_volume - a.total_volume
+    || b.transaction_count - a.transaction_count
+    || b.net_total - a.net_total
+    || a.participant_name.localeCompare(b.participant_name)
+  )
+}
+
+function compareLeaderboardIncoming(a: FundLeaderboardEntry, b: FundLeaderboardEntry) {
+  return (
+    b.incoming_total - a.incoming_total
+    || b.transaction_count - a.transaction_count
+    || b.net_total - a.net_total
+    || a.participant_name.localeCompare(b.participant_name)
+  )
+}
+
+function compareLeaderboardOutgoing(a: FundLeaderboardEntry, b: FundLeaderboardEntry) {
+  return (
+    b.outgoing_total - a.outgoing_total
+    || b.transaction_count - a.transaction_count
+    || a.participant_name.localeCompare(b.participant_name)
+  )
+}
+
+export function buildFundLeaderboard(transactions: CashbookTransaction[]) {
+  const groups = new Map<
+    Currency,
+    {
+      transaction_count: number
+      total_incoming: number
+      total_outgoing: number
+      entries: Map<string, FundLeaderboardEntry>
+    }
+  >()
+
+  for (const transaction of transactions) {
+    if (transaction.status !== 'posted') continue
+    if (!shouldIncludeInFundReporting(transaction)) continue
+
+    const amount = Number(transaction.total_amount)
+    const currency = transaction.currency
+    const participant = resolveFundLeaderboardParticipant(transaction)
+
+    if (!groups.has(currency)) {
+      groups.set(currency, {
+        transaction_count: 0,
+        total_incoming: 0,
+        total_outgoing: 0,
+        entries: new Map<string, FundLeaderboardEntry>(),
+      })
+    }
+
+    const group = groups.get(currency)!
+    group.transaction_count += 1
+
+    if (!group.entries.has(participant.key)) {
+      group.entries.set(participant.key, {
+        participant_key: participant.key,
+        participant_name: participant.name,
+        participant_kind: participant.kind,
+        participant_type_label: participant.typeLabel,
+        participant_context: participant.context,
+        participant_region: participant.region,
+        member_type: participant.memberType,
+        incoming_total: 0,
+        outgoing_total: 0,
+        net_total: 0,
+        total_volume: 0,
+        transaction_count: 0,
+        contribution_count: 0,
+        expense_count: 0,
+        last_transaction_date: null,
+      })
+    }
+
+    const entry = group.entries.get(participant.key)!
+    entry.transaction_count += 1
+    entry.last_transaction_date = entry.last_transaction_date
+      ? (entry.last_transaction_date > transaction.transaction_date
+        ? entry.last_transaction_date
+        : transaction.transaction_date)
+      : transaction.transaction_date
+
+    if (isIncomingTransactionEffect(transaction)) {
+      entry.incoming_total += amount
+      entry.contribution_count += 1
+      group.total_incoming += amount
+    } else {
+      entry.outgoing_total += amount
+      entry.expense_count += 1
+      group.total_outgoing += amount
+    }
+
+    entry.net_total = entry.incoming_total - entry.outgoing_total
+    entry.total_volume = entry.incoming_total + entry.outgoing_total
+  }
+
+  return [...groups.entries()]
+    .map(([currency, group]) => {
+      const entries = [...group.entries.values()].sort(compareLeaderboardActivity)
+
+      return {
+        currency,
+        transaction_count: group.transaction_count,
+        participant_count: entries.length,
+        total_incoming: group.total_incoming,
+        total_outgoing: group.total_outgoing,
+        net_total: group.total_incoming - group.total_outgoing,
+        incoming_leaders: [...entries]
+          .filter((entry) => entry.incoming_total > 0)
+          .sort(compareLeaderboardIncoming),
+        outgoing_leaders: [...entries]
+          .filter((entry) => entry.outgoing_total > 0)
+          .sort(compareLeaderboardOutgoing),
+        activity_leaders: [...entries].sort(compareLeaderboardActivity),
+        entries,
+      }
+    })
+    .sort((a, b) => a.currency.localeCompare(b.currency))
 }
 
 export interface BudgetComparisonLineRow {

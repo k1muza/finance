@@ -5,7 +5,7 @@ import { ApiRouteError, toErrorResponse } from '@/lib/server/errors'
 import { createServerClient } from '@/lib/supabase/server'
 
 // POST /api/cashbook/transactions/[id]/void
-// Voids a draft transaction. Only draft transactions may be voided.
+// Voids a draft or submitted transaction.
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -30,7 +30,7 @@ export async function POST(
     if (!canTransitionTransaction(txn.status, 'voided')) {
       throw new ApiRouteError(
         'INVALID_STATUS_TRANSITION',
-        `Cannot void a transaction with status '${txn.status}'. Only drafts may be voided.`,
+        `Cannot void a transaction with status '${txn.status}'. Only draft or submitted transactions may be voided.`,
         422,
       )
     }
@@ -39,7 +39,7 @@ export async function POST(
       .from('cashbook_transactions')
       .update({ status: 'voided' })
       .eq('id', id)
-      .eq('status', 'draft')
+      .eq('status', txn.status)
       .select()
       .single()
 
