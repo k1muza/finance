@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react'
+import { useAppUiStore, type ToastPosition } from '@/stores/app-ui-store'
 
 type ToastType = 'success' | 'error' | 'info'
 
@@ -20,8 +21,27 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null)
 
+const POSITION_CLASSES: Record<ToastPosition, string> = {
+  'top-left':      'top-4 left-4',
+  'top-center':    'top-4 left-1/2 -translate-x-1/2',
+  'top-right':     'top-4 right-4',
+  'bottom-left':   'bottom-4 left-4',
+  'bottom-center': 'bottom-4 left-1/2 -translate-x-1/2',
+  'bottom-right':  'bottom-4 right-4',
+}
+
+const ANIMATION_CLASSES: Record<ToastPosition, string> = {
+  'top-left':      'slide-in-from-left',
+  'top-center':    'slide-in-from-top',
+  'top-right':     'slide-in-from-right',
+  'bottom-left':   'slide-in-from-left',
+  'bottom-center': 'slide-in-from-bottom',
+  'bottom-right':  'slide-in-from-right',
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
+  const position = useAppUiStore((s) => s.toastPosition)
 
   const push = useCallback((type: ToastType, message: string) => {
     const id = Math.random().toString(36).slice(2)
@@ -42,12 +62,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 w-80">
+      <div className={cn('fixed z-50 flex flex-col gap-2 w-80', POSITION_CLASSES[position])}>
         {toasts.map((toast) => (
           <div
             key={toast.id}
             className={cn(
-              'animate-in slide-in-from-right flex items-start gap-3 rounded-[var(--radius-sm)] border px-4 py-3 text-sm shadow-[var(--shadow-card)] backdrop-blur-[var(--panel-blur)]',
+              'animate-in flex items-start gap-3 rounded-[var(--radius-sm)] border px-4 py-3 text-sm shadow-[var(--shadow-card)] backdrop-blur-[var(--panel-blur)]',
+              ANIMATION_CLASSES[position],
               {
                 'bg-green-900/90 border-green-700 text-green-100': toast.type === 'success',
                 'bg-red-900/90 border-red-700 text-red-100': toast.type === 'error',

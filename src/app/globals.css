@@ -432,6 +432,18 @@ html {
     overflow: visible !important;
   }
 
+  body[data-print-layout='fund-leaderboard'] [data-dashboard-shell] {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body[data-print-layout='fund-leaderboard'] [data-dashboard-content] {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
   body[data-print-layout='fund-leaderboard'] main {
     overflow: visible !important;
     height: auto !important;

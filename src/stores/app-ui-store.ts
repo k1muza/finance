@@ -6,6 +6,7 @@ import { createJSONStorage, persist, type StateStorage } from 'zustand/middlewar
 
 export type NetworkStatus = 'online' | 'offline'
 export type SyncPhase = 'idle' | 'syncing' | 'failed'
+export type ToastPosition = 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right'
 
 type DistrictIdUpdater = string | null | ((current: string | null) => string | null)
 
@@ -30,6 +31,7 @@ interface AppUiState {
   activeDistrictId: string | null
   cashbookActiveAccountIds: Record<string, string>
   cashbookFilterDraftsByDistrict: Record<string, CashbookFilterDraftState>
+  toastPosition: ToastPosition
   hasHydrated: boolean
   syncStatus: SyncStatusState
   markHydrated: (value: boolean) => void
@@ -37,6 +39,7 @@ interface AppUiState {
   setCashbookActiveAccountId: (districtId: string, accountId: string | null) => void
   setCashbookFilterDraft: (districtId: string, patch: Partial<CashbookFilterDraftState>) => void
   clearCashbookFilterDraft: (districtId: string) => void
+  setToastPosition: (position: ToastPosition) => void
   setNetworkStatus: (status: NetworkStatus) => void
   startSync: (pendingCount?: number) => void
   completeSync: () => void
@@ -86,6 +89,7 @@ export const useAppUiStore = create<AppUiState>()(
       activeDistrictId: null,
       cashbookActiveAccountIds: {},
       cashbookFilterDraftsByDistrict: {},
+      toastPosition: 'bottom-right',
       hasHydrated: false,
       syncStatus: buildInitialSyncStatus(),
       markHydrated: (value) => set({ hasHydrated: value }),
@@ -128,6 +132,7 @@ export const useAppUiStore = create<AppUiState>()(
             cashbookFilterDraftsByDistrict: rest,
           }
         }),
+      setToastPosition: (position) => set({ toastPosition: position }),
       setNetworkStatus: (status) =>
         set((state) => ({
           syncStatus: {
@@ -197,6 +202,7 @@ export const useAppUiStore = create<AppUiState>()(
         activeDistrictId: state.activeDistrictId,
         cashbookActiveAccountIds: state.cashbookActiveAccountIds,
         cashbookFilterDraftsByDistrict: state.cashbookFilterDraftsByDistrict,
+        toastPosition: state.toastPosition,
       }),
       onRehydrateStorage: () => (state) => {
         state?.markHydrated(true)

@@ -12,9 +12,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <ToastProvider>
       <SyncStatusController />
       <DistrictGuard>
-        <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-slate-950">
-          <Sidebar />
-          <div className="flex flex-col flex-1 overflow-hidden">
+        <div data-dashboard-shell className="flex flex-col md:flex-row h-screen overflow-hidden bg-slate-950">
+          <div className="print-hidden contents md:block">
+            <Sidebar />
+          </div>
+          <div data-dashboard-content className="flex flex-col flex-1 overflow-hidden">
             <TopBar />
             <SyncStatusBanner />
             <main className="flex-1 overflow-y-auto">

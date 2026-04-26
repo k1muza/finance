@@ -130,6 +130,35 @@ export interface FundLeaderboardCurrencyGroup {
   entries: FundLeaderboardEntry[]
 }
 
+export type FundLeaderboardMovementDirection =
+  | 'up'
+  | 'down'
+  | 'same'
+  | 'new'
+
+export interface FundLeaderboardSnapshotEntry {
+  participant_key: string
+  participant_name: string
+  rank: number
+  incoming_total: number
+  transaction_count: number
+}
+
+export interface FundLeaderboardSnapshotCurrencyGroup {
+  currency: Currency
+  captured_at: string
+  entries: FundLeaderboardSnapshotEntry[]
+}
+
+export interface FundLeaderboardMovement {
+  direction: FundLeaderboardMovementDirection
+  previous_rank: number | null
+  current_rank: number
+  rank_delta: number
+  incoming_delta: number
+  previous_incoming_total: number | null
+}
+
 function normalizePartyName(value: string) {
   return value.trim().replace(/\s+/g, ' ')
 }
@@ -232,6 +261,27 @@ function compareLeaderboardOutgoing(a: FundLeaderboardEntry, b: FundLeaderboardE
   )
 }
 
+function getLeaderboardCompetitionRank<T>(
+  items: T[],
+  index: number,
+  getValue: (item: T) => number,
+) {
+  if (index <= 0) return 1
+
+  let rank = 1
+  for (let pointer = 1; pointer <= index; pointer += 1) {
+    if (!amountsMatch(getValue(items[pointer - 1]), getValue(items[pointer]))) {
+      rank += 1
+    }
+  }
+
+  return rank
+}
+
+function amountsMatch(a: number, b: number) {
+  return Math.abs(a - b) < 0.000001
+}
+
 export function buildFundLeaderboard(transactions: CashbookTransaction[]) {
   const groups = new Map<
     Currency,
@@ -327,6 +377,60 @@ export function buildFundLeaderboard(transactions: CashbookTransaction[]) {
       }
     })
     .sort((a, b) => a.currency.localeCompare(b.currency))
+}
+
+export function buildFundLeaderboardSnapshot(
+  leaderboard: FundLeaderboardCurrencyGroup[],
+  capturedAt: string,
+) {
+  return leaderboard.map((group) => ({
+    currency: group.currency,
+    captured_at: capturedAt,
+    entries: group.incoming_leaders.map((entry, index) => ({
+      participant_key: entry.participant_key,
+      participant_name: entry.participant_name,
+      rank: getLeaderboardCompetitionRank(
+        group.incoming_leaders,
+        index,
+        (item) => item.incoming_total,
+      ),
+      incoming_total: entry.incoming_total,
+      transaction_count: entry.transaction_count,
+    })),
+  }))
+}
+
+export function getFundLeaderboardMovement(
+  entry: FundLeaderboardEntry,
+  currentRank: number,
+  snapshot: FundLeaderboardSnapshotCurrencyGroup | null | undefined,
+): FundLeaderboardMovement | null {
+  if (!snapshot) return null
+
+  const previous = snapshot.entries.find(
+    (snapshotEntry) => snapshotEntry.participant_key === entry.participant_key,
+  )
+
+  if (!previous) {
+    return {
+      direction: 'new',
+      previous_rank: null,
+      current_rank: currentRank,
+      rank_delta: 0,
+      incoming_delta: entry.incoming_total,
+      previous_incoming_total: null,
+    }
+  }
+
+  const rankDelta = previous.rank - currentRank
+  return {
+    direction: rankDelta > 0 ? 'up' : rankDelta < 0 ? 'down' : 'same',
+    previous_rank: previous.rank,
+    current_rank: currentRank,
+    rank_delta: rankDelta,
+    incoming_delta: entry.incoming_total - previous.incoming_total,
+    previous_incoming_total: previous.incoming_total,
+  }
 }
 
 export interface BudgetComparisonLineRow {

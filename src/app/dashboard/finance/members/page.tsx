@@ -11,6 +11,8 @@ import {
   Check,
   X,
   Briefcase,
+  Search,
+  FilterX,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
@@ -86,9 +88,17 @@ const emptyCounterpartyForm = (): CounterpartyFormState => ({
   address: '',
 })
 
+type StatusFilter = 'all' | 'active' | 'inactive'
+
+function matchesSearch(haystack: (string | null | undefined)[], needle: string): boolean {
+  const q = needle.toLowerCase()
+  return haystack.some((s) => s?.toLowerCase().includes(q))
+}
+
 function MemberTable({
   memberType,
   members,
+  allMembers,
   loading,
   parentOptions,
   showParentColumn,
@@ -100,6 +110,7 @@ function MemberTable({
 }: {
   memberType: MemberType
   members: Member[]
+  allMembers: Member[]
   loading: boolean
   parentOptions: Array<{ value: string; label: string }>
   showParentColumn: boolean
@@ -117,11 +128,26 @@ function MemberTable({
   const [editForm, setEditForm] = useState<MemberFormState>(emptyMemberForm())
   const [editSaving, setEditSaving] = useState(false)
 
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+
   const toast = useToast()
 
   const typeItems = members.filter((member) => member.type === memberType)
   const titleOptions = (Object.entries(INDIVIDUAL_TITLE_LABELS) as [IndividualTitle, string][])
     .map(([value, label]) => ({ value, label }))
+
+  const filteredItems = typeItems.filter((member) => {
+    if (statusFilter === 'active' && !member.is_active) return false
+    if (statusFilter === 'inactive' && member.is_active) return false
+    if (search.trim()) {
+      const parentLabel = parentOptions.find((o) => o.value === member.parent_id)?.label
+      return matchesSearch([member.name, member.code, member.phone, member.email, member.address, parentLabel], search)
+    }
+    return true
+  })
+
+  const hasFilters = search.trim() !== '' || statusFilter !== 'all'
 
   const labels: Record<MemberType, { namePlaceholder: string; emptyText: string }> = {
     district: { namePlaceholder: '', emptyText: '' },
@@ -237,22 +263,55 @@ function MemberTable({
       )}
 
       <Card className="overflow-hidden">
-        <CardHeader className="flex items-center justify-between border-b px-5 py-3 [border-color:var(--border-strong)]">
-          <span className="text-xs text-[var(--text-muted)]">
-            {typeItems.length} {typeItems.length === 1 ? 'record' : 'records'}
-          </span>
-          {!adding && (
-            <Button variant="ghost" size="sm" onClick={() => { setAdding(true); setForm(emptyMemberForm()) }}>
-              <Plus className="h-4 w-4" />
-              Add
-            </Button>
-          )}
+        <CardHeader className="flex flex-col gap-3 border-b px-5 py-3 [border-color:var(--border-strong)]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search…"
+                className="h-8 w-full rounded-[var(--radius-sm)] border bg-[var(--surface-panel)] pl-8 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                className="h-8 rounded-[var(--radius-sm)] border bg-[var(--surface-panel)] px-2 text-sm text-[var(--text-secondary)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
+              >
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              {hasFilters && (
+                <button
+                  type="button"
+                  onClick={() => { setSearch(''); setStatusFilter('all') }}
+                  className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                  title="Clear filters"
+                >
+                  <FilterX className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {!adding && (
+                <Button variant="ghost" size="sm" onClick={() => { setAdding(true); setForm(emptyMemberForm()) }}>
+                  <Plus className="h-4 w-4" />
+                  Add
+                </Button>
+              )}
+            </div>
+          </div>
+
         </CardHeader>
 
         {loading ? (
           <div className="px-5 py-8 text-sm text-[var(--text-muted)]">Loading...</div>
-        ) : typeItems.length === 0 ? (
-          <div className="px-5 py-8 text-sm text-[var(--text-muted)]">{labels[memberType].emptyText}</div>
+        ) : filteredItems.length === 0 ? (
+          <div className="px-5 py-8 text-sm text-[var(--text-muted)]">
+            {hasFilters ? 'No records match the current filters.' : labels[memberType].emptyText}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -262,12 +321,21 @@ function MemberTable({
                   {showParentColumn && (
                     <th className="px-4 py-3 text-left font-medium text-[var(--text-tertiary)]">{parentLabel}</th>
                   )}
+                  {memberType === 'region' && (
+                    <>
+                      <th className="px-4 py-3 text-right font-medium text-[var(--text-tertiary)]">Assemblies</th>
+                      <th className="px-4 py-3 text-right font-medium text-[var(--text-tertiary)]">Individuals</th>
+                    </>
+                  )}
+                  {memberType === 'assembly' && (
+                    <th className="px-4 py-3 text-right font-medium text-[var(--text-tertiary)]">Individuals</th>
+                  )}
                   <th className="px-4 py-3 text-left font-medium text-[var(--text-tertiary)]">Contact</th>
                   <th className="w-20 px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
-                {typeItems.map((member) => {
+                {filteredItems.map((member) => {
                   const isEditing = editingId === member.id
                   const parentName = parentOptions.find((option) => option.value === member.parent_id)?.label ?? null
 
@@ -324,6 +392,26 @@ function MemberTable({
                           )}
                         </td>
                       )}
+                      {memberType === 'region' && !isEditing && (
+                        <>
+                          <td className="px-4 py-3 text-right tabular-nums text-[var(--text-tertiary)] align-top">
+                            {allMembers.filter((m) => m.type === 'assembly' && m.parent_id === member.id).length || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums text-[var(--text-tertiary)] align-top">
+                            {(() => {
+                              const asmIds = allMembers.filter((m) => m.type === 'assembly' && m.parent_id === member.id).map((m) => m.id)
+                              return allMembers.filter((m) => m.type === 'individual' && asmIds.includes(m.parent_id ?? '')).length || '-'
+                            })()}
+                          </td>
+                        </>
+                      )}
+                      {memberType === 'region' && isEditing && <><td /><td /></>}
+                      {memberType === 'assembly' && !isEditing && (
+                        <td className="px-4 py-3 text-right tabular-nums text-[var(--text-tertiary)] align-top">
+                          {allMembers.filter((m) => m.type === 'individual' && m.parent_id === member.id).length || '-'}
+                        </td>
+                      )}
+                      {memberType === 'assembly' && isEditing && <td />}
                       <td className="min-w-[180px] px-4 py-3 align-top">
                         {isEditing ? (
                           <div className="space-y-2">
@@ -414,9 +502,23 @@ function CounterpartyTable({
   const [editForm, setEditForm] = useState<CounterpartyFormState>(emptyCounterpartyForm())
   const [editSaving, setEditSaving] = useState(false)
 
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState<CounterpartyType | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+
   const toast = useToast()
   const counterpartyTypeOptions = (Object.entries(COUNTERPARTY_TYPE_LABELS) as [CounterpartyType, string][])
     .map(([value, label]) => ({ value, label }))
+
+  const filteredCounterparties = counterparties.filter((cp) => {
+    if (typeFilter !== 'all' && cp.type !== typeFilter) return false
+    if (statusFilter === 'active' && !cp.is_active) return false
+    if (statusFilter === 'inactive' && cp.is_active) return false
+    if (search.trim()) return matchesSearch([cp.name, cp.code, cp.phone, cp.email, cp.address], search)
+    return true
+  })
+
+  const hasFilters = search.trim() !== '' || typeFilter !== 'all' || statusFilter !== 'all'
 
   const handleAdd = async () => {
     if (!form.name.trim()) {
@@ -512,22 +614,69 @@ function CounterpartyTable({
       )}
 
       <Card className="overflow-hidden">
-        <CardHeader className="flex items-center justify-between border-b px-5 py-3 [border-color:var(--border-strong)]">
+        <CardHeader className="flex flex-col gap-3 border-b px-5 py-3 [border-color:var(--border-strong)]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search…"
+                className="h-8 w-full rounded-[var(--radius-sm)] border bg-[var(--surface-panel)] pl-8 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as CounterpartyType | 'all')}
+                className="h-8 rounded-[var(--radius-sm)] border bg-[var(--surface-panel)] px-2 text-sm text-[var(--text-secondary)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
+              >
+                <option value="all">All types</option>
+                {counterpartyTypeOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                className="h-8 rounded-[var(--radius-sm)] border bg-[var(--surface-panel)] px-2 text-sm text-[var(--text-secondary)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
+              >
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              {hasFilters && (
+                <button
+                  type="button"
+                  onClick={() => { setSearch(''); setTypeFilter('all'); setStatusFilter('all') }}
+                  className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                  title="Clear filters"
+                >
+                  <FilterX className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {!adding && (
+                <Button variant="ghost" size="sm" onClick={() => { setAdding(true); setForm(emptyCounterpartyForm()) }}>
+                  <Plus className="h-4 w-4" />
+                  Add
+                </Button>
+              )}
+            </div>
+          </div>
           <span className="text-xs text-[var(--text-muted)]">
-            {counterparties.length} {counterparties.length === 1 ? 'record' : 'records'}
+            {hasFilters
+              ? `${filteredCounterparties.length} of ${counterparties.length} ${counterparties.length === 1 ? 'record' : 'records'}`
+              : `${counterparties.length} ${counterparties.length === 1 ? 'record' : 'records'}`}
           </span>
-          {!adding && (
-            <Button variant="ghost" size="sm" onClick={() => { setAdding(true); setForm(emptyCounterpartyForm()) }}>
-              <Plus className="h-4 w-4" />
-              Add
-            </Button>
-          )}
         </CardHeader>
 
         {loading ? (
           <div className="px-5 py-8 text-sm text-[var(--text-muted)]">Loading...</div>
-        ) : counterparties.length === 0 ? (
-          <div className="px-5 py-8 text-sm text-[var(--text-muted)]">No counterparties yet.</div>
+        ) : filteredCounterparties.length === 0 ? (
+          <div className="px-5 py-8 text-sm text-[var(--text-muted)]">
+            {hasFilters ? 'No records match the current filters.' : 'No counterparties yet.'}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -540,7 +689,7 @@ function CounterpartyTable({
                 </tr>
               </thead>
               <tbody>
-                {counterparties.map((counterparty) => {
+                {filteredCounterparties.map((counterparty) => {
                   const isEditing = editingId === counterparty.id
 
                   return (
@@ -766,6 +915,13 @@ export default function MembersPage() {
     }
   }
 
+  const tabCounts: Record<DirectoryTab, number> = {
+    regions: members.filter((m) => m.type === 'region').length,
+    assemblies: members.filter((m) => m.type === 'assembly').length,
+    individuals: members.filter((m) => m.type === 'individual').length,
+    counterparties: counterparties.length,
+  }
+
   const currentTab = TABS.find((tab) => tab.key === activeTab)!
   const deleteTitle = confirmDelete?.kind === 'counterparty'
     ? 'Delete Counterparty'
@@ -785,6 +941,9 @@ export default function MembersPage() {
             <TabsTrigger key={key} value={key} className="gap-2 px-1 sm:px-4">
               <Icon className="h-4 w-4" />
               {label}
+              <span className="rounded-full bg-[var(--surface-panel-muted)] px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-[var(--text-muted)]">
+                {tabCounts[key]}
+              </span>
             </TabsTrigger>
           ))}
         </TabsList>
@@ -793,6 +952,7 @@ export default function MembersPage() {
           <MemberTable
             memberType="region"
             members={members}
+            allMembers={members}
             loading={membersLoading}
             parentOptions={[]}
             showParentColumn={false}
@@ -808,6 +968,7 @@ export default function MembersPage() {
           <MemberTable
             memberType="assembly"
             members={members}
+            allMembers={members}
             loading={membersLoading}
             parentOptions={regionOptions}
             showParentColumn={regionOptions.length > 0}
@@ -823,6 +984,7 @@ export default function MembersPage() {
           <MemberTable
             memberType="individual"
             members={members}
+            allMembers={members}
             loading={membersLoading}
             parentOptions={assemblyOptions}
             showParentColumn={assemblyOptions.length > 0}

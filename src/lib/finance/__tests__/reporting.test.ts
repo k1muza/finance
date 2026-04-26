@@ -6,6 +6,8 @@ import {
   buildCashbookFundBalances,
   buildCashbookTotalsByCurrency,
   buildFundLeaderboard,
+  buildFundLeaderboardSnapshot,
+  getFundLeaderboardMovement,
 } from '@/lib/finance/reporting'
 
 function makeTransaction(
@@ -344,6 +346,90 @@ describe('cashbook reporting helpers', () => {
       total_incoming: 600,
       total_outgoing: 0,
       net_total: 600,
+    })
+  })
+
+  it('captures leaderboard snapshots and reports future contributor movement', () => {
+    const initial = buildFundLeaderboard([
+      makeTransaction({
+        id: 'alice-initial',
+        total_amount: 150,
+        member_id: 'alice',
+        member_name_snapshot: 'Alice Example',
+      }),
+      makeTransaction({
+        id: 'brenda-initial',
+        total_amount: 100,
+        member_id: 'brenda',
+        member_name_snapshot: 'Brenda Example',
+      }),
+    ])
+    const snapshot = buildFundLeaderboardSnapshot(initial, '2026-04-21T10:00:00.000Z')
+
+    const current = buildFundLeaderboard([
+      makeTransaction({
+        id: 'alice-current',
+        total_amount: 150,
+        member_id: 'alice',
+        member_name_snapshot: 'Alice Example',
+      }),
+      makeTransaction({
+        id: 'brenda-current-1',
+        total_amount: 100,
+        member_id: 'brenda',
+        member_name_snapshot: 'Brenda Example',
+      }),
+      makeTransaction({
+        id: 'brenda-current-2',
+        total_amount: 75,
+        member_id: 'brenda',
+        member_name_snapshot: 'Brenda Example',
+      }),
+      makeTransaction({
+        id: 'charles-current',
+        total_amount: 50,
+        member_id: 'charles',
+        member_name_snapshot: 'Charles Example',
+      }),
+    ])
+    const usdSnapshot = snapshot.find((group) => group.currency === 'USD')
+    const brenda = current[0].incoming_leaders.find((entry) => entry.participant_key === 'member:brenda')!
+    const alice = current[0].incoming_leaders.find((entry) => entry.participant_key === 'member:alice')!
+    const charles = current[0].incoming_leaders.find((entry) => entry.participant_key === 'member:charles')!
+
+    expect(snapshot[0].entries).toEqual([
+      expect.objectContaining({
+        participant_key: 'member:alice',
+        rank: 1,
+        incoming_total: 150,
+      }),
+      expect.objectContaining({
+        participant_key: 'member:brenda',
+        rank: 2,
+        incoming_total: 100,
+      }),
+    ])
+
+    expect(getFundLeaderboardMovement(brenda, 1, usdSnapshot)).toMatchObject({
+      direction: 'up',
+      previous_rank: 2,
+      current_rank: 1,
+      rank_delta: 1,
+      incoming_delta: 75,
+    })
+    expect(getFundLeaderboardMovement(alice, 2, usdSnapshot)).toMatchObject({
+      direction: 'down',
+      previous_rank: 1,
+      current_rank: 2,
+      rank_delta: -1,
+      incoming_delta: 0,
+    })
+    expect(getFundLeaderboardMovement(charles, 3, usdSnapshot)).toMatchObject({
+      direction: 'new',
+      previous_rank: null,
+      current_rank: 3,
+      previous_incoming_total: null,
+      incoming_delta: 50,
     })
   })
 

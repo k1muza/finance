@@ -2,18 +2,30 @@
 
 import { useState } from 'react'
 import { useTheme } from 'next-themes'
-import { Palette, Settings2 } from 'lucide-react'
+import { Palette, Settings2, Bell } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils/cn'
 import { THEME_OPTIONS, type ThemeOption } from '@/components/layout/themeCatalog'
+import { useAppUiStore, type ToastPosition } from '@/stores/app-ui-store'
 
 interface UiSettingsButtonProps {
   className?: string
 }
 
+const TOAST_POSITIONS: { value: ToastPosition; row: number; col: number; label: string }[] = [
+  { value: 'top-left',      row: 0, col: 0, label: 'Top left' },
+  { value: 'top-center',    row: 0, col: 1, label: 'Top center' },
+  { value: 'top-right',     row: 0, col: 2, label: 'Top right' },
+  { value: 'bottom-left',   row: 1, col: 0, label: 'Bottom left' },
+  { value: 'bottom-center', row: 1, col: 1, label: 'Bottom center' },
+  { value: 'bottom-right',  row: 1, col: 2, label: 'Bottom right' },
+]
+
 export function UiSettingsButton({ className }: UiSettingsButtonProps) {
   const [open, setOpen] = useState(false)
   const { theme, setTheme } = useTheme()
+  const toastPosition = useAppUiStore((s) => s.toastPosition)
+  const setToastPosition = useAppUiStore((s) => s.setToastPosition)
 
   const activeTheme: ThemeOption =
     THEME_OPTIONS.find((option) => option.value === theme)?.value ?? 'dark'
@@ -132,6 +144,64 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
                 )
               })}
             </div>
+          </section>
+
+          <section className="space-y-3">
+            <div className="flex items-start gap-3 rounded-[var(--radius-xl)] border bg-[var(--surface-panel-muted)] p-4 shadow-[var(--shadow-soft)] [border-color:var(--border-subtle)]">
+              <div className="rounded-[var(--radius-sm)] bg-[var(--accent-soft)] p-2 text-[var(--accent-solid-hover)]">
+                <Bell className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Notifications</h3>
+                <p className="text-sm text-[var(--text-tertiary)]">
+                  Choose where toast notifications appear on screen.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-[var(--text-secondary)]">Toast position</p>
+              <p className="text-sm text-[var(--text-muted)]">Pick a corner or edge for notification toasts.</p>
+            </div>
+
+            {/* 3×2 visual position picker */}
+            <div
+              className="mx-auto grid w-48 grid-cols-3 grid-rows-2 gap-2"
+              role="radiogroup"
+              aria-label="Toast position"
+            >
+              {TOAST_POSITIONS.map(({ value, row, col, label }) => {
+                const isActive = toastPosition === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={isActive}
+                    aria-label={label}
+                    title={label}
+                    onClick={() => setToastPosition(value)}
+                    style={{ gridRow: row + 1, gridColumn: col + 1 }}
+                    className={cn(
+                      'flex h-12 w-full items-center justify-center rounded-[var(--radius-sm)] border transition-[background-color,border-color,box-shadow]',
+                      isActive
+                        ? 'bg-[var(--accent-soft)] shadow-[var(--shadow-card)] [border-color:var(--accent-border)]'
+                        : 'bg-[var(--surface-panel)] [border-color:var(--border-strong)] hover:bg-[var(--surface-panel-muted)]',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'h-2 w-2 rounded-full',
+                        isActive ? 'bg-[var(--accent-solid-hover)]' : 'bg-[var(--text-muted)]',
+                      )}
+                    />
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-center text-xs text-[var(--text-muted)]">
+              {TOAST_POSITIONS.find((p) => p.value === toastPosition)?.label}
+            </p>
           </section>
         </div>
       </Modal>

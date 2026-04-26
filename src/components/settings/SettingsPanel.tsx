@@ -5,6 +5,7 @@ import {
   CheckCircle,
   AlertCircle,
   Trash2,
+  Bell,
   Building2,
   Landmark,
   PiggyBank,
@@ -22,6 +23,7 @@ import { Select } from '@/components/ui/Select'
 import { Badge } from '@/components/ui/Badge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useAuth } from '@/contexts/AuthContext'
+import { useAppUiStore, type ToastPosition } from '@/stores/app-ui-store'
 import { useToast } from '@/components/ui/Toast'
 import { useDistricts } from '@/hooks/useDistricts'
 import { useCurrencies } from '@/hooks/useCurrencies'
@@ -1119,6 +1121,75 @@ function DangerZone() {
   )
 }
 
+
+const TOAST_POSITIONS: { value: ToastPosition; row: number; col: number; label: string }[] = [
+  { value: 'top-left',      row: 0, col: 0, label: 'Top left' },
+  { value: 'top-center',    row: 0, col: 1, label: 'Top center' },
+  { value: 'top-right',     row: 0, col: 2, label: 'Top right' },
+  { value: 'bottom-left',   row: 1, col: 0, label: 'Bottom left' },
+  { value: 'bottom-center', row: 1, col: 1, label: 'Bottom center' },
+  { value: 'bottom-right',  row: 1, col: 2, label: 'Bottom right' },
+]
+
+function PreferencesSection() {
+  const toastPosition = useAppUiStore((s) => s.toastPosition)
+  const setToastPosition = useAppUiStore((s) => s.setToastPosition)
+
+  return (
+    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
+      <h2 className="font-semibold text-slate-100 flex items-center gap-2">
+        <Bell className="h-5 w-5 text-cyan-400" />
+        Preferences
+      </h2>
+      <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-4 space-y-4">
+        <div>
+          <p className="text-sm font-medium text-slate-100">Toast position</p>
+          <p className="mt-1 text-sm text-slate-400">
+            Choose where notification toasts appear on screen. Changes apply immediately.
+          </p>
+        </div>
+        <div
+          className="grid w-48 grid-cols-3 grid-rows-2 gap-2"
+          role="radiogroup"
+          aria-label="Toast position"
+        >
+          {TOAST_POSITIONS.map(({ value, row, col, label }) => {
+            const isActive = toastPosition === value
+            return (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={isActive}
+                aria-label={label}
+                title={label}
+                onClick={() => setToastPosition(value)}
+                style={{ gridRow: row + 1, gridColumn: col + 1 }}
+                className={[
+                  'flex h-12 w-full items-center justify-center rounded-lg border transition-colors',
+                  isActive
+                    ? 'border-cyan-500 bg-cyan-500/10'
+                    : 'border-slate-600 bg-slate-900/40 hover:border-slate-500',
+                ].join(' ')}
+              >
+                <span
+                  className={[
+                    'h-2 w-2 rounded-full',
+                    isActive ? 'bg-cyan-400' : 'bg-slate-500',
+                  ].join(' ')}
+                />
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-xs text-slate-400">
+          {TOAST_POSITIONS.find((p) => p.value === toastPosition)?.label}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function SettingsPanel() {
   const { districtId, isAdmin } = useAuth()
   const { can } = usePermissions()
@@ -1126,6 +1197,7 @@ export function SettingsPanel() {
 
   return (
     <div className="space-y-6">
+      <PreferencesSection />
       {!districtId && (
         <SelectDistrictHint description="Choose a district from the top bar to manage district settings." />
       )}

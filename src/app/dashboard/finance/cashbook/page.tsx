@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/Toast'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Badge } from '@/components/ui/Badge'
 import { SlideOver } from '@/components/ui/SlideOver'
 import { Modal } from '@/components/ui/Modal'
@@ -65,6 +66,8 @@ import {
   Currency,
   Fund,
   Member,
+  MemberType,
+  IndividualTitle,
   MEMBER_TYPE_LABELS,
   TransactionKind,
   TRANSACTION_KIND_LABELS,
@@ -160,7 +163,17 @@ interface NewTransactionFormProps {
   counterparties: Counterparty[]
   districtId: string
   defaultAccountId: string
+  defaultFundId: string
   autoPostTransactions: boolean
+  onAddMember: (values: {
+    district_id: string
+    parent_id?: string | null
+    type: MemberType
+    name: string
+    title?: IndividualTitle
+    phone?: string | null
+    email?: string | null
+  }) => Promise<string>
   onSaved: () => void
   onClose: () => void
 }
@@ -172,7 +185,9 @@ function NewTransactionForm({
   counterparties,
   districtId,
   defaultAccountId,
+  defaultFundId,
   autoPostTransactions,
+  onAddMember,
   onSaved,
   onClose,
 }: NewTransactionFormProps) {
@@ -188,11 +203,48 @@ function NewTransactionForm({
     counterparty_id: '',
     counterparty: '',
     narration: '',
-    fund_id: '',
+    fund_id: defaultFundId,
     amount: '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [addMemberOpen, setAddMemberOpen] = useState(false)
+  const [memberForm, setMemberForm] = useState({
+    name: '',
+    type: 'individual' as MemberType,
+    title: 'saint' as IndividualTitle,
+    parent_id: '',
+    phone: '',
+    email: '',
+  })
+  const [memberSaving, setMemberSaving] = useState(false)
+  const [memberError, setMemberError] = useState<string | null>(null)
+
+  const handleAddMember = async () => {
+    setMemberError(null)
+    if (!memberForm.name.trim()) { setMemberError('Name is required'); return }
+    setMemberSaving(true)
+    try {
+      const newId = await onAddMember({
+        district_id: districtId,
+        name: memberForm.name,
+        type: memberForm.type,
+        title: memberForm.type === 'individual' ? memberForm.title : 'saint',
+        parent_id: memberForm.parent_id || null,
+        phone: memberForm.phone || null,
+        email: memberForm.email || null,
+      })
+      setForm((f) => ({ ...f, member_id: newId, counterparty_id: '' }))
+      setAddMemberOpen(false)
+      setMemberForm({ name: '', type: 'individual', title: 'saint', parent_id: '', phone: '', email: '' })
+      toast.success('Member added')
+    } catch (e) {
+      setMemberError(String(e))
+    } finally {
+      setMemberSaving(false)
+    }
+  }
 
   const selectedAccount = accounts.find((a) => a.id === form.account_id)
   const selectedFund = funds.find((fund) => fund.id === form.fund_id) ?? null
@@ -259,7 +311,10 @@ function NewTransactionForm({
   }
 
   return (
-    <div className="space-y-5">
+    <form
+      className="space-y-5"
+      onSubmit={(e) => { e.preventDefault(); void handleSave() }}
+    >
       <div className="grid grid-cols-1 gap-4">
         <Select
           label="Account *"
@@ -306,13 +361,13 @@ function NewTransactionForm({
           onChange={(e) => setForm((f) => ({ ...f, transaction_date: e.target.value }))}
         />
         <div className="space-y-1">
-          <Select
+          <SearchableSelect
             label={`Member${requiresIndividualReceiptMember ? ' *' : ''}`}
             value={form.member_id}
-            onChange={(e) => setForm((f) => ({
+            onChange={(val) => setForm((f) => ({
               ...f,
-              member_id: e.target.value,
-              counterparty_id: e.target.value ? '' : f.counterparty_id,
+              member_id: val,
+              counterparty_id: val ? '' : f.counterparty_id,
             }))}
             options={members.filter((member) => member.is_active).map((member) => ({
               value: member.id,
@@ -335,6 +390,13 @@ function NewTransactionForm({
               {memberPreview.message}
             </p>
           )}
+          <button
+            type="button"
+            onClick={() => setAddMemberOpen(true)}
+            className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+          >
+            + Add new member
+          </button>
         </div>
         {form.kind === 'payment' && (
           <div className="space-y-1">
@@ -404,12 +466,79 @@ function NewTransactionForm({
       )}
 
       <div className="flex justify-end gap-2 pt-2 border-t border-slate-700">
-        <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
-        <Button onClick={handleSave} loading={saving}>
+        <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button type="submit" loading={saving}>
           {autoPostTransactions ? 'Post transaction' : 'Save draft'}
         </Button>
       </div>
-    </div>
+
+      <Modal open={addMemberOpen} onClose={() => setAddMemberOpen(false)} title="Add New Member" size="sm">
+        <div className="space-y-4">
+          <Input
+            label="Name *"
+            value={memberForm.name}
+            onChange={(e) => setMemberForm((f) => ({ ...f, name: e.target.value }))}
+            placeholder="Full name"
+          />
+          <Select
+            label="Type *"
+            value={memberForm.type}
+            onChange={(e) => setMemberForm((f) => ({ ...f, type: e.target.value as MemberType }))}
+            options={[
+              { value: 'individual', label: 'Individual' },
+              { value: 'assembly', label: 'Assembly' },
+              { value: 'region', label: 'Region' },
+              { value: 'department', label: 'Department' },
+              { value: 'district', label: 'District' },
+            ]}
+          />
+          {memberForm.type === 'individual' && (
+            <Select
+              label="Title"
+              value={memberForm.title}
+              onChange={(e) => setMemberForm((f) => ({ ...f, title: e.target.value as IndividualTitle }))}
+              options={[
+                { value: 'saint', label: 'Saint' },
+                { value: 'elder', label: 'Elder' },
+                { value: 'deacon', label: 'Deacon' },
+              ]}
+            />
+          )}
+          <Select
+            label="Parent"
+            value={memberForm.parent_id}
+            onChange={(e) => setMemberForm((f) => ({ ...f, parent_id: e.target.value }))}
+            options={members.filter((m) => m.is_active && m.type !== 'individual').map((m) => ({
+              value: m.id,
+              label: memberLabel(m),
+            }))}
+            placeholder="None"
+          />
+          <Input
+            label="Phone"
+            value={memberForm.phone}
+            onChange={(e) => setMemberForm((f) => ({ ...f, phone: e.target.value }))}
+            placeholder="Optional"
+          />
+          <Input
+            label="Email"
+            value={memberForm.email}
+            onChange={(e) => setMemberForm((f) => ({ ...f, email: e.target.value }))}
+            placeholder="Optional"
+          />
+          {memberError && (
+            <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {memberError}
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-700">
+            <Button variant="ghost" onClick={() => setAddMemberOpen(false)} disabled={memberSaving}>Cancel</Button>
+            <Button onClick={handleAddMember} loading={memberSaving}>Add Member</Button>
+          </div>
+        </div>
+      </Modal>
+    </form>
   )
 }
 
@@ -556,13 +685,13 @@ function EditDraftForm({
           onChange={(e) => setForm((f) => ({ ...f, transaction_date: e.target.value }))}
         />
         <div className="space-y-1">
-          <Select
+          <SearchableSelect
             label={`Member${requiresIndividualReceiptMember ? ' *' : ''}`}
             value={form.member_id}
-            onChange={(e) => setForm((f) => ({
+            onChange={(val) => setForm((f) => ({
               ...f,
-              member_id: e.target.value,
-              counterparty_id: e.target.value ? '' : f.counterparty_id,
+              member_id: val,
+              counterparty_id: val ? '' : f.counterparty_id,
             }))}
             options={members.filter((member) => member.is_active).map((member) => ({
               value: member.id,
@@ -1002,7 +1131,7 @@ export default function CashbookPage() {
   const { data: accounts, loading: accountsLoading } = useAccounts({ district_id: districtId })
   const { data: districts } = useDistricts()
   const { data: funds } = useFunds({ district_id: districtId })
-  const { data: members } = useMembers({ district_id: districtId })
+  const { data: members, add: addMember } = useMembers({ district_id: districtId })
   const { data: counterparties } = useCounterparties({ district_id: districtId })
   const { data: openingBalances } = useOpeningBalances({ account_id: selectedAccountId || null, district_id: districtId })
   const currentDistrict = districts.find((district) => district.id === districtId)
@@ -1236,9 +1365,6 @@ export default function CashbookPage() {
                   <h2 className="text-lg font-semibold text-slate-100">
                     {selectedAccount ? selectedAccount.name : 'Choose an account to begin'}
                   </h2>
-                  <p className="mt-1 text-sm text-slate-400">
-                    Keep the working filters together here, then use fund chips and search below to narrow the register.
-                  </p>
                 </div>
               </div>
 
@@ -1264,31 +1390,9 @@ export default function CashbookPage() {
             </div>
           </div>
 
-          <div className="border-t border-slate-700/80 bg-slate-950/25 px-5 py-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
-                  <Wallet className="h-4 w-4 text-cyan-400" />
-                  Fund filter
-                </div>
-                <p className="mt-1 text-sm text-slate-500">
-                  Narrow the visible register rows by fund without changing the account totals above.
-                </p>
-              </div>
-
-              {selectedFund && (
-                <Link
-                  href={`/dashboard/finance/funds/${selectedFund.id}`}
-                  className="inline-flex items-center gap-2 text-sm text-cyan-400 transition-colors hover:text-cyan-300"
-                >
-                  Open selected fund
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </Link>
-              )}
-            </div>
-
+          <div className="border-t border-slate-700/80 bg-slate-950/25 px-5 py-4 flex gap-4 justify-between items-center">
             {funds.length > 0 ? (
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => updateCashbookFilterDraft({ selectedFundId: null })}
@@ -1335,10 +1439,23 @@ export default function CashbookPage() {
                 })}
               </div>
             ) : (
-              <p className="mt-4 text-sm italic text-slate-500">No funds defined yet.</p>
+              <p className="text-sm italic text-slate-500">No funds defined yet.</p>
             )}
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              {selectedFund && (
+                <Link
+                  href={`/dashboard/finance/funds/${selectedFund.id}`}
+                  className="inline-flex items-center gap-2 text-sm text-cyan-400 transition-colors hover:text-cyan-300"
+                >
+                  Open selected fund
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+              )}
+            </div>
           </div>
         </section>
+
+        <hr className="border-slate-700/80" />
 
         {/* ── main content ── */}
         <div className="space-y-5">
@@ -1593,7 +1710,9 @@ export default function CashbookPage() {
           counterparties={counterparties}
           districtId={districtId}
           defaultAccountId={selectedAccountId}
+          defaultFundId={selectedFundId ?? ""}
           autoPostTransactions={autoPostTransactions}
+          onAddMember={addMember}
           onSaved={() => { setNewTxnOpen(false); void refresh() }}
           onClose={() => setNewTxnOpen(false)}
         />

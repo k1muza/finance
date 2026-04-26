@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, Award, Crown, Medal, Printer } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, Award, Camera, Crown, Medal, Minus, Printer, Sparkles } from 'lucide-react'
 import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { Button } from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
@@ -11,8 +11,12 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useFunds } from '@/hooks/useFunds'
 import {
   buildFundLeaderboard,
+  buildFundLeaderboardSnapshot,
+  getFundLeaderboardMovement,
   type FundLeaderboardCurrencyGroup,
   type FundLeaderboardEntry,
+  type FundLeaderboardMovement,
+  type FundLeaderboardSnapshotCurrencyGroup,
 } from '@/lib/finance/reporting'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
@@ -21,6 +25,15 @@ import type { CashbookTransaction } from '@/types'
 type PeriodPreset = 'all_time' | 'this_year' | 'this_month' | 'custom'
 
 type SummaryTone = 'sky' | 'emerald' | 'amber' | 'rose'
+
+type SnapshotPayload = {
+  version: 1
+  district_id: string
+  fund_id: string
+  period_label: string
+  captured_at: string
+  groups: FundLeaderboardSnapshotCurrencyGroup[]
+}
 
 type RegionRankingRow = {
   region: string
@@ -77,6 +90,10 @@ function activeRangeLabel(preset: PeriodPreset, customFrom: string, customTo: st
   return 'Custom period'
 }
 
+function getSnapshotStorageKey(districtId: string, fundId: string, rangeLabel: string) {
+  return `finance:fund-leaderboard:snapshot:${districtId}:${fundId}:${rangeLabel}`
+}
+
 function getOrdinalRank(rank: number) {
   const mod100 = rank % 100
   if (mod100 >= 11 && mod100 <= 13) return `${rank}th`
@@ -86,6 +103,16 @@ function getOrdinalRank(rank: number) {
   if (mod10 === 2) return `${rank}nd`
   if (mod10 === 3) return `${rank}rd`
   return `${rank}th`
+}
+
+function formatSnapshotDate(iso: string) {
+  return new Date(iso).toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 function getInitials(name: string) {
@@ -158,19 +185,19 @@ function SummaryCard({
   tone: SummaryTone
 }) {
   const toneStyles: Record<SummaryTone, string> = {
-    sky: 'border-sky-100 bg-sky-50/90',
-    emerald: 'border-emerald-100 bg-emerald-50/90',
-    amber: 'border-amber-100 bg-amber-50/90',
-    rose: 'border-rose-100 bg-rose-50/90',
+    sky: 'border-sky-500/25 bg-sky-500/10',
+    emerald: 'border-emerald-500/25 bg-emerald-500/10',
+    amber: 'border-amber-500/25 bg-amber-500/10',
+    rose: 'border-rose-500/25 bg-rose-500/10',
   }
 
   return (
     <article
       data-print-card
-      className={`print-color-exact rounded-[5px] border px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] ${toneStyles[tone]}`}
+      className={`print-color-exact rounded-[5px] border px-4 py-4 shadow-[var(--shadow-card)] ${toneStyles[tone]}`}
     >
       <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">{label}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">{value}</p>
+      <p className="mt-3 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">{value}</p>
     </article>
   )
 }
@@ -185,7 +212,7 @@ function TopContributorDecoration({ rank }: { rank: number }) {
     },
     2: {
       icon: Medal,
-      className: 'border-slate-200 bg-slate-100 text-slate-700',
+      className: 'border-[var(--border-strong)] bg-[var(--surface-panel-muted)] text-[var(--text-secondary)]',
     },
     3: {
       icon: Award,
@@ -206,6 +233,55 @@ function TopContributorDecoration({ rank }: { rank: number }) {
   )
 }
 
+function MovementBadge({
+  movement,
+  currency,
+}: {
+  movement: FundLeaderboardMovement | null
+  currency: FundLeaderboardCurrencyGroup['currency']
+}) {
+  if (!movement) {
+    return <span className="text-xs font-medium text-slate-400">No snapshot</span>
+  }
+
+  if (movement.direction === 'new') {
+    return (
+      <span className="print-color-exact inline-flex items-center gap-1.5 rounded-[5px] border border-sky-500/25 bg-sky-500/10 px-2 py-1 text-xs font-semibold text-[var(--theme-accent-500)]">
+        <Sparkles className="h-3.5 w-3.5" />
+        New
+      </span>
+    )
+  }
+
+  if (movement.direction === 'same') {
+    return (
+      <span
+        title={`Contribution change: ${formatCurrency(movement.incoming_delta, currency)}`}
+        className="print-color-exact inline-flex items-center gap-1.5 rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-app)] px-2 py-1 text-xs font-semibold text-slate-500"
+      >
+        <Minus className="h-3.5 w-3.5" />
+        Same
+      </span>
+    )
+  }
+
+  const movedUp = movement.direction === 'up'
+  const Icon = movedUp ? ArrowUp : ArrowDown
+  const className = movedUp
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    : 'border-rose-200 bg-rose-50 text-rose-700'
+
+  return (
+    <span
+      title={`Previously ${getOrdinalRank(movement.previous_rank ?? movement.current_rank)}. Contribution change: ${formatCurrency(movement.incoming_delta, currency)}`}
+      className={`print-color-exact inline-flex items-center gap-1.5 rounded-[5px] border px-2 py-1 text-xs font-semibold ${className}`}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {Math.abs(movement.rank_delta)}
+    </span>
+  )
+}
+
 function RegionRankingsSection({
   section,
 }: {
@@ -217,19 +293,19 @@ function RegionRankingsSection({
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Region Rankings</p>
         </div>
-        <div className="print-color-exact inline-flex rounded-[5px] border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+        <div className="print-color-exact inline-flex rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-app)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
           {section.group.currency} currency view
         </div>
       </div>
 
       {section.regionRows.length === 0 ? (
-        <div className="rounded-[5px] border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+        <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-4 py-8 text-center text-sm text-slate-500">
           No regional contribution data is available for this currency.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[5px] border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+        <div className="overflow-hidden rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] shadow-[var(--shadow-card)]">
           <table className="w-full border-collapse text-left">
-            <thead className="print-color-exact bg-slate-100 text-[11px] uppercase tracking-[0.18em] text-slate-600">
+            <thead className="print-color-exact bg-[var(--surface-panel-muted)] text-[11px] uppercase tracking-[0.18em] text-slate-600">
               <tr>
                 <th className="px-4 py-3 font-semibold">Rank</th>
                 <th className="px-4 py-3 font-semibold">Region</th>
@@ -237,13 +313,13 @@ function RegionRankingsSection({
                 <th className="px-4 py-3 text-right font-semibold">Total</th>
               </tr>
             </thead>
-            <tbody className="text-sm text-slate-700">
+            <tbody className="text-sm text-slate-600">
               {section.regionRows.map((row, index) => (
-                <tr key={row.region} className="border-t border-slate-100 odd:bg-white even:bg-slate-50/60">
+                <tr key={row.region} className="border-t border-[var(--border-subtle)] odd:bg-[var(--surface-panel)] even:bg-[var(--surface-panel-muted)]">
                   <td className="px-4 py-3 font-medium text-slate-500">{getOrdinalRank(index + 1)}</td>
-                  <td className="px-4 py-3 font-semibold text-slate-900">{row.region}</td>
+                  <td className="px-4 py-3 font-semibold text-[var(--text-primary)]">{row.region}</td>
                   <td className="px-4 py-3 text-right">{row.participantCount}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                  <td className="px-4 py-3 text-right font-semibold text-[var(--text-primary)]">
                     {formatCurrency(row.totalIncoming, section.group.currency)}
                   </td>
                 </tr>
@@ -258,8 +334,10 @@ function RegionRankingsSection({
 
 function ContributorsSection({
   section,
+  snapshot,
 }: {
   section: ReportSection
+  snapshot: FundLeaderboardSnapshotCurrencyGroup | null
 }) {
   return (
     <section className="space-y-4">
@@ -267,41 +345,43 @@ function ContributorsSection({
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Individual Contributors</p>
         </div>
-        <div className="rounded-[5px] border border-slate-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+        <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
           {section.contributorCount} contributor{section.contributorCount === 1 ? '' : 's'}
         </div>
       </div>
 
       {section.contributors.length === 0 ? (
-        <div className="rounded-[5px] border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+        <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-4 py-8 text-center text-sm text-slate-500">
           No posted contribution activity to rank for this currency.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[5px] border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+        <div className="overflow-hidden rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] shadow-[var(--shadow-card)]">
           <table className="w-full border-collapse text-left">
-            <thead className="print-color-exact bg-slate-100 text-[11px] uppercase tracking-[0.18em] text-slate-600">
+            <thead className="print-color-exact bg-[var(--surface-panel-muted)] text-[11px] uppercase tracking-[0.18em] text-slate-600">
               <tr>
                 <th className="px-4 py-3 font-semibold">Rank</th>
                 <th className="px-4 py-3 font-semibold">Name</th>
                 <th className="px-4 py-3 font-semibold">Region</th>
+                <th className="px-4 py-3 font-semibold">Move</th>
                 <th className="px-4 py-3 text-right font-semibold">Amount</th>
               </tr>
             </thead>
-            <tbody className="text-sm text-slate-700">
+            <tbody className="text-sm text-slate-600">
               {section.contributors.map((entry, index) => {
                 const displayRank = getCompetitionRank(
                   section.contributors,
                   index,
                   (item) => item.incoming_total,
                 )
+                const movement = getFundLeaderboardMovement(entry, displayRank, snapshot)
 
                 return (
-                  <tr key={entry.participant_key} className="border-t border-slate-100 odd:bg-white even:bg-slate-50/60">
+                  <tr key={entry.participant_key} className="border-t border-[var(--border-subtle)] odd:bg-[var(--surface-panel)] even:bg-[var(--surface-panel-muted)]">
                     <td className="px-4 py-3 font-medium text-slate-500">{getOrdinalRank(displayRank)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <span className="relative inline-flex shrink-0">
-                          <span className="print-color-exact inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">
+                          <span className="print-color-exact inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface-panel-muted)] text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">
                             {getInitials(entry.participant_name)}
                           </span>
                           <span className="absolute -right-1 -top-1 z-10">
@@ -309,12 +389,15 @@ function ContributorsSection({
                           </span>
                         </span>
                         <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <p className="truncate font-semibold text-slate-900">{entry.participant_name}</p>
+                          <p className="truncate font-semibold text-[var(--text-primary)]">{entry.participant_name}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{entry.participant_region || 'Unassigned'}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                    <td className="px-4 py-3 text-slate-500">{entry.participant_region || 'Unassigned'}</td>
+                    <td className="px-4 py-3">
+                      <MovementBadge movement={movement} currency={section.group.currency} />
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold text-[var(--text-primary)]">
                       {formatCurrency(entry.incoming_total, section.group.currency)}
                     </td>
                   </tr>
@@ -340,6 +423,7 @@ export default function FundLeaderboardPage() {
   const [customFrom] = useState(firstOfYear())
   const [customTo] = useState(toIsoDate(new Date()))
   const [reportDate] = useState(() => toIsoDate(new Date()))
+  const [snapshot, setSnapshot] = useState<SnapshotPayload | null>(null)
 
   const activeRange = useMemo(() => {
     if (preset === 'custom') return { dateFrom: customFrom || null, dateTo: customTo || null }
@@ -350,6 +434,7 @@ export default function FundLeaderboardPage() {
   const fund = funds.find((item) => item.id === id)
   const leaderboard = useMemo(() => buildFundLeaderboard(transactions), [transactions])
   const rangeLabel = activeRangeLabel(preset, customFrom, customTo)
+  const snapshotStorageKey = districtId && id ? getSnapshotStorageKey(districtId, id, rangeLabel) : null
 
   const sections = useMemo<ReportSection[]>(() => (
     leaderboard.map((group) => {
@@ -370,13 +455,87 @@ export default function FundLeaderboardPage() {
   ), [leaderboard])
 
   const hasContributors = sections.some((section) => section.contributors.length > 0)
+  const snapshotByCurrency = useMemo(() => {
+    const groups = new Map<FundLeaderboardCurrencyGroup['currency'], FundLeaderboardSnapshotCurrencyGroup>()
+    for (const group of snapshot?.groups ?? []) {
+      groups.set(group.currency, group)
+    }
+    return groups
+  }, [snapshot])
+
+  function captureSnapshot() {
+    if (!districtId || !id || !snapshotStorageKey) return
+
+    const capturedAt = new Date().toISOString()
+    const payload: SnapshotPayload = {
+      version: 1,
+      district_id: districtId,
+      fund_id: id,
+      period_label: rangeLabel,
+      captured_at: capturedAt,
+      groups: buildFundLeaderboardSnapshot(leaderboard, capturedAt),
+    }
+
+    window.localStorage.setItem(snapshotStorageKey, JSON.stringify(payload))
+    setSnapshot(payload)
+  }
 
   useEffect(() => {
     document.body.dataset.printLayout = 'fund-leaderboard'
     document.documentElement.dataset.printLayout = 'fund-leaderboard'
+
+    let printShell: HTMLDivElement | null = null
+    let originalParent: HTMLElement | null = null
+    let originalNextSibling: ChildNode | null = null
+    const hiddenBodyChildren: HTMLElement[] = []
+
+    function onBeforePrint() {
+      const root = document.querySelector<HTMLElement>('[data-print-root="fund-leaderboard"]')
+      if (!root) return
+
+      // Remember where the root lives so we can put it back
+      originalParent = root.parentElement
+      originalNextSibling = root.nextSibling
+
+      // Move it to a direct child of <body> — outside every overflow-clipped ancestor
+      printShell = document.createElement('div')
+      document.body.appendChild(printShell)
+      printShell.appendChild(root)
+
+      // Hide everything else in <body> so only the report prints
+      for (const child of Array.from(document.body.children) as HTMLElement[]) {
+        if (child === printShell) continue
+        child.style.setProperty('display', 'none', 'important')
+        hiddenBodyChildren.push(child)
+      }
+    }
+
+    function onAfterPrint() {
+      const root = printShell?.querySelector<HTMLElement>('[data-print-root="fund-leaderboard"]')
+
+      if (root && originalParent) {
+        originalParent.insertBefore(root, originalNextSibling ?? null)
+      }
+
+      printShell?.remove()
+      printShell = null
+      originalParent = null
+      originalNextSibling = null
+
+      for (const child of hiddenBodyChildren) {
+        child.style.removeProperty('display')
+      }
+      hiddenBodyChildren.length = 0
+    }
+
+    window.addEventListener('beforeprint', onBeforePrint)
+    window.addEventListener('afterprint', onAfterPrint)
+
     return () => {
       delete document.body.dataset.printLayout
       delete document.documentElement.dataset.printLayout
+      window.removeEventListener('beforeprint', onBeforePrint)
+      window.removeEventListener('afterprint', onAfterPrint)
     }
   }, [])
 
@@ -418,6 +577,26 @@ export default function FundLeaderboardPage() {
 
     return () => { cancelled = true }
   }, [activeRange.dateFrom, activeRange.dateTo, districtId, id, supabase])
+
+  useEffect(() => {
+    if (!snapshotStorageKey) {
+      setSnapshot(null)
+      return
+    }
+
+    try {
+      const raw = window.localStorage.getItem(snapshotStorageKey)
+      if (!raw) {
+        setSnapshot(null)
+        return
+      }
+
+      const parsed = JSON.parse(raw) as SnapshotPayload
+      setSnapshot(parsed.version === 1 ? parsed : null)
+    } catch {
+      setSnapshot(null)
+    }
+  }, [snapshotStorageKey])
 
   if (!districtId) {
     return (
@@ -462,10 +641,22 @@ export default function FundLeaderboardPage() {
           body[data-print-layout='fund-leaderboard'] [data-print-root='fund-leaderboard'] {
             padding: 12mm !important;
             max-width: none !important;
-            min-height: 100vh !important;
+            min-height: unset !important;
             box-sizing: border-box !important;
             -webkit-box-decoration-break: clone;
             box-decoration-break: clone;
+            --surface-panel: #ffffff;
+            --surface-canvas: #ffffff;
+            --surface-app: #f8fafc;
+            --surface-panel-muted: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #1e293b;
+            --text-tertiary: #475569;
+            --text-muted: #64748b;
+            --border-strong: rgb(226 232 240);
+            --border-subtle: rgb(241 245 249);
+            --shadow-card: 0 10px 24px rgba(15,23,42,0.05);
+            --theme-accent-500: #0284c7;
           }
           body[data-print-layout='fund-leaderboard'] [data-print-header-grid] {
             display: grid !important;
@@ -484,46 +675,61 @@ export default function FundLeaderboardPage() {
 
       <div
         data-print-root="fund-leaderboard"
-        className="print-color-exact mx-auto max-w-5xl bg-[linear-gradient(180deg,#f8fbff_0%,#fcfdff_22%,#ffffff_40%)] px-4 py-4 text-slate-950 sm:px-6 sm:py-8"
+        className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-8"
       >
         <div className="space-y-8">
           <div className="print-hidden flex items-center justify-between gap-4">
             <Link
               href={`/dashboard/finance/funds/${id}`}
-              className="inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-slate-800"
+              className="inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-[var(--text-primary)]"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
             </Link>
-            <Button onClick={() => window.print()} className="gap-2 rounded-[5px]">
-              <Printer className="h-4 w-4" />
-              Print Report
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                onClick={captureSnapshot}
+                className="gap-2 rounded-[5px]"
+                disabled={!hasContributors}
+              >
+                <Camera className="h-4 w-4" />
+                Save Snapshot
+              </Button>
+              <Button onClick={() => window.print()} className="gap-2 rounded-[5px]">
+                <Printer className="h-4 w-4" />
+                Print Report
+              </Button>
+            </div>
           </div>
 
-          <header className="print-color-exact rounded-[5px] border border-slate-200 bg-white/90 px-5 py-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)] sm:px-7">
+          <header className="print-color-exact rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-5 py-6 shadow-[var(--shadow-card)] sm:px-7">
             <div data-print-header-grid className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-sky-700">Fund Contributions Leaderboard</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[var(--theme-accent-500)]">Fund Contributions Leaderboard</p>
                 <div>
-                  <h1 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">{fund.name}</h1>
-                  <p className="mt-2 max-w-2xl text-sm text-slate-600">
+                  <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-4xl">{fund.name}</h1>
+                  <p className="mt-2 max-w-2xl text-sm text-slate-500">
                     {fund.description || 'Structured contribution summary with region rankings and individual contributor totals.'}
                   </p>
+                  {snapshot && (
+                    <p className="mt-3 text-xs font-medium text-slate-500">
+                      Movement compared with snapshot saved {formatSnapshotDate(snapshot.captured_at)}.
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div className="grid gap-3 text-sm text-slate-600 sm:min-w-[220px]">
-                <div className="rounded-[5px] border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="grid gap-3 text-sm text-slate-500 sm:min-w-[220px]">
+                <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-app)] px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Period</p>
-                    <p className="font-semibold text-slate-900 text-right whitespace-nowrap">{rangeLabel}</p>
+                    <p className="font-semibold text-[var(--text-primary)] text-right whitespace-nowrap">{rangeLabel}</p>
                   </div>
                 </div>
-                <div className="rounded-[5px] border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-app)] px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Report Date</p>
-                    <p className="font-semibold text-slate-900 text-right whitespace-nowrap">{formatDate(reportDate)}</p>
+                    <p className="font-semibold text-[var(--text-primary)] text-right whitespace-nowrap">{formatDate(reportDate)}</p>
                   </div>
                 </div>
               </div>
@@ -531,13 +737,13 @@ export default function FundLeaderboardPage() {
           </header>
 
           {error && (
-            <p className="rounded-[5px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <p className="rounded-[5px] border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
               {error}
             </p>
           )}
 
           {!hasContributors ? (
-            <div className="rounded-[5px] border border-slate-200 bg-white px-4 py-16 text-center text-sm text-slate-500 shadow-[0_16px_40px_rgba(15,23,42,0.04)]">
+            <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-4 py-16 text-center text-sm text-slate-500 shadow-[var(--shadow-card)]">
               No posted contribution activity is available for this fund in the selected period.
             </div>
           ) : (
@@ -545,7 +751,7 @@ export default function FundLeaderboardPage() {
               <section key={section.group.currency} className="space-y-6">
                 <div className="flex items-center justify-between gap-4">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Summary</p>
-                  <div className="rounded-[5px] border border-slate-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+                  <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
                     {section.group.transaction_count} transaction{section.group.transaction_count === 1 ? '' : 's'}
                   </div>
                 </div>
@@ -573,13 +779,13 @@ export default function FundLeaderboardPage() {
                   />
                 </div>
 
-                <ContributorsSection section={section} />
+                <ContributorsSection section={section} snapshot={snapshotByCurrency.get(section.group.currency) ?? null} />
                 <RegionRankingsSection section={section} />
               </section>
             ))
           )}
 
-          <footer className="border-t border-slate-200 pt-5 text-center text-[11px] uppercase tracking-[0.22em] text-slate-400">
+          <footer className="border-t border-[var(--border-strong)] pt-5 text-center text-[11px] uppercase tracking-[0.22em] text-slate-500">
             End of report - verified posted transaction records only
           </footer>
         </div>

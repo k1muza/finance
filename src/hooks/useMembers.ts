@@ -69,8 +69,8 @@ export function useMembers(filter: MemberFilter = {}) {
     address?: string | null
     notes?: string | null
     is_active?: boolean
-  }) => {
-    const { error: err } = await supabase.from('members').insert({
+  }): Promise<string> => {
+    const { data, error: err } = await supabase.from('members').insert({
       district_id: values.district_id,
       parent_id: values.parent_id ?? null,
       type: values.type,
@@ -82,9 +82,10 @@ export function useMembers(filter: MemberFilter = {}) {
       address: values.address?.trim() || null,
       notes: values.notes?.trim() || null,
       is_active: values.is_active ?? true,
-    })
+    }).select('id').single()
     if (err) throw new Error(err.message)
     await fetch()
+    return data.id as string
   }
 
   const update = async (
