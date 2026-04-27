@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useDistricts } from '@/hooks/useDistricts'
 import { useFunds } from '@/hooks/useFunds'
+import { useCurrencies } from '@/hooks/useCurrencies'
+import { useFundRecognitionTiers } from '@/hooks/useFundRecognitionTiers'
 import { usePermissions } from '@/hooks/usePermissions'
 import { createClient } from '@/lib/supabase/client'
 import { performCashbookBulkAction } from '@/lib/finance/cashbook-client'
@@ -34,10 +36,17 @@ import {
   Lock,
   Loader,
   Trophy,
+  Plus,
+  Trash2,
+  Award,
+  Pencil,
 } from 'lucide-react'
+import { Pagination } from '@/components/ui/Pagination'
 import {
   CashbookTransaction,
   Currency,
+  FundRecognitionTier,
+  RecognitionTierColor,
   TransactionKind,
   TRANSACTION_STATUS_LABELS,
 } from '@/types'
@@ -62,6 +71,26 @@ const STATUS_BADGE: Record<string, 'default' | 'green' | 'yellow' | 'teal' | 're
   voided: 'red',
 }
 
+const TIER_COLOR_OPTIONS: { value: RecognitionTierColor; label: string; className: string }[] = [
+  { value: 'amber',   label: 'Gold',     className: 'bg-amber-400' },
+  { value: 'slate',   label: 'Silver',   className: 'bg-slate-400' },
+  { value: 'orange',  label: 'Bronze',   className: 'bg-orange-500' },
+  { value: 'sky',     label: 'Platinum', className: 'bg-sky-400' },
+  { value: 'violet',  label: 'Diamond',  className: 'bg-violet-400' },
+  { value: 'emerald', label: 'Emerald',  className: 'bg-emerald-400' },
+  { value: 'rose',    label: 'Rose',     className: 'bg-rose-400' },
+]
+
+const TIER_COLOR_PILL: Record<RecognitionTierColor, string> = {
+  amber:   'border-amber-200 bg-amber-50 text-amber-700',
+  slate:   'border-slate-300 bg-slate-100 text-slate-600',
+  orange:  'border-orange-200 bg-orange-50 text-orange-700',
+  sky:     'border-sky-200 bg-sky-50 text-sky-700',
+  violet:  'border-violet-200 bg-violet-50 text-violet-700',
+  emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  rose:    'border-rose-200 bg-rose-50 text-rose-700',
+}
+
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
@@ -79,10 +108,31 @@ export default function FundDetailPage() {
   const { data: funds, loading: fundsLoading } = useFunds({ district_id: districtId })
   const [supabase] = useState(() => createClient())
 
+  const { data: currencies } = useCurrencies()
+  const { data: recognitionTiers, loading: tiersLoading, add: addTier, update: updateTier, remove: removeTier } = useFundRecognitionTiers(id)
+
+  const [showAddTier, setShowAddTier] = useState(false)
+  const [tierName, setTierName] = useState('')
+  const [tierMinAmount, setTierMinAmount] = useState('')
+  const [tierCurrency, setTierCurrency] = useState('')
+  const [tierColor, setTierColor] = useState<RecognitionTierColor>('amber')
+  const [tierSaving, setTierSaving] = useState(false)
+  const [tierError, setTierError] = useState<string | null>(null)
+  const [deletingTierId, setDeletingTierId] = useState<string | null>(null)
+  const [editingTierId, setEditingTierId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editMinAmount, setEditMinAmount] = useState('')
+  const [editCurrency, setEditCurrency] = useState('')
+  const [editColor, setEditColor] = useState<RecognitionTierColor>('amber')
+  const [editSaving, setEditSaving] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+
   const [transactions, setTransactions] = useState<CashbookTransaction[]>([])
   const [txnLoading, setTxnLoading] = useState(true)
   const [dateFrom, setDateFrom] = useState(firstOfMonth())
   const [dateTo, setDateTo] = useState(toIsoDate(new Date()))
+  const [txnPage, setTxnPage] = useState(1)
+  const TXN_PAGE_SIZE = 10
   const [bulkAction, setBulkAction] = useState<CashbookBulkAction | ''>('')
   const [selectedTransactionIds, setSelectedTransactionIds] = useState<string[]>([])
   const [bulkSubmitting, setBulkSubmitting] = useState(false)
@@ -136,6 +186,7 @@ export default function FundDetailPage() {
 
   useEffect(() => {
     setSelectedTransactionIds([])
+    setTxnPage(1)
   }, [id, dateFrom, dateTo, bulkAction])
 
   // Balance from ALL time posted transactions (not filtered by date)
@@ -161,6 +212,8 @@ export default function FundDetailPage() {
 
   const balance = allTime ? allTime.totalIn - allTime.totalOut : 0
   const currency = (allTime?.currency ?? 'USD') as Currency
+  const txnPageCount = Math.ceil(transactions.length / TXN_PAGE_SIZE)
+  const pagedTransactions = transactions.slice((txnPage - 1) * TXN_PAGE_SIZE, txnPage * TXN_PAGE_SIZE)
 
   // Period totals (filtered by date range, posted only)
   const postedInPeriod = transactions.filter((t) => t.status === 'posted' && shouldIncludeInFundReporting(t))
@@ -220,6 +273,74 @@ export default function FundDetailPage() {
       toast.error(String(error))
     } finally {
       setBulkSubmitting(false)
+    }
+  }
+
+  async function handleAddTier(e: React.FormEvent) {
+    e.preventDefault()
+    const amount = parseFloat(tierMinAmount)
+    if (!tierName.trim() || !tierCurrency || isNaN(amount) || amount < 0) {
+      setTierError('Please fill in all fields with valid values.')
+      return
+    }
+    setTierSaving(true)
+    setTierError(null)
+    try {
+      await addTier({ name: tierName, min_amount: amount, currency: tierCurrency, color: tierColor })
+      setShowAddTier(false)
+      setTierName('')
+      setTierMinAmount('')
+      setTierCurrency('')
+      setTierColor('amber')
+    } catch (err) {
+      setTierError(String(err))
+    } finally {
+      setTierSaving(false)
+    }
+  }
+
+  function startEditTier(tier: FundRecognitionTier) {
+    setEditingTierId(tier.id)
+    setEditName(tier.name)
+    setEditMinAmount(String(tier.min_amount))
+    setEditCurrency(tier.currency)
+    setEditColor(tier.color)
+    setEditError(null)
+  }
+
+  function cancelEditTier() {
+    setEditingTierId(null)
+    setEditError(null)
+  }
+
+  async function handleSaveEditTier(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingTierId) return
+    const amount = parseFloat(editMinAmount)
+    if (!editName.trim() || !editCurrency || isNaN(amount) || amount < 0) {
+      setEditError('Please fill in all fields with valid values.')
+      return
+    }
+    setEditSaving(true)
+    setEditError(null)
+    try {
+      await updateTier(editingTierId, { name: editName, min_amount: amount, currency: editCurrency, color: editColor })
+      setEditingTierId(null)
+    } catch (err) {
+      setEditError(String(err))
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  async function handleDeleteTier(tier: FundRecognitionTier) {
+    setDeletingTierId(tier.id)
+    try {
+      await removeTier(tier.id)
+    } catch (err) {
+      toast.error(String(err))
+    } finally {
+      setDeletingTierId(null)
     }
   }
 
@@ -336,7 +457,7 @@ export default function FundDetailPage() {
           <p className="text-xs text-slate-500">{transactions.length} record{transactions.length !== 1 ? 's' : ''}</p>
         </div>
 
-        {showBulkControls && (
+        {hasSelectedTransactions && (
           <div className="px-4 py-3 border-b border-slate-700/80 bg-slate-900/40 grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)_auto] lg:items-center">
             <Select
               id="fund-bulk-action"
@@ -372,6 +493,7 @@ export default function FundDetailPage() {
             No transactions for this fund in the selected period.
           </div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -403,7 +525,7 @@ export default function FundDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((txn) => {
+                {pagedTransactions.map((txn) => {
                   const isIn = isIncomingTransactionEffect(txn)
                   const txnCurrency = ((txn.account as { currency?: string } | null)?.currency ?? txn.currency ?? 'USD') as Currency
                   const isSelected = selectedTransactionIds.includes(txn.id)
@@ -455,6 +577,256 @@ export default function FundDetailPage() {
                     </tr>
                   )
                 })}
+              </tbody>
+            </table>
+          </div>
+          <Pagination
+            page={txnPage}
+            pageCount={txnPageCount}
+            pageSize={TXN_PAGE_SIZE}
+            totalCount={transactions.length}
+            onPageChange={setTxnPage}
+          />
+          </>
+        )}
+      </div>
+
+      {/* recognition tiers */}
+      <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Award className="h-4 w-4 text-amber-400" />
+            <p className="text-sm font-medium text-slate-300">Recognition Tiers</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {!tiersLoading && (
+              <p className="text-xs text-slate-500">{recognitionTiers.length} tier{recognitionTiers.length !== 1 ? 's' : ''}</p>
+            )}
+            {canDraftTransactions && !showAddTier && (
+              <button
+                onClick={() => {
+                  setShowAddTier(true)
+                  setTierCurrency(currencies[0]?.code ?? '')
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-600 transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Tier
+              </button>
+            )}
+          </div>
+        </div>
+
+        {showAddTier && (
+          <form onSubmit={handleAddTier} className="px-4 py-4 border-b border-slate-700 bg-slate-900/40 space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Tier Name</label>
+                <input
+                  type="text"
+                  value={tierName}
+                  onChange={(e) => setTierName(e.target.value)}
+                  placeholder="e.g. Gold"
+                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Currency</label>
+                <select
+                  value={tierCurrency}
+                  onChange={(e) => setTierCurrency(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                >
+                  {currencies.map((c) => (
+                    <option key={c.code} value={c.code}>{c.code}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Min Amount</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={tierMinAmount}
+                  onChange={(e) => setTierMinAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Color</label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {TIER_COLOR_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      title={opt.label}
+                      onClick={() => setTierColor(opt.value)}
+                      className={`h-6 w-6 rounded-full border-2 ${opt.className} ${tierColor === opt.value ? 'border-white scale-110' : 'border-transparent'} transition-transform`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+            {tierError && (
+              <p className="text-xs text-rose-400">{tierError}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={tierSaving}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-500 disabled:opacity-50 transition-colors"
+              >
+                {tierSaving ? <Loader className="h-3.5 w-3.5 animate-spin" /> : null}
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowAddTier(false); setTierError(null) }}
+                className="inline-flex items-center rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-600 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+
+        {tiersLoading ? (
+          <div className="px-4 py-8 flex items-center justify-center gap-2 text-slate-500 text-sm">
+            <Loader className="h-4 w-4 animate-spin" /> Loading...
+          </div>
+        ) : recognitionTiers.length === 0 ? (
+          <div className="px-4 py-8 text-center text-slate-500 text-sm">
+            No recognition tiers configured for this fund.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <th className="text-left px-4 py-3 text-slate-400 font-medium w-8">Color</th>
+                  <th className="text-left px-4 py-3 text-slate-400 font-medium">Name</th>
+                  <th className="text-left px-4 py-3 text-slate-400 font-medium">Currency</th>
+                  <th className="text-right px-4 py-3 text-slate-400 font-medium">Min Amount</th>
+                  {canDraftTransactions && (
+                    <th className="px-4 py-3" />
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {recognitionTiers.map((tier) => (
+                  editingTierId === tier.id ? (
+                    <tr key={tier.id} className="border-b border-slate-700/50 last:border-0 bg-slate-900/40">
+                      <td colSpan={canDraftTransactions ? 5 : 4} className="px-4 py-3">
+                        <form onSubmit={handleSaveEditTier} className="space-y-3">
+                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <div>
+                              <label className="block text-xs text-slate-400 mb-1">Tier Name</label>
+                              <input
+                                type="text"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-slate-400 mb-1">Currency</label>
+                              <select
+                                value={editCurrency}
+                                onChange={(e) => setEditCurrency(e.target.value)}
+                                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                              >
+                                {currencies.map((c) => (
+                                  <option key={c.code} value={c.code}>{c.code}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-slate-400 mb-1">Min Amount</label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={editMinAmount}
+                                onChange={(e) => setEditMinAmount(e.target.value)}
+                                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-slate-400 mb-1">Color</label>
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {TIER_COLOR_OPTIONS.map((opt) => (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    title={opt.label}
+                                    onClick={() => setEditColor(opt.value)}
+                                    className={`h-6 w-6 rounded-full border-2 ${opt.className} ${editColor === opt.value ? 'border-white scale-110' : 'border-transparent'} transition-transform`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          {editError && <p className="text-xs text-rose-400">{editError}</p>}
+                          <div className="flex gap-2">
+                            <button
+                              type="submit"
+                              disabled={editSaving}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-500 disabled:opacity-50 transition-colors"
+                            >
+                              {editSaving ? <Loader className="h-3.5 w-3.5 animate-spin" /> : null}
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEditTier}
+                              className="inline-flex items-center rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-600 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </td>
+                    </tr>
+                  ) : (
+                  <tr key={tier.id} className="border-b border-slate-700/50 last:border-0 hover:bg-slate-700/20 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold ${TIER_COLOR_PILL[tier.color]}`}>
+                        {tier.name}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-200 font-medium">{tier.name}</td>
+                    <td className="px-4 py-3 text-slate-400 font-mono text-xs">{tier.currency}</td>
+                    <td className="px-4 py-3 text-right text-slate-200 font-mono">
+                      {tier.min_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}+
+                    </td>
+                    {canDraftTransactions && (
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => startEditTier(tier)}
+                            className="inline-flex items-center justify-center rounded p-1.5 text-slate-500 hover:bg-slate-600/50 hover:text-slate-200 transition-colors"
+                            aria-label="Edit tier"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTier(tier)}
+                            disabled={deletingTierId === tier.id}
+                            className="inline-flex items-center justify-center rounded p-1.5 text-slate-500 hover:bg-rose-500/10 hover:text-rose-400 disabled:opacity-50 transition-colors"
+                            aria-label="Delete tier"
+                          >
+                            {deletingTierId === tier.id
+                              ? <Loader className="h-3.5 w-3.5 animate-spin" />
+                              : <Trash2 className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                  )
+                ))}
               </tbody>
             </table>
           </div>

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFunds } from '@/hooks/useFunds'
+import { useFundRecognitionTiers } from '@/hooks/useFundRecognitionTiers'
 import {
   buildFundLeaderboard,
   buildFundLeaderboardSnapshot,
@@ -20,7 +21,7 @@ import {
 } from '@/lib/finance/reporting'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
-import type { CashbookTransaction } from '@/types'
+import type { CashbookTransaction, FundRecognitionTier, RecognitionTierColor } from '@/types'
 
 type PeriodPreset = 'all_time' | 'this_year' | 'this_month' | 'custom'
 
@@ -125,6 +126,67 @@ function getInitials(name: string) {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
 
   return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase()
+}
+
+const TIER_COLOR_STYLES: Record<RecognitionTierColor, string> = {
+  amber:   'border-amber-200 bg-amber-50 text-amber-700',
+  slate:   'border-slate-300 bg-slate-100 text-slate-600',
+  orange:  'border-orange-200 bg-orange-50 text-orange-700',
+  sky:     'border-sky-200 bg-sky-50 text-sky-700',
+  violet:  'border-violet-200 bg-violet-50 text-violet-700',
+  emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  rose:    'border-rose-200 bg-rose-50 text-rose-700',
+}
+
+const TIER_DOT_STYLES: Record<RecognitionTierColor, string> = {
+  amber:   'bg-amber-400',
+  slate:   'bg-slate-400',
+  orange:  'bg-orange-500',
+  sky:     'bg-sky-400',
+  violet:  'bg-violet-400',
+  emerald: 'bg-emerald-400',
+  rose:    'bg-rose-400',
+}
+
+function getRecognitionTierForAmount(
+  tiers: FundRecognitionTier[],
+  amount: number,
+  currency: string,
+): FundRecognitionTier | null {
+  return tiers
+    .filter((t) => t.is_active && t.currency === currency && amount >= t.min_amount)
+    .sort((a, b) => b.min_amount - a.min_amount)[0] ?? null
+}
+
+function RecognitionTierBadge({ tier }: { tier: FundRecognitionTier }) {
+  const pillClass = TIER_COLOR_STYLES[tier.color]
+  const dotClass = TIER_DOT_STYLES[tier.color]
+
+  return (
+    <span
+      aria-label={`${tier.name} recognition tier`}
+      title={`${tier.name} (min ${tier.min_amount.toLocaleString()} ${tier.currency})`}
+      className={`print-color-exact inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${pillClass}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
+      {tier.name}
+    </span>
+  )
+}
+
+function RecognitionTierAvatar({ tier }: { tier: FundRecognitionTier }) {
+  const dotClass = TIER_DOT_STYLES[tier.color]
+  const pillClass = TIER_COLOR_STYLES[tier.color]
+
+  return (
+    <span
+      aria-label={`${tier.name} recognition tier`}
+      title={`${tier.name}`}
+      className={`print-color-exact inline-flex h-5 w-5 items-center justify-center rounded-full border shadow-[0_4px_10px_rgba(15,23,42,0.12)] ${pillClass}`}
+    >
+      <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+    </span>
+  )
 }
 
 function amountsMatch(a: number, b: number) {
@@ -260,7 +322,7 @@ function MovementBadge({
         className="print-color-exact inline-flex items-center gap-1.5 rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-app)] px-2 py-1 text-xs font-semibold text-slate-500"
       >
         <Minus className="h-3.5 w-3.5" />
-        Same
+        0
       </span>
     )
   }
@@ -316,8 +378,8 @@ function RegionRankingsSection({
             <tbody className="text-sm text-slate-600">
               {section.regionRows.map((row, index) => (
                 <tr key={row.region} className="border-t border-[var(--border-subtle)] odd:bg-[var(--surface-panel)] even:bg-[var(--surface-panel-muted)]">
-                  <td className="px-4 py-3 font-medium text-slate-500">{getOrdinalRank(index + 1)}</td>
-                  <td className="px-4 py-3 font-semibold text-[var(--text-primary)]">{row.region}</td>
+                  <td className="px-4 py-3 font-medium text-slate-500">#{index + 1}</td>
+                  <td className="px-4 py-3 font-semibold text-[var(--text-primary)]" title={row.region}>{getInitials(row.region)}</td>
                   <td className="px-4 py-3 text-right">{row.participantCount}</td>
                   <td className="px-4 py-3 text-right font-semibold text-[var(--text-primary)]">
                     {formatCurrency(row.totalIncoming, section.group.currency)}
@@ -335,10 +397,15 @@ function RegionRankingsSection({
 function ContributorsSection({
   section,
   snapshot,
+  recognitionTiers,
 }: {
   section: ReportSection
   snapshot: FundLeaderboardSnapshotCurrencyGroup | null
+  recognitionTiers: FundRecognitionTier[]
 }) {
+  const hasTiersForCurrency = recognitionTiers.some(
+    (t) => t.is_active && t.currency === section.group.currency,
+  )
   return (
     <section className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -362,6 +429,7 @@ function ContributorsSection({
                 <th className="px-4 py-3 font-semibold">Rank</th>
                 <th className="px-4 py-3 font-semibold">Name</th>
                 <th className="px-4 py-3 font-semibold">Region</th>
+                {hasTiersForCurrency && <th className="px-4 py-3 font-semibold">Class</th>}
                 <th className="px-4 py-3 font-semibold">Move</th>
                 <th className="px-4 py-3 text-right font-semibold">Amount</th>
               </tr>
@@ -374,10 +442,13 @@ function ContributorsSection({
                   (item) => item.incoming_total,
                 )
                 const movement = getFundLeaderboardMovement(entry, displayRank, snapshot)
+                const recognitionTier = hasTiersForCurrency
+                  ? getRecognitionTierForAmount(recognitionTiers, entry.incoming_total, section.group.currency)
+                  : null
 
                 return (
                   <tr key={entry.participant_key} className="border-t border-[var(--border-subtle)] odd:bg-[var(--surface-panel)] even:bg-[var(--surface-panel-muted)]">
-                    <td className="px-4 py-3 font-medium text-slate-500">{getOrdinalRank(displayRank)}</td>
+                    <td className="px-4 py-3 font-medium text-slate-500">#{displayRank}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <span className="relative inline-flex shrink-0">
@@ -385,15 +456,22 @@ function ContributorsSection({
                             {getInitials(entry.participant_name)}
                           </span>
                           <span className="absolute -right-1 -top-1 z-10">
-                            <TopContributorDecoration rank={displayRank} />
+                            {hasTiersForCurrency
+                              ? (recognitionTier ? <RecognitionTierAvatar tier={recognitionTier} /> : null)
+                              : <TopContributorDecoration rank={displayRank} />}
                           </span>
                         </span>
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <div className="flex min-w-0 items-center">
                           <p className="truncate font-semibold text-[var(--text-primary)]">{entry.participant_name}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-500">{entry.participant_region || 'Unassigned'}</td>
+                    <td className="px-4 py-3 text-slate-500" title={entry.participant_region || 'Unassigned'}>{getInitials(entry.participant_region || 'Unassigned')}</td>
+                    {hasTiersForCurrency && (
+                      <td className="px-4 py-3">
+                        {recognitionTier ? <RecognitionTierBadge tier={recognitionTier} /> : <span className="text-slate-400 text-xs">—</span>}
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <MovementBadge movement={movement} currency={section.group.currency} />
                     </td>
@@ -415,6 +493,7 @@ export default function FundLeaderboardPage() {
   const { id } = useParams<{ id: string }>()
   const { districtId } = useAuth()
   const { data: funds, loading: fundsLoading } = useFunds({ district_id: districtId })
+  const { data: recognitionTiers } = useFundRecognitionTiers(id)
   const [supabase] = useState(() => createClient())
   const [transactions, setTransactions] = useState<CashbookTransaction[]>([])
   const [loading, setLoading] = useState(true)
@@ -779,7 +858,7 @@ export default function FundLeaderboardPage() {
                   />
                 </div>
 
-                <ContributorsSection section={section} snapshot={snapshotByCurrency.get(section.group.currency) ?? null} />
+                <ContributorsSection section={section} snapshot={snapshotByCurrency.get(section.group.currency) ?? null} recognitionTiers={recognitionTiers} />
                 <RegionRankingsSection section={section} />
               </section>
             ))

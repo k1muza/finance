@@ -17,6 +17,7 @@ import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { Card, CardContent } from '@/components/ui/Card'
+import { Pagination } from '@/components/ui/Pagination'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
 import { transactionDisplayLabel } from '@/lib/finance/transactions'
 import { createClient } from '@/lib/supabase/client'
@@ -456,6 +457,14 @@ export default function TransfersPage() {
     })
   }, [accountFilter, accountMap, search, statusFilter, transfers])
 
+  const TRANSFER_PAGE_SIZE = 10
+  const [transferPage, setTransferPage] = useState(1)
+
+  useEffect(() => { setTransferPage(1) }, [statusFilter, accountFilter, search])
+
+  const transferPageCount = Math.ceil(filteredTransfers.length / TRANSFER_PAGE_SIZE)
+  const pagedTransfers = filteredTransfers.slice((transferPage - 1) * TRANSFER_PAGE_SIZE, transferPage * TRANSFER_PAGE_SIZE)
+
   const postedTransfers = transfers.filter((transfer) => transfer.status === 'posted')
   const postedTotalsByCurrency = useMemo(() => {
     return postedTransfers.reduce<Record<string, number>>((acc, transfer) => {
@@ -621,6 +630,7 @@ export default function TransfersPage() {
               No transfers match the current filters.
             </div>
           ) : (
+            <>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-sm">
                 <thead>
@@ -635,7 +645,7 @@ export default function TransfersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredTransfers.map((transfer) => {
+                  {pagedTransfers.map((transfer) => {
                     const { label } = transferRouteLabel(transfer, accountMap)
                     const currency = resolveTransferCurrency(transfer, accountMap)
                     const isPosting = actionLoading === `post:${transfer.id}`
@@ -697,6 +707,14 @@ export default function TransfersPage() {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              page={transferPage}
+              pageCount={transferPageCount}
+              pageSize={TRANSFER_PAGE_SIZE}
+              totalCount={filteredTransfers.length}
+              onPageChange={setTransferPage}
+            />
+            </>
           )}
         </div>
       )}

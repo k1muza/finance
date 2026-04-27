@@ -91,6 +91,28 @@ export interface Fund {
   district?: District | null
 }
 
+export type RecognitionTierColor =
+  | 'amber'
+  | 'slate'
+  | 'orange'
+  | 'sky'
+  | 'violet'
+  | 'emerald'
+  | 'rose'
+
+export interface FundRecognitionTier {
+  id: string
+  fund_id: string
+  name: string
+  min_amount: number
+  currency: string
+  color: RecognitionTierColor
+  display_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export type MemberType = 'district' | 'region' | 'assembly' | 'individual' | 'department'
 export type CounterpartyType = 'supplier' | 'other'
 

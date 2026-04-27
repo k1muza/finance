@@ -18,6 +18,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Badge } from '@/components/ui/Badge'
 import { SlideOver } from '@/components/ui/SlideOver'
 import { Modal } from '@/components/ui/Modal'
+import { Pagination } from '@/components/ui/Pagination'
 import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
 import {
@@ -1223,6 +1224,14 @@ export default function CashbookPage() {
     )
   })
 
+  const CASHBOOK_PAGE_SIZE = 10
+  const [cashbookPage, setCashbookPage] = useState(1)
+
+  useEffect(() => { setCashbookPage(1) }, [search, selectedFundId, kindFilter, dateFrom, dateTo, selectedAccountId])
+
+  const cashbookPageCount = Math.ceil(filtered.length / CASHBOOK_PAGE_SIZE)
+  const pagedFiltered = filtered.slice((cashbookPage - 1) * CASHBOOK_PAGE_SIZE, cashbookPage * CASHBOOK_PAGE_SIZE)
+
   const hasTableFilters = Boolean(search || selectedFundId)
   const hasCustomFilters = Boolean(
     kindFilter ||
@@ -1554,7 +1563,7 @@ export default function CashbookPage() {
             </div>
           </div>
 
-          {showBulkControls && (
+          {hasSelectedTransactions && (
             <div className="mt-4 grid gap-3 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-3 lg:grid-cols-[220px_minmax(0,1fr)_auto] lg:items-center">
               <Select
                 id="cashbook-bulk-action"
@@ -1593,6 +1602,7 @@ export default function CashbookPage() {
               : 'No transactions found for the selected account and date range.'}
           </div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-sm">
               <thead>
@@ -1625,7 +1635,7 @@ export default function CashbookPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((txn) => {
+                {pagedFiltered.map((txn) => {
                   const isIn = isIncomingTransactionEffect(txn)
                   const isOut = isOutgoingTransactionEffect(txn)
                   const isSelected = selectedTransactionIds.includes(txn.id)
@@ -1695,6 +1705,14 @@ export default function CashbookPage() {
               </tbody>
             </table>
           </div>
+          <Pagination
+            page={cashbookPage}
+            pageCount={cashbookPageCount}
+            pageSize={CASHBOOK_PAGE_SIZE}
+            totalCount={filtered.length}
+            onPageChange={setCashbookPage}
+          />
+          </>
         )}
       </div>
 
