@@ -21,6 +21,7 @@ CREATE TRIGGER trg_fund_recognition_tiers_updated_at
 
 ALTER TABLE public.fund_recognition_tiers ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "district_member_read_recognition_tiers" ON public.fund_recognition_tiers;
 CREATE POLICY "district_member_read_recognition_tiers"
   ON public.fund_recognition_tiers FOR SELECT
   USING (
@@ -29,6 +30,7 @@ CREATE POLICY "district_member_read_recognition_tiers"
     ) OR public.is_admin_user()
   );
 
+DROP POLICY IF EXISTS "district_admin_insert_recognition_tiers" ON public.fund_recognition_tiers;
 CREATE POLICY "district_admin_insert_recognition_tiers"
   ON public.fund_recognition_tiers FOR INSERT
   WITH CHECK (
@@ -37,6 +39,7 @@ CREATE POLICY "district_admin_insert_recognition_tiers"
     )
   );
 
+DROP POLICY IF EXISTS "district_admin_update_recognition_tiers" ON public.fund_recognition_tiers;
 CREATE POLICY "district_admin_update_recognition_tiers"
   ON public.fund_recognition_tiers FOR UPDATE
   USING (
@@ -50,6 +53,7 @@ CREATE POLICY "district_admin_update_recognition_tiers"
     )
   );
 
+DROP POLICY IF EXISTS "district_admin_delete_recognition_tiers" ON public.fund_recognition_tiers;
 CREATE POLICY "district_admin_delete_recognition_tiers"
   ON public.fund_recognition_tiers FOR DELETE
   USING (

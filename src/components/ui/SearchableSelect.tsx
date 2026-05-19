@@ -35,8 +35,6 @@ export function SearchableSelect({
 
   useEffect(() => {
     if (open) {
-      setQuery('')
-      // Focus the search input after the dropdown renders
       requestAnimationFrame(() => inputRef.current?.focus())
     }
   }, [open])
@@ -67,7 +65,7 @@ export function SearchableSelect({
         id={id}
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => { if (!open) setQuery(''); setOpen((o) => !o) }}
         className={cn(
           'flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] border bg-[var(--field-bg)] px-3 py-2 text-left text-sm shadow-[var(--field-shadow)] transition-[background-color,border-color,box-shadow] outline-none [border-color:var(--field-border)] hover:[border-color:var(--field-border-hover)]',
           open && 'ring-2 ring-[var(--accent-ring)] [border-color:var(--accent-border)]',

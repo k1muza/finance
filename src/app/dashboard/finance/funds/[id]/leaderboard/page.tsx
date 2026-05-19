@@ -658,23 +658,18 @@ export default function FundLeaderboardPage() {
   }, [activeRange.dateFrom, activeRange.dateTo, districtId, id, supabase])
 
   useEffect(() => {
-    if (!snapshotStorageKey) {
-      setSnapshot(null)
-      return
+    let nextSnapshot: SnapshotPayload | null = null
+    if (snapshotStorageKey) {
+      try {
+        const raw = window.localStorage.getItem(snapshotStorageKey)
+        if (raw) {
+          const parsed = JSON.parse(raw) as SnapshotPayload
+          nextSnapshot = parsed.version === 1 ? parsed : null
+        }
+      } catch { /* leave null */ }
     }
-
-    try {
-      const raw = window.localStorage.getItem(snapshotStorageKey)
-      if (!raw) {
-        setSnapshot(null)
-        return
-      }
-
-      const parsed = JSON.parse(raw) as SnapshotPayload
-      setSnapshot(parsed.version === 1 ? parsed : null)
-    } catch {
-      setSnapshot(null)
-    }
+    const frameId = requestAnimationFrame(() => setSnapshot(nextSnapshot))
+    return () => cancelAnimationFrame(frameId)
   }, [snapshotStorageKey])
 
   if (!districtId) {

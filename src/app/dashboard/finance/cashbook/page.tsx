@@ -54,7 +54,6 @@ import {
   Stamp,
   Trash2,
   Pencil,
-  Wallet,
   FilterX,
 } from 'lucide-react'
 import {
