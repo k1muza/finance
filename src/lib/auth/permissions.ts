@@ -18,6 +18,19 @@ export type DistrictRole =
   | 'auditor'    // Auditor             — read-only oversight
   | 'viewer'     // Viewer              — limited read access
 
+export const DISTRICT_ROLES: ReadonlyArray<DistrictRole> = [
+  'admin',
+  'secretary',
+  'treasurer',
+  'clerk',
+  'auditor',
+  'viewer',
+]
+
+export function isDistrictRole(value: unknown): value is DistrictRole {
+  return typeof value === 'string' && (DISTRICT_ROLES as ReadonlyArray<string>).includes(value)
+}
+
 export type LegacyDistrictRole = DistrictRole | 'preparer' | 'approver'
 
 const LEGACY_ROLE_MAP = {
@@ -55,6 +68,8 @@ export type DistrictAction =
   | 'budgets.manage'    // create / edit draft budgets
   | 'budgets.activate'
   | 'budgets.close'
+  // Calendar
+  | 'events.manage'     // create, edit, delete calendar events
   // Reporting & exports
   | 'reports.view'
   | 'exports.generate'
@@ -90,6 +105,7 @@ const MATRIX: Record<DistrictRole, ReadonlyArray<DistrictAction>> = {
     'budgets.manage',
     'budgets.activate',
     'budgets.close',
+    'events.manage',
     'reports.view',
     'exports.generate',
     'attachments.upload',
@@ -108,6 +124,7 @@ const MATRIX: Record<DistrictRole, ReadonlyArray<DistrictAction>> = {
     'transfers.draft',
     'transfers.post',
     'budgets.manage',
+    'events.manage',
     'reports.view',
     'exports.generate',
     'attachments.upload',

@@ -708,6 +708,30 @@ Examples:
 
 ---
 
+### 9.14 `district_events`
+
+**Purpose:** District calendar items (services, conferences, meetings). Not financial records; hard delete is allowed.
+
+**Fields:**
+- `id`
+- `district_id`
+- `title`
+- `description`, nullable
+- `location`, nullable
+- `start_date`, `end_date` (DATE)
+- `start_time`, `end_time` (TIME), nullable; null `start_time` means all day
+- `created_by`
+- `created_at`
+- `updated_at`
+
+**Constraints:**
+- `end_date >= start_date`
+- `end_time` requires `start_time`; on a single-day event `end_time >= start_time`
+- dates are stored without timezone so an event shows on the same day for every viewer
+- any active district member can read; `admin` and `secretary` can create, edit and delete (`events.manage`)
+
+---
+
 ## 10. Member Hierarchy and Reporting Snapshots
 
 ### 10.1 Why snapshots are needed
@@ -1071,6 +1095,7 @@ Limited read-only access.
 - `transfers.post`
 - `transfers.reverse`
 - `budgets.manage`
+- `events.manage`
 - `reports.view`
 - `exports.generate`
 

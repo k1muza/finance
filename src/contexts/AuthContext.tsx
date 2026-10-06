@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react'
+import { useParams } from 'next/navigation'
 import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { District } from '@/types'
@@ -261,7 +262,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const isAdmin = userProfile?.is_superuser ?? false
-  const district = memberships.find((m) => m.district.id === activeDistrictId)?.district ?? null
+
+  // On /district/[districtId] routes the URL is the source of truth; the store
+  // only remembers the last district for routes that don't carry one.
+  const params = useParams<{ districtId?: string }>()
+  const routeDistrictId = typeof params?.districtId === 'string' ? params.districtId : null
+  const routeDistrictAllowed = routeDistrictId !== null
+    && memberships.some((m) => m.district.id === routeDistrictId)
+  const effectiveDistrictId = routeDistrictAllowed ? routeDistrictId : activeDistrictId
+
+  useEffect(() => {
+    if (routeDistrictAllowed && activeDistrictId !== routeDistrictId) {
+      setStoredActiveDistrictId(routeDistrictId)
+    }
+  }, [activeDistrictId, routeDistrictAllowed, routeDistrictId, setStoredActiveDistrictId])
+
+  const district = memberships.find((m) => m.district.id === effectiveDistrictId)?.district ?? null
   const setActiveDistrictId = useCallback((id: string | null) => {
     if (id === null || isAdmin || memberships.some((membership) => membership.district.id === id)) {
       setStoredActiveDistrictId(id)
@@ -274,7 +290,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfile,
       memberships,
       district,
-      districtId: activeDistrictId,
+      districtId: effectiveDistrictId,
       isAdmin,
       loading,
       logout,

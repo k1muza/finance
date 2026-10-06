@@ -31,6 +31,9 @@
   --surface-app: #09090b;
   --surface-canvas: #111113;
   --surface-panel: #18181b;
+  /* Chart series (validated for CVD + 3:1 contrast on every dark theme surface) */
+  --viz-series-1: #3987e5;
+  --viz-series-2: #d95926;
   --surface-panel-muted: #111113;
   --surface-elevated: rgb(24 24 27 / 0.96);
   --surface-overlay: rgb(9 9 11 / 0.72);
@@ -114,6 +117,8 @@ html {
   --surface-app: #fafafa;
   --surface-canvas: #ffffff;
   --surface-panel: #ffffff;
+  --viz-series-1: #2a78d6;
+  --viz-series-2: #eb6834;
   --surface-panel-muted: #f4f4f5;
   --surface-elevated: rgb(255 255 255 / 0.98);
   --surface-overlay: rgb(9 9 11 / 0.16);

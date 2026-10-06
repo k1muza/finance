@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation'
 import { districtPath } from '@/lib/district-routes'
 
-// Overview became Summaries → Financial Summary; keep old links working.
-export default async function OverviewRedirect({ params }: PageProps<'/district/[districtId]/overview'>) {
+export default async function SummariesPage({ params }: PageProps<'/district/[districtId]/summaries'>) {
   const { districtId } = await params
   redirect(districtPath(districtId, 'summaries/financial'))
 }

@@ -20,5 +20,7 @@ describe('district routes', () => {
   it('derives the current page when switching districts', () => {
     expect(districtPageFromPathname('/district/district-1/budgets/budget-1')).toBe('budgets')
     expect(districtPageFromPathname('/dashboard/settings')).toBe('settings')
+    expect(districtPageFromPathname('/district/district-1/summaries/coordination')).toBe('summaries/coordination')
+    expect(districtPageFromPathname('/district/district-1/summaries')).toBe('summaries/financial')
   })
 })

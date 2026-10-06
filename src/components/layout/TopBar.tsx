@@ -7,6 +7,8 @@ import { useDistricts } from '@/hooks/useDistricts'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { UiSettingsButton } from '@/components/layout/UiSettingsButton'
+import { SidebarToggleButton } from '@/components/layout/SidebarState'
+import { GlobalSearch } from '@/components/layout/GlobalSearch'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { ShieldCheck, MapPin, ChevronDown, Check, Plus, User, LogOut } from 'lucide-react'
@@ -245,11 +247,10 @@ export function TopBar() {
     return (
       <header className="print-hidden hidden md:block border-b border-slate-800 bg-slate-950">
         <div className="p-4 xl:p-6 max-w-6xl mx-auto flex items-center gap-4">
-          <div>
-            <p className="text-sm font-semibold text-slate-100">District Finance Dashboard</p>
-            <p className="text-xs text-slate-500 mt-1">Multi-district income and expenditure management</p>
+          <SidebarToggleButton />
+          <div className="flex-1 min-w-0">
+            <GlobalSearch />
           </div>
-          <div className="flex-1" />
           <div className="flex items-center gap-3 shrink-0">
             <span className="flex items-center gap-1.5 text-xs text-slate-500">
               <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
@@ -272,11 +273,10 @@ export function TopBar() {
     return (
       <header className="print-hidden hidden md:block border-b border-slate-800 bg-slate-950">
         <div className="p-4 xl:p-6 max-w-6xl mx-auto flex items-center gap-4">
-          <div>
-            <p className="text-sm font-semibold text-slate-100">District Finance Dashboard</p>
-            <p className="text-xs text-slate-500 mt-1">District income and expenditure workspace</p>
+          <SidebarToggleButton />
+          <div className="flex-1 min-w-0">
+            <GlobalSearch />
           </div>
-          <div className="flex-1" />
           <div className="flex items-center gap-3 shrink-0">
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm bg-slate-800 border border-slate-700 text-sm">
               <MapPin className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
@@ -296,11 +296,10 @@ export function TopBar() {
   return (
     <header className="print-hidden hidden md:block border-b border-slate-800 bg-slate-950">
       <div className="p-4 xl:p-6 max-w-6xl mx-auto flex items-center gap-4">
-        <div>
-          <p className="text-sm font-semibold text-slate-100">District Finance Dashboard</p>
-          <p className="text-xs text-slate-500 mt-1">Choose a district to continue working.</p>
+        <SidebarToggleButton />
+        <div className="flex-1 min-w-0">
+          <GlobalSearch />
         </div>
-        <div className="flex-1" />
         <div className="flex items-center gap-3 shrink-0">
           <UiSettingsButton />
           <div className="w-px h-4 bg-slate-700" />

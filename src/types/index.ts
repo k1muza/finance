@@ -393,3 +393,21 @@ export interface OverviewStats {
   topExpenseCategories: FinanceCategoryBreakdown[]
   districtBreakdown: DistrictFinanceBreakdown[]
 }
+
+export interface DistrictEvent {
+  id: string
+  district_id: string
+  title: string
+  description: string | null
+  location: string | null
+  /** YYYY-MM-DD */
+  start_date: string
+  /** YYYY-MM-DD, same as start_date for single-day events */
+  end_date: string
+  /** HH:MM[:SS]; null means all day */
+  start_time: string | null
+  end_time: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}

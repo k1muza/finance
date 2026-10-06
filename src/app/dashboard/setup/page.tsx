@@ -83,7 +83,7 @@ export default function SetupPage() {
                 </p>
               </div>
               <Button onClick={() => router.push('/dashboard/overview')} className="w-full">
-                Go to Overview
+                Go to Financial Summary
               </Button>
             </CardContent>
           </Card>
