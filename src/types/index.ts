@@ -121,7 +121,7 @@ export const MEMBER_TYPE_LABELS: Record<MemberType, string> = {
   region: 'Region',
   assembly: 'Assembly',
   individual: 'Individual',
-  department: 'Department',
+  department: 'Ministry',
 }
 
 export const COUNTERPARTY_TYPE_LABELS: Record<CounterpartyType, string> = {

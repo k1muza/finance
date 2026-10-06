@@ -23,7 +23,6 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Badge } from '@/components/ui/Badge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useAuth } from '@/contexts/AuthContext'
 import { useAppUiStore, type ToastPosition } from '@/stores/app-ui-store'
 import { useToast } from '@/components/ui/Toast'
 import { useDistricts } from '@/hooks/useDistricts'
@@ -31,8 +30,6 @@ import { useCurrencies } from '@/hooks/useCurrencies'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useOpeningBalances } from '@/hooks/useOpeningBalances'
 import { useFunds } from '@/hooks/useFunds'
-import { usePermissions } from '@/hooks/usePermissions'
-import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import {
   ACCOUNT_STATUS_LABELS,
   ACCOUNT_TYPE_LABELS,
@@ -93,7 +90,7 @@ const emptyAccountForm: AccountFormState = {
 
 
 
-function DistrictSettings({ districtId }: { districtId: string }) {
+export function DistrictSettings({ districtId }: { districtId: string }) {
   const { data: districts, update } = useDistricts()
   const toast = useToast()
   const district = districts.find((d) => d.id === districtId)
@@ -1101,7 +1098,7 @@ export function FundsSection({ districtId }: { districtId: string }) {
 }
 
 
-function DangerZone() {
+export function DangerZone() {
   return (
     <div className="rounded-sm border border-red-500/30 bg-red-500/5 p-5 space-y-4">
       <h2 className="flex items-center gap-2 font-semibold text-red-500">
@@ -1132,7 +1129,7 @@ const TOAST_POSITIONS: { value: ToastPosition; row: number; col: number; label: 
   { value: 'bottom-right',  row: 1, col: 2, label: 'Bottom right' },
 ]
 
-function PreferencesSection() {
+export function PreferencesSection() {
   const toastPosition = useAppUiStore((s) => s.toastPosition)
   const setToastPosition = useAppUiStore((s) => s.setToastPosition)
 
@@ -1188,24 +1185,5 @@ function PreferencesSection() {
         </p>
       </div>
     </Card>
-  )
-}
-
-export function SettingsPanel() {
-  const { districtId, isAdmin } = useAuth()
-  const { can } = usePermissions()
-  const canManageDistrictSettings = districtId ? can('district.settings.manage') : false
-
-  return (
-    <div className="space-y-6">
-      <PreferencesSection />
-      {!districtId && (
-        <SelectDistrictHint description="Choose a district from the top bar to manage district settings." />
-      )}
-
-      {canManageDistrictSettings && districtId && <DistrictSettings key={`ds-${districtId}`} districtId={districtId} />}
-
-      {isAdmin && <DangerZone />}
-    </div>
   )
 }

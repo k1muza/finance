@@ -25,13 +25,16 @@ import {
   Library,
   Contact,
   ChevronDown,
-  UserCog,
   CalendarDays,
   Handshake,
+  MapPin,
+  Church,
+  HandHeart,
   LayoutDashboard,
   CalendarRange,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { navItemClass } from '@/components/layout/nav-styles'
 import { districtPath, type DistrictPage } from '@/lib/district-routes'
 
 type NavLink = {
@@ -90,8 +93,10 @@ const mainNav: NavEntry[] = [
     label: 'People',
     icon: Users,
     items: [
+      { page: 'regions', icon: MapPin, label: 'Regions' },
+      { page: 'assemblies', icon: Church, label: 'Assemblies' },
+      { page: 'ministries', icon: HandHeart, label: 'Ministries' },
       { page: 'members', fallbackHref: '/dashboard/finance/members', icon: Contact, label: 'Members' },
-      { page: 'users', icon: UserCog, label: 'Users & roles', requires: 'district.users.manage' },
     ],
   },
   {
@@ -145,10 +150,7 @@ function subscribeGroups(listener: () => void) {
   }
 }
 
-const linkClass = (active: boolean) =>
-  active
-    ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
-    : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+const linkClass = navItemClass
 
 /** Resolves a link's href, or null when the link shouldn't be shown to this user. */
 function useNavHref() {
@@ -326,7 +328,7 @@ function NavTree({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
               aria-expanded={open}
               className={cn(
                 'flex items-center justify-between rounded-sm px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors hover:bg-slate-800',
-                groupHasActive(items) && !open ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'
+                groupHasActive(items) && !open ? 'text-[var(--text-primary)]' : 'text-slate-500 hover:text-slate-300'
               )}
             >
               <span>{entry.label}</span>

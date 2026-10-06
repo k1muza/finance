@@ -12,7 +12,6 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Select } from '@/components/ui/Select'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { useToast } from '@/components/ui/Toast'
-import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useDistrictUsers, type DistrictUser } from '@/hooks/useDistrictUsers'
@@ -36,7 +35,8 @@ function displayName(user: DistrictUser) {
   return user.display_name || user.email || 'Unknown user'
 }
 
-export function DistrictUsersPage() {
+/** Settings → Users & roles. Access is checked by SettingsSectionGate. */
+export function UsersSettings() {
   const { districtId, user: currentUser } = useAuth()
   const { can } = usePermissions()
   const canManage = can('district.users.manage')
@@ -49,27 +49,6 @@ export function DistrictUsersPage() {
   const [adding, setAdding] = useState(false)
   const [pending, setPending] = useState<PendingChange | null>(null)
   const [savingUserId, setSavingUserId] = useState<string | null>(null)
-
-  if (!districtId) {
-    return (
-      <div className="mx-auto max-w-5xl space-y-6 p-6">
-        <PageHeader title={TITLE} description={DESCRIPTION} />
-        <SelectDistrictHint description="Choose a district to manage its users." />
-      </div>
-    )
-  }
-
-  if (!canManage) {
-    return (
-      <div className="mx-auto max-w-5xl space-y-6 p-6">
-        <PageHeader title={TITLE} description={DESCRIPTION} />
-        <SelectDistrictHint
-          title="District admins only"
-          description="Ask a District Admin to add users or change roles."
-        />
-      </div>
-    )
-  }
 
   const activeAdminCount = users.filter((u) => u.is_active && u.role === 'admin').length
   const sortedUsers = [...users].sort((a, b) => Number(b.is_active) - Number(a.is_active))
@@ -156,8 +135,9 @@ export function DistrictUsersPage() {
   })()
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6">
+    <div className="space-y-6">
       <PageHeader
+        size="md"
         title={TITLE}
         description={DESCRIPTION}
         actions={(

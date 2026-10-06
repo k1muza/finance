@@ -1,13 +1,12 @@
-import { SettingsPanel } from '@/components/settings/SettingsPanel'
+import { SettingsLayout } from '@/components/settings/SettingsLayout'
+import { PreferencesSettingsPage } from '@/components/settings/SettingsSections'
 
+// No district selected: only personal preferences apply. District sections live
+// under /district/[districtId]/settings/*.
 export default function SettingsPage() {
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-100">Settings</h1>
-        <p className="text-sm text-slate-400 mt-1">Manage accounts, funds, districts, imports, and finance configuration.</p>
-      </div>
-      <SettingsPanel />
-    </div>
+    <SettingsLayout>
+      <PreferencesSettingsPage />
+    </SettingsLayout>
   )
 }

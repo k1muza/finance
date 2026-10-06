@@ -1,1 +1,3 @@
-export { default } from '@/app/dashboard/settings/page'
+import { SettingsIndexRedirect } from '@/components/settings/SettingsLayout'
+
+export default SettingsIndexRedirect

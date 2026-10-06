@@ -3,5 +3,5 @@
 import { MembersDirectory } from '@/components/members/MembersDirectory'
 
 export default function Page() {
-  return <MembersDirectory view="members" />
+  return <MembersDirectory view="assemblies" />
 }

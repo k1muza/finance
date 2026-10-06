@@ -7,9 +7,11 @@ export const DISTRICT_PAGES = [
   'accounts',
   'funds',
   'budgets',
+  'regions',
+  'assemblies',
+  'ministries',
   'members',
   'reports',
-  'users',
   'settings',
 ] as const
 

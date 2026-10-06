@@ -489,7 +489,7 @@ function NewTransactionForm({
               { value: 'individual', label: 'Individual' },
               { value: 'assembly', label: 'Assembly' },
               { value: 'region', label: 'Region' },
-              { value: 'department', label: 'Department' },
+              { value: 'department', label: 'Ministry' },
               { value: 'district', label: 'District' },
             ]}
           />
