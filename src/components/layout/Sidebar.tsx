@@ -49,7 +49,7 @@ function DistrictBadge({ collapsed }: { collapsed: boolean }) {
   if (collapsed) return null
   if (isAdmin) {
     return (
-      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-cyan-500/10 border border-cyan-500/20">
         <ShieldCheck className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
         <span className="text-xs text-cyan-400 font-medium truncate">
           {districtId ? 'Admin · District view' : 'Admin · All districts'}
@@ -59,7 +59,7 @@ function DistrictBadge({ collapsed }: { collapsed: boolean }) {
   }
   if (district) {
     return (
-      <div className="px-3 py-1.5 rounded-lg bg-slate-700/50 border border-slate-700">
+      <div className="px-3 py-1.5 rounded-sm bg-slate-700/50 border border-slate-700">
         <p className="text-xs text-slate-400 leading-none mb-0.5">District</p>
         <p className="text-xs font-semibold text-slate-200 truncate">{district.name}</p>
       </div>
@@ -101,7 +101,7 @@ export function Sidebar() {
             href={href}
             title={collapsed ? label : undefined}
             className={cn(
-              'flex items-center rounded-lg text-sm font-medium transition-colors',
+              'flex items-center rounded-sm text-sm font-medium transition-colors',
               collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
               active
                 ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
@@ -127,7 +127,7 @@ export function Sidebar() {
             href={href}
             onClick={() => setMobileOpen(false)}
             className={cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+              'flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm font-medium transition-colors',
               active
                 ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
                 : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
@@ -153,7 +153,7 @@ export function Sidebar() {
           <button
             type="button"
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-100"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-sm border border-slate-700 bg-slate-800 text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-100"
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -179,7 +179,7 @@ export function Sidebar() {
               <button
                 type="button"
                 onClick={handleMobileLogout}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors w-full"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm font-medium text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors w-full"
               >
                 <LogOut className="h-4 w-4 shrink-0" />
                 <span>Sign out</span>
@@ -215,7 +215,7 @@ export function Sidebar() {
             onClick={() => setCollapsed((c) => !c)}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             className={cn(
-              'flex items-center rounded-lg text-sm text-slate-500 hover:bg-slate-800 hover:text-slate-300 transition-colors w-full',
+              'flex items-center rounded-sm text-sm text-slate-500 hover:bg-slate-800 hover:text-slate-300 transition-colors w-full',
               collapsed ? 'justify-center px-0 py-2' : 'gap-2 px-3 py-2'
             )}
           >

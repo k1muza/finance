@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { Card } from '@/components/ui/Card'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ArrowDown, ArrowLeft, ArrowUp, Award, Camera, Crown, Medal, Minus, Printer, Sparkles } from 'lucide-react'
@@ -260,7 +261,7 @@ function SummaryCard({
   return (
     <article
       data-print-card
-      className={`print-color-exact rounded-[5px] border px-4 py-4 shadow-[var(--shadow-card)] ${toneStyles[tone]}`}
+      className={`print-color-exact rounded-sm border px-4 py-4 shadow-[var(--shadow-card)] ${toneStyles[tone]}`}
     >
       <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">{label}</p>
       <p className="mt-3 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">{value}</p>
@@ -312,7 +313,7 @@ function MovementBadge({
 
   if (movement.direction === 'new') {
     return (
-      <span className="print-color-exact inline-flex items-center gap-1.5 rounded-[5px] border border-sky-500/25 bg-sky-500/10 px-2 py-1 text-xs font-semibold text-[var(--theme-accent-500)]">
+      <span className="print-color-exact inline-flex items-center gap-1.5 rounded-sm border border-sky-500/25 bg-sky-500/10 px-2 py-1 text-xs font-semibold text-[var(--theme-accent-500)]">
         <Sparkles className="h-3.5 w-3.5" />
         New
       </span>
@@ -323,7 +324,7 @@ function MovementBadge({
     return (
       <span
         title={`Contribution change: ${formatCurrency(movement.incoming_delta, currency)}`}
-        className="print-color-exact inline-flex items-center gap-1.5 rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-app)] px-2 py-1 text-xs font-semibold text-slate-500"
+        className="print-color-exact inline-flex items-center gap-1.5 rounded-sm border border-[var(--border-strong)] bg-[var(--surface-app)] px-2 py-1 text-xs font-semibold text-slate-500"
       >
         <Minus className="h-3.5 w-3.5" />
         0
@@ -340,7 +341,7 @@ function MovementBadge({
   return (
     <span
       title={`Previously ${getOrdinalRank(movement.previous_rank ?? movement.current_rank)}. Contribution change: ${formatCurrency(movement.incoming_delta, currency)}`}
-      className={`print-color-exact inline-flex items-center gap-1.5 rounded-[5px] border px-2 py-1 text-xs font-semibold ${className}`}
+      className={`print-color-exact inline-flex items-center gap-1.5 rounded-sm border px-2 py-1 text-xs font-semibold ${className}`}
     >
       <Icon className="h-3.5 w-3.5" />
       {Math.abs(movement.rank_delta)}
@@ -359,17 +360,17 @@ function AssemblyRankingsSection({
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">District Rankings</p>
         </div>
-        <div className="print-color-exact inline-flex rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-app)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+        <div className="print-color-exact inline-flex rounded-sm border border-[var(--border-strong)] bg-[var(--surface-app)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
           {section.group.currency} currency view
         </div>
       </div>
 
       {section.assemblyRows.length === 0 ? (
-        <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-4 py-8 text-center text-sm text-slate-500">
+        <div className="rounded-sm border border-[var(--border-strong)] bg-[var(--surface-panel)] px-4 py-8 text-center text-sm text-slate-500">
           No district contribution data is available for this currency.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] shadow-[var(--shadow-card)]">
+        <Card className="overflow-hidden">
           <table className="w-full border-collapse text-left">
             <thead className="print-color-exact bg-[var(--surface-panel-muted)] text-[11px] uppercase tracking-[0.18em] text-slate-600">
               <tr>
@@ -392,7 +393,7 @@ function AssemblyRankingsSection({
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
     </section>
   )
@@ -416,17 +417,17 @@ function ContributorsSection({
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Individual Contributors</p>
         </div>
-        <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+        <div className="rounded-sm border border-[var(--border-strong)] bg-[var(--surface-panel)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
           {section.contributorCount} contributor{section.contributorCount === 1 ? '' : 's'}
         </div>
       </div>
 
       {section.contributors.length === 0 ? (
-        <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-4 py-8 text-center text-sm text-slate-500">
+        <div className="rounded-sm border border-[var(--border-strong)] bg-[var(--surface-panel)] px-4 py-8 text-center text-sm text-slate-500">
           No posted contribution activity to rank for this currency.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] shadow-[var(--shadow-card)]">
+        <Card className="overflow-hidden">
           <table className="w-full border-collapse text-left">
             <thead className="print-color-exact bg-[var(--surface-panel-muted)] text-[11px] uppercase tracking-[0.18em] text-slate-600">
               <tr>
@@ -487,7 +488,7 @@ function ContributorsSection({
               })}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
     </section>
   )
@@ -774,20 +775,20 @@ export default function FundLeaderboardPage() {
             <div className="flex flex-wrap justify-end gap-2">
               <Button
                 onClick={captureSnapshot}
-                className="gap-2 rounded-[5px]"
+                className="gap-2 rounded-sm"
                 disabled={!hasContributors}
               >
                 <Camera className="h-4 w-4" />
                 Save Snapshot
               </Button>
-              <Button onClick={() => window.print()} className="gap-2 rounded-[5px]">
+              <Button onClick={() => window.print()} className="gap-2 rounded-sm">
                 <Printer className="h-4 w-4" />
                 Print Report
               </Button>
             </div>
           </div>
 
-          <header className="print-color-exact rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-5 py-6 shadow-[var(--shadow-card)] sm:px-7">
+          <header className="print-color-exact rounded-sm border border-[var(--border-strong)] bg-[var(--surface-panel)] px-5 py-6 shadow-[var(--shadow-card)] sm:px-7">
             <div data-print-header-grid className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[var(--theme-accent-500)]">Fund Contributions Leaderboard</p>
@@ -805,13 +806,13 @@ export default function FundLeaderboardPage() {
               </div>
 
               <div className="grid gap-3 text-sm text-slate-500 sm:min-w-[220px]">
-                <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-app)] px-4 py-3">
+                <div className="rounded-sm border border-[var(--border-strong)] bg-[var(--surface-app)] px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Period</p>
                     <p className="font-semibold text-[var(--text-primary)] text-right whitespace-nowrap">{rangeLabel}</p>
                   </div>
                 </div>
-                <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-app)] px-4 py-3">
+                <div className="rounded-sm border border-[var(--border-strong)] bg-[var(--surface-app)] px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Report Date</p>
                     <p className="font-semibold text-[var(--text-primary)] text-right whitespace-nowrap">{formatDate(reportDate)}</p>
@@ -822,13 +823,13 @@ export default function FundLeaderboardPage() {
           </header>
 
           {error && (
-            <p className="rounded-[5px] border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
+            <p className="rounded-sm border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
               {error}
             </p>
           )}
 
           {!hasContributors ? (
-            <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-4 py-16 text-center text-sm text-slate-500 shadow-[var(--shadow-card)]">
+            <div className="rounded-sm border border-[var(--border-strong)] bg-[var(--surface-panel)] px-4 py-16 text-center text-sm text-slate-500 shadow-[var(--shadow-card)]">
               No posted contribution activity is available for this fund in the selected period.
             </div>
           ) : (
@@ -836,7 +837,7 @@ export default function FundLeaderboardPage() {
               <section key={section.group.currency} className="space-y-6">
                 <div className="flex items-center justify-between gap-4">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Summary</p>
-                  <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+                  <div className="rounded-sm border border-[var(--border-strong)] bg-[var(--surface-panel)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
                     {section.group.transaction_count} transaction{section.group.transaction_count === 1 ? '' : 's'}
                   </div>
                 </div>

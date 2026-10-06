@@ -38,7 +38,7 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
         title="UI settings"
         onClick={() => setOpen(true)}
         className={cn(
-          'inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] border bg-[var(--surface-panel)] text-[var(--text-tertiary)] shadow-[var(--shadow-soft)] transition-[background-color,border-color,color,box-shadow] [border-color:var(--border-strong)] hover:bg-[var(--button-secondary-hover)] hover:text-[var(--text-primary)]',
+          'inline-flex h-9 w-9 items-center justify-center rounded-sm border bg-[var(--surface-panel)] text-[var(--text-tertiary)] shadow-[var(--shadow-soft)] transition-[background-color,border-color,color,box-shadow] [border-color:var(--border-strong)] hover:bg-[var(--button-secondary-hover)] hover:text-[var(--text-primary)]',
           className,
         )}
       >
@@ -47,9 +47,9 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
 
       <Modal open={open} onClose={() => setOpen(false)} title="UI Settings" size="lg">
         <div className="space-y-6">
-          <section className="rounded-[var(--radius-xl)] border bg-[var(--surface-panel-muted)] p-4 shadow-[var(--shadow-soft)] [border-color:var(--border-subtle)]">
+          <section className="rounded-xl border bg-[var(--surface-panel-muted)] p-4 shadow-[var(--shadow-soft)] [border-color:var(--border-subtle)]">
             <div className="flex items-start gap-3">
-              <div className="rounded-[var(--radius-sm)] bg-[var(--accent-soft)] p-2 text-[var(--accent-solid-hover)]">
+              <div className="rounded-sm bg-[var(--accent-soft)] p-2 text-[var(--accent-solid-hover)]">
                 <Palette className="h-5 w-5" />
               </div>
               <div className="space-y-1">
@@ -77,7 +77,7 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
                     type="button"
                     onClick={() => setTheme(value)}
                     className={cn(
-                      'rounded-[var(--radius-xl)] border p-4 text-left transition-[background-color,border-color,box-shadow,transform] hover:-translate-y-0.5',
+                      'rounded-xl border p-4 text-left transition-[background-color,border-color,box-shadow,transform] hover:-translate-y-0.5',
                       isActive
                         ? 'bg-[var(--accent-soft)] shadow-[var(--shadow-card)] [border-color:var(--accent-border)]'
                         : 'bg-[var(--surface-panel)] shadow-[var(--shadow-soft)] [border-color:var(--border-strong)] hover:bg-[var(--surface-panel-muted)]',
@@ -87,7 +87,7 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
                       <div className="flex items-center gap-3">
                         <div
                           className={cn(
-                            'rounded-[var(--radius-sm)] p-2',
+                            'rounded-sm p-2',
                             isActive
                               ? 'bg-[var(--accent-soft-strong)] text-[var(--accent-solid-hover)]'
                               : 'bg-[var(--surface-panel-muted)] text-[var(--text-tertiary)]',
@@ -113,7 +113,7 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
                     </div>
 
                     <div
-                      className="mt-4 overflow-hidden rounded-[var(--radius-sm)] border [border-color:var(--border-subtle)]"
+                      className="mt-4 overflow-hidden rounded-sm border [border-color:var(--border-subtle)]"
                       aria-hidden="true"
                     >
                       <div
@@ -147,8 +147,8 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
           </section>
 
           <section className="space-y-3">
-            <div className="flex items-start gap-3 rounded-[var(--radius-xl)] border bg-[var(--surface-panel-muted)] p-4 shadow-[var(--shadow-soft)] [border-color:var(--border-subtle)]">
-              <div className="rounded-[var(--radius-sm)] bg-[var(--accent-soft)] p-2 text-[var(--accent-solid-hover)]">
+            <div className="flex items-start gap-3 rounded-xl border bg-[var(--surface-panel-muted)] p-4 shadow-[var(--shadow-soft)] [border-color:var(--border-subtle)]">
+              <div className="rounded-sm bg-[var(--accent-soft)] p-2 text-[var(--accent-solid-hover)]">
                 <Bell className="h-5 w-5" />
               </div>
               <div className="space-y-1">
@@ -183,7 +183,7 @@ export function UiSettingsButton({ className }: UiSettingsButtonProps) {
                     onClick={() => setToastPosition(value)}
                     style={{ gridRow: row + 1, gridColumn: col + 1 }}
                     className={cn(
-                      'flex h-12 w-full items-center justify-center rounded-[var(--radius-sm)] border transition-[background-color,border-color,box-shadow]',
+                      'flex h-12 w-full items-center justify-center rounded-sm border transition-[background-color,border-color,box-shadow]',
                       isActive
                         ? 'bg-[var(--accent-soft)] shadow-[var(--shadow-card)] [border-color:var(--accent-border)]'
                         : 'bg-[var(--surface-panel)] [border-color:var(--border-strong)] hover:bg-[var(--surface-panel-muted)]',

@@ -32,7 +32,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
       />
       <div
         className={cn(
-          'relative flex max-h-[90vh] w-full flex-col rounded-[var(--radius-xl)] border bg-[var(--surface-elevated)] shadow-[var(--shadow-popover)] backdrop-blur-[var(--panel-blur)] [border-color:var(--border-strong)]',
+          'relative flex max-h-[90vh] w-full flex-col rounded-xl border bg-[var(--surface-elevated)] shadow-[var(--shadow-popover)] backdrop-blur-[var(--panel-blur)] [border-color:var(--border-strong)]',
           {
             'max-w-sm': size === 'sm',
             'max-w-lg': size === 'md',

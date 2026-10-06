@@ -94,7 +94,7 @@ export function CategoryManagerModal({
     onClose()
   }
 
-  const inputCls = 'w-full rounded-md bg-slate-900 border border-slate-600 px-2 py-1.5 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-cyan-500'
+  const inputCls = 'w-full rounded-sm bg-slate-900 border border-slate-600 px-2 py-1.5 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-cyan-500'
 
   return (
     <>
@@ -102,7 +102,7 @@ export function CategoryManagerModal({
         <div className="space-y-4">
           <p className="text-sm text-slate-400">{description}</p>
 
-          <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+          <div className="bg-slate-800 border border-slate-700 rounded-sm overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
               <h3 className="text-sm font-semibold text-slate-200">Categories</h3>
               {!adding && (

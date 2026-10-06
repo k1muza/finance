@@ -272,14 +272,14 @@ function MemberTable({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search…"
-                className="h-8 w-full rounded-[var(--radius-sm)] border bg-[var(--surface-panel)] pl-8 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
+                className="h-8 w-full rounded-sm border bg-[var(--surface-panel)] pl-8 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
               />
             </div>
             <div className="flex items-center gap-2">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                className="h-8 rounded-[var(--radius-sm)] border bg-[var(--surface-panel)] px-2 text-sm text-[var(--text-secondary)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
+                className="h-8 rounded-sm border bg-[var(--surface-panel)] px-2 text-sm text-[var(--text-secondary)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
               >
                 <option value="all">All</option>
                 <option value="active">Active</option>
@@ -623,14 +623,14 @@ function CounterpartyTable({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search…"
-                className="h-8 w-full rounded-[var(--radius-sm)] border bg-[var(--surface-panel)] pl-8 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
+                className="h-8 w-full rounded-sm border bg-[var(--surface-panel)] pl-8 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
               />
             </div>
             <div className="flex items-center gap-2">
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value as CounterpartyType | 'all')}
-                className="h-8 rounded-[var(--radius-sm)] border bg-[var(--surface-panel)] px-2 text-sm text-[var(--text-secondary)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
+                className="h-8 rounded-sm border bg-[var(--surface-panel)] px-2 text-sm text-[var(--text-secondary)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
               >
                 <option value="all">All types</option>
                 {counterpartyTypeOptions.map((o) => (
@@ -640,7 +640,7 @@ function CounterpartyTable({
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                className="h-8 rounded-[var(--radius-sm)] border bg-[var(--surface-panel)] px-2 text-sm text-[var(--text-secondary)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
+                className="h-8 rounded-sm border bg-[var(--surface-panel)] px-2 text-sm text-[var(--text-secondary)] [border-color:var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-ring)]"
               >
                 <option value="all">All</option>
                 <option value="active">Active</option>

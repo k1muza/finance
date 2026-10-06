@@ -112,7 +112,7 @@ function MetricCard({
   return (
     <Card>
       <CardContent className="flex items-start gap-4">
-        <div className="shrink-0 rounded-lg bg-slate-900/60 p-3">{icon}</div>
+        <div className="shrink-0 rounded-sm bg-slate-900/60 p-3">{icon}</div>
         <div>
           <p className="text-sm text-slate-400">{title}</p>
           {values.length === 0 ? (
@@ -371,7 +371,7 @@ function BudgetVsActualsSection({
     >
       <div className="space-y-6 p-5">
         {budgets.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-700 p-10 text-center text-slate-500">
+          <div className="rounded-sm border border-dashed border-slate-700 p-10 text-center text-slate-500">
             No budgets available for comparison.
           </div>
         ) : (
@@ -387,7 +387,7 @@ function BudgetVsActualsSection({
                 }))}
               />
               {selectedBudget ? (
-                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-4 py-3">
+                <div className="rounded-sm border border-slate-700 bg-slate-900/40 px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium text-slate-100">{selectedBudget.name}</p>
                     <Badge variant={statusVariant}>{BUDGET_STATUS_LABELS[selectedBudget.status]}</Badge>
@@ -402,7 +402,7 @@ function BudgetVsActualsSection({
               ) : null}
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-slate-700">
+            <div className="overflow-x-auto rounded-sm border border-slate-700">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-700">
@@ -440,7 +440,7 @@ function BudgetVsActualsSection({
               </table>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-slate-700">
+            <div className="overflow-x-auto rounded-sm border border-slate-700">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-700">
@@ -734,7 +734,7 @@ export default function ReportsPage() {
             key={p}
             type="button"
             onClick={() => setPreset(p)}
-            className={`rounded-lg border px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`rounded-sm border px-4 py-1.5 text-sm font-medium transition-colors ${
               preset === p
                 ? 'border-cyan-500/40 bg-cyan-500/20 text-cyan-300'
                 : 'border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600 hover:text-slate-200'

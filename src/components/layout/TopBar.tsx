@@ -106,7 +106,7 @@ function AdminDistrictDropdown() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border transition-colors bg-cyan-500/10 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/15"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm border transition-colors bg-cyan-500/10 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/15"
       >
         <MapPin className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
         <span className="font-medium max-w-[160px] truncate">
@@ -119,7 +119,7 @@ function AdminDistrictDropdown() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-1.5 w-56 bg-slate-900 border border-slate-700 rounded-sm shadow-xl z-50 overflow-hidden">
           <div className="max-h-64 overflow-y-auto">
             {districts.map((district) => {
               const isSelected = activeDistrictId === district.id
@@ -154,7 +154,7 @@ function AdminDistrictDropdown() {
             <button
               type="button"
               onClick={() => { setOpen(false); setAddOpen(true) }}
-              className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-colors"
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-sm text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
               New District
@@ -211,7 +211,7 @@ function UserMenu() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border transition-colors bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-600 hover:text-slate-100"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm border transition-colors bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-600 hover:text-slate-100"
       >
         <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />
         <span className="max-w-30 truncate font-medium">{displayName}</span>
@@ -219,7 +219,7 @@ function UserMenu() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 w-44 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden py-1">
+        <div className="absolute right-0 top-full mt-1.5 w-44 bg-slate-900 border border-slate-700 rounded-sm shadow-xl z-50 overflow-hidden py-1">
           <div className="px-3 py-2 border-b border-slate-800">
             <p className="text-xs text-slate-500 truncate">{user?.email}</p>
           </div>
@@ -278,7 +278,7 @@ export function TopBar() {
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-sm">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm bg-slate-800 border border-slate-700 text-sm">
               <MapPin className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
               <span className="text-slate-200 font-medium">{district.name}</span>
               {stat && <span className="text-xs text-slate-500 ml-0.5">{stat.transaction_count}</span>}

@@ -67,7 +67,7 @@ function FundBalanceCards({ districtId }: { districtId: string }) {
   if (loading) return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-slate-800 rounded-xl border border-slate-700 p-5 h-32 animate-pulse" />
+        <div key={i} className="bg-slate-800 rounded-sm border border-slate-700 p-5 h-32 animate-pulse" />
       ))}
     </div>
   )
@@ -88,7 +88,7 @@ function FundBalanceCards({ districtId }: { districtId: string }) {
           <Link
             key={fund.id}
             href={`${districtPath(districtId, 'funds')}/${fund.id}`}
-            className="bg-slate-800 rounded-xl border border-slate-700 p-5 space-y-3 hover:border-cyan-500/40 hover:bg-slate-800/80 transition-all group"
+            className="bg-slate-800 rounded-sm border border-slate-700 p-5 space-y-3 hover:border-cyan-500/40 hover:bg-slate-800/80 transition-all group"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">

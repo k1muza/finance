@@ -67,7 +67,7 @@ export function SearchableSelect({
         disabled={disabled}
         onClick={() => { if (!open) setQuery(''); setOpen((o) => !o) }}
         className={cn(
-          'flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] border bg-[var(--field-bg)] px-3 py-2 text-left text-sm shadow-[var(--field-shadow)] transition-[background-color,border-color,box-shadow] outline-none [border-color:var(--field-border)] hover:[border-color:var(--field-border-hover)]',
+          'flex w-full items-center justify-between gap-2 rounded-sm border bg-[var(--field-bg)] px-3 py-2 text-left text-sm shadow-[var(--field-shadow)] transition-[background-color,border-color,box-shadow] outline-none [border-color:var(--field-border)] hover:[border-color:var(--field-border-hover)]',
           open && 'ring-2 ring-[var(--accent-ring)] [border-color:var(--accent-border)]',
           disabled && 'cursor-not-allowed opacity-50',
         )}
@@ -93,7 +93,7 @@ export function SearchableSelect({
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-[var(--radius-sm)] border [border-color:var(--field-border)] bg-[var(--field-bg)] shadow-xl">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-sm border [border-color:var(--field-border)] bg-[var(--field-bg)] shadow-xl">
           <div className="flex items-center gap-2 border-b px-3 py-2 [border-color:var(--field-border)]">
             <Search className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
             <input

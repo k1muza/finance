@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/ui/Card'
 import {
   CheckCircle,
   AlertCircle,
@@ -135,7 +136,7 @@ function DistrictSettings({ districtId }: { districtId: string }) {
   }
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
+    <Card className="p-5 space-y-4">
       <h2 className="font-semibold text-slate-100 flex items-center gap-2">
         <Building2 className="h-5 w-5 text-cyan-400" />
         District Settings
@@ -153,7 +154,7 @@ function DistrictSettings({ districtId }: { districtId: string }) {
           Save
         </Button>
       </div>
-      <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-4 space-y-3">
+      <div className="rounded-sm border border-slate-700 bg-slate-900/40 p-4 space-y-3">
         <div>
           <p className="text-sm font-medium text-slate-100">Cashbook Workflow</p>
           <p className="mt-1 text-sm text-slate-400">
@@ -175,7 +176,7 @@ function DistrictSettings({ districtId }: { districtId: string }) {
           </div>
         </label>
         {autoPostCashbookTransactions && (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          <div className="flex items-start gap-2 rounded-sm border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             Posted records are immutable. Fix mistakes by reversing them, not by deleting or editing them.
           </div>
@@ -193,7 +194,7 @@ function DistrictSettings({ districtId }: { districtId: string }) {
           {error}
         </div>
       )}
-    </div>
+    </Card>
   )
 }
 
@@ -303,7 +304,7 @@ function AccountOpeningBalancesPanel({ account, districtId }: { account: Account
         </div>
 
         {adding && (
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-3">
+          <Card className="p-4 space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <Input
                 label="Effective date *"
@@ -331,7 +332,7 @@ function AccountOpeningBalancesPanel({ account, districtId }: { account: Account
               <Button variant="ghost" onClick={() => setAdding(false)} disabled={saving}>Cancel</Button>
               <Button onClick={handleAdd} loading={saving}>Save</Button>
             </div>
-          </div>
+          </Card>
         )}
 
         {loading ? (
@@ -529,7 +530,7 @@ export function AccountsSection({ districtId }: { districtId: string }) {
 
   return (
     <>
-      <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+      <Card className="overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-700 flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h2 className="font-semibold text-slate-100 flex items-center gap-2">
@@ -767,7 +768,7 @@ export function AccountsSection({ districtId }: { districtId: string }) {
             </table>
           </div>
         )}
-      </div>
+      </Card>
 
       <ConfirmDialog
         open={confirmDelete.open}
@@ -883,7 +884,7 @@ export function FundsSection({ districtId }: { districtId: string }) {
 
   return (
     <>
-      <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+      <Card className="overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-700 flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h2 className="font-semibold text-slate-100 flex items-center gap-2">
@@ -1084,7 +1085,7 @@ export function FundsSection({ districtId }: { districtId: string }) {
             </table>
           </div>
         )}
-      </div>
+      </Card>
 
       <ConfirmDialog
         open={confirmDelete.open}
@@ -1102,7 +1103,7 @@ export function FundsSection({ districtId }: { districtId: string }) {
 
 function DangerZone() {
   return (
-    <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-5 space-y-4">
+    <div className="rounded-sm border border-red-500/30 bg-red-500/5 p-5 space-y-4">
       <h2 className="flex items-center gap-2 font-semibold text-red-500">
         <Trash2 className="h-5 w-5" />
         Danger Zone
@@ -1136,12 +1137,12 @@ function PreferencesSection() {
   const setToastPosition = useAppUiStore((s) => s.setToastPosition)
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
+    <Card className="p-5 space-y-4">
       <h2 className="font-semibold text-slate-100 flex items-center gap-2">
         <Bell className="h-5 w-5 text-cyan-400" />
         Preferences
       </h2>
-      <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-4 space-y-4">
+      <div className="rounded-sm border border-slate-700 bg-slate-900/40 p-4 space-y-4">
         <div>
           <p className="text-sm font-medium text-slate-100">Toast position</p>
           <p className="mt-1 text-sm text-slate-400">
@@ -1166,7 +1167,7 @@ function PreferencesSection() {
                 onClick={() => setToastPosition(value)}
                 style={{ gridRow: row + 1, gridColumn: col + 1 }}
                 className={[
-                  'flex h-12 w-full items-center justify-center rounded-lg border transition-colors',
+                  'flex h-12 w-full items-center justify-center rounded-sm border transition-colors',
                   isActive
                     ? 'border-cyan-500 bg-cyan-500/10'
                     : 'border-slate-600 bg-slate-900/40 hover:border-slate-500',
@@ -1186,7 +1187,7 @@ function PreferencesSection() {
           {TOAST_POSITIONS.find((p) => p.value === toastPosition)?.label}
         </p>
       </div>
-    </div>
+    </Card>
   )
 }
 

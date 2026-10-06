@@ -86,13 +86,13 @@ function AccountBalanceCards({ districtId }: { districtId: string }) {
         const closing = bal?.closing ?? 0
         const currency = account.currency as Currency
         return (
-          <div key={account.id} className={`bg-slate-800 rounded-xl border p-5 space-y-3 ${account.status === 'archived' ? 'opacity-60 border-slate-700' : 'border-slate-700'}`}>
+          <div key={account.id} className={`bg-slate-800 rounded-sm border p-5 space-y-3 ${account.status === 'archived' ? 'opacity-60 border-slate-700' : 'border-slate-700'}`}>
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold text-slate-100">{account.name}</p>
                 <p className="text-xs text-slate-500 mt-0.5">{account.currency} · {account.type.replace('_', ' ')}</p>
               </div>
-              <div className="bg-cyan-500/10 rounded-lg p-2 text-cyan-400 shrink-0">
+              <div className="bg-cyan-500/10 rounded-sm p-2 text-cyan-400 shrink-0">
                 <Landmark className="h-4 w-4" />
               </div>
             </div>

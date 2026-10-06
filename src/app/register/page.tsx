@@ -19,7 +19,7 @@ function RegisterPageLoading() {
     <div className="min-h-screen flex items-center justify-center bg-[var(--surface-app)] p-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-[var(--radius-2xl)] border bg-[var(--accent-soft)] [border-color:var(--accent-border)]">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl border bg-[var(--accent-soft)] [border-color:var(--accent-border)]">
             <Landmark className="h-8 w-8 text-[var(--theme-accent-400)]" />
           </div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">District Finance Dashboard</h1>

@@ -453,14 +453,14 @@ function NewTransactionForm({
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-sm px-3 py-2">
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
       )}
 
       {autoPostTransactions && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+        <div className="flex items-start gap-2 rounded-sm border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
           <Stamp className="mt-0.5 h-4 w-4 shrink-0" />
           Saving will post this transaction immediately. Corrections after that must use reversal.
         </div>
@@ -528,7 +528,7 @@ function NewTransactionForm({
             placeholder="Optional"
           />
           {memberError && (
-            <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-sm px-3 py-2">
               <AlertCircle className="h-4 w-4 shrink-0" />
               {memberError}
             </div>
@@ -767,7 +767,7 @@ function EditDraftForm({
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-sm px-3 py-2">
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
@@ -922,7 +922,7 @@ function TransactionDetail({ txnId, userId, onTableRefresh, onReverseRequest }: 
 
       {/* workflow actions */}
       {(canSubmit || canApprove || canPost || canVoid || canReverse) && (
-        <div className="space-y-2 border border-slate-700 rounded-lg p-3">
+        <div className="space-y-2 border border-slate-700 rounded-sm p-3">
           <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Actions</p>
           <div className="flex flex-wrap gap-2">
             {canSubmit && (
@@ -1078,14 +1078,14 @@ function CashbookMetricCard({
   const palette = tones[tone]
 
   return (
-    <div className={cn('rounded-xl border p-4', palette.panel)}>
+    <div className={cn('rounded-sm border p-4', palette.panel)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-2">
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">{label}</p>
           <p className={cn('text-2xl font-semibold tracking-tight', palette.value)}>{value}</p>
           <p className="text-xs text-[var(--text-tertiary)]">{caption}</p>
         </div>
-        <div className={cn('rounded-xl p-2 shrink-0', palette.icon)}>
+        <div className={cn('rounded-sm p-2 shrink-0', palette.icon)}>
           <Icon className="h-4 w-4" />
         </div>
       </div>
@@ -1353,7 +1353,7 @@ export default function CashbookPage() {
       <div className="space-y-5">
 
         {/* ── left sidebar: funds ── */}
-        <section className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/70 shadow-[0_24px_60px_-40px_rgba(2,6,23,0.9)]">
+        <section className="overflow-hidden rounded-sm border border-slate-700 bg-slate-900/70 shadow-[0_24px_60px_-40px_rgba(2,6,23,0.9)]">
           <div className="space-y-5 p-5">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="space-y-2">
@@ -1378,7 +1378,7 @@ export default function CashbookPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <div className="rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-xs text-slate-400">
+                <div className="rounded-sm border border-slate-700 bg-slate-800/80 px-3 py-2 text-xs text-slate-400">
                   <span className="block uppercase tracking-wide text-slate-500">Period</span>
                   <span className="mt-1 block text-slate-200">
                     {formatDate(dateFrom)} - {formatDate(dateTo)}
@@ -1406,7 +1406,7 @@ export default function CashbookPage() {
                   type="button"
                   onClick={() => updateCashbookFilterDraft({ selectedFundId: null })}
                   className={cn(
-                    'inline-flex items-center rounded-xl border px-3 py-2 text-sm transition-colors',
+                    'inline-flex items-center rounded-sm border px-3 py-2 text-sm transition-colors',
                     selectedFundId === null
                       ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300'
                       : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-600 hover:bg-slate-800 hover:text-slate-100'
@@ -1426,7 +1426,7 @@ export default function CashbookPage() {
                         selectedFundId: fund.id === selectedFundId ? null : fund.id,
                       })}
                       className={cn(
-                        'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors',
+                        'inline-flex items-center gap-2 rounded-sm border px-3 py-2 text-sm transition-colors',
                         isActive
                           ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300'
                           : 'border-slate-700 bg-slate-800/70 text-slate-300 hover:border-slate-600 hover:bg-slate-800 hover:text-slate-100'
@@ -1537,7 +1537,7 @@ export default function CashbookPage() {
       )}
 
       {/* search + table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-800">
+      <div className="overflow-hidden rounded-sm border border-slate-700 bg-slate-800">
         <div className="border-b border-slate-700 px-4 py-4 md:px-5">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
@@ -1551,7 +1551,7 @@ export default function CashbookPage() {
               <p className="text-xs text-slate-500 sm:text-right">
                 {selectedAccount ? `${selectedAccount.name} - ${currency}` : 'Choose an account to load entries'}
               </p>
-              <div className="flex w-full items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 sm:w-[340px]">
+              <div className="flex w-full items-center gap-2 rounded-sm border border-slate-700 bg-slate-900/80 px-3 py-2 sm:w-[340px]">
                 <Search className="h-4 w-4 shrink-0 text-slate-500" />
                 <input
                   className="w-full bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500"
@@ -1564,7 +1564,7 @@ export default function CashbookPage() {
           </div>
 
           {hasSelectedTransactions && (
-            <div className="mt-4 grid gap-3 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-3 lg:grid-cols-[220px_minmax(0,1fr)_auto] lg:items-center">
+            <div className="mt-4 grid gap-3 rounded-sm border border-slate-700 bg-slate-900/70 px-3 py-3 lg:grid-cols-[220px_minmax(0,1fr)_auto] lg:items-center">
               <Select
                 id="cashbook-bulk-action"
                 value={bulkAction}
@@ -1779,7 +1779,7 @@ export default function CashbookPage() {
           <div>
             <label className="block text-sm text-slate-400 mb-1">Reason (optional)</label>
             <input
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-500"
+              className="w-full bg-slate-700 border border-slate-600 rounded-sm px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-500"
               placeholder="e.g. Incorrect amount posted"
               value={reverseNarration}
               onChange={(e) => setReverseNarration(e.target.value)}

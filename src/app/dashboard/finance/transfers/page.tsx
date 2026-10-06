@@ -240,13 +240,13 @@ function TransferForm({
       </div>
 
       {fromAccount && toAccount && fromAccount.currency !== toAccount.currency && (
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+        <div className="rounded-sm border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
           Transfers can only post between accounts that share the same currency.
         </div>
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+        <div className="rounded-sm border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
           {error}
         </div>
       )}
@@ -530,7 +530,7 @@ export default function TransfersPage() {
   if (!canViewTransfers) {
     return (
       <div className="mx-auto max-w-6xl p-6">
-        <div className="rounded-xl border border-slate-700 bg-slate-800/80 p-6 text-sm text-slate-400">
+        <div className="rounded-sm border border-slate-700 bg-slate-800/80 p-6 text-sm text-slate-400">
           You do not have permission to view transfers in this district.
         </div>
       </div>
@@ -595,7 +595,7 @@ export default function TransfersPage() {
         />
         <div className="xl:col-span-2">
           <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">Search</label>
-          <div className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-slate-700 bg-[var(--field-bg)] px-3 py-2">
+          <div className="flex items-center gap-2 rounded-sm border border-slate-700 bg-[var(--field-bg)] px-3 py-2">
             <Search className="h-4 w-4 shrink-0 text-slate-500" />
             <input
               className="w-full bg-transparent text-sm text-[var(--text-primary)] outline-none placeholder:text-slate-500"
@@ -610,7 +610,7 @@ export default function TransfersPage() {
       {loading ? (
         <PageSpinner />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-800">
+        <div className="overflow-hidden rounded-sm border border-slate-700 bg-slate-800">
           <div className="border-b border-slate-700 px-4 py-4 md:px-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -767,7 +767,7 @@ export default function TransfersPage() {
           <div>
             <label className="mb-1 block text-sm text-slate-400">Reason (optional)</label>
             <input
-              className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+              className="w-full rounded-sm border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
               value={reverseNarration}
               onChange={(event) => setReverseNarration(event.target.value)}
               placeholder="e.g. Sent to the wrong account"

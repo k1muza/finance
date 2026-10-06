@@ -235,7 +235,7 @@ export function BudgetFormModal({
             onChange={(e) => onChange({ description: e.target.value })}
             placeholder="Optional description"
             rows={4}
-            className="w-full rounded-[var(--radius-sm)] border bg-[var(--field-bg)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-[var(--field-shadow)] outline-none transition-[background-color,border-color,box-shadow,color] [border-color:var(--field-border)] hover:[border-color:var(--field-border-hover)] focus:ring-2 focus:ring-[var(--accent-ring)] focus:[border-color:var(--accent-border)]"
+            className="w-full rounded-sm border bg-[var(--field-bg)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-[var(--field-shadow)] outline-none transition-[background-color,border-color,box-shadow,color] [border-color:var(--field-border)] hover:[border-color:var(--field-border-hover)] focus:ring-2 focus:ring-[var(--accent-ring)] focus:[border-color:var(--accent-border)]"
           />
         </div>
 
@@ -328,7 +328,7 @@ export function BudgetLineModal({
             onChange={(e) => onChange({ notes: e.target.value })}
             placeholder="Optional notes for this line"
             rows={4}
-            className="w-full rounded-[var(--radius-sm)] border bg-[var(--field-bg)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-[var(--field-shadow)] outline-none transition-[background-color,border-color,box-shadow,color] [border-color:var(--field-border)] hover:[border-color:var(--field-border-hover)] focus:ring-2 focus:ring-[var(--accent-ring)] focus:[border-color:var(--accent-border)]"
+            className="w-full rounded-sm border bg-[var(--field-bg)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-[var(--field-shadow)] outline-none transition-[background-color,border-color,box-shadow,color] [border-color:var(--field-border)] hover:[border-color:var(--field-border-hover)] focus:ring-2 focus:ring-[var(--accent-ring)] focus:[border-color:var(--accent-border)]"
           />
         </div>
 
@@ -450,12 +450,12 @@ export function BudgetDetailView({
     <Card className="overflow-hidden">
       <CardContent className="space-y-6 p-5">
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-[var(--radius-md)] border p-4 [border-color:var(--border-strong)]">
+          <div className="rounded-md border p-4 [border-color:var(--border-strong)]">
             <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Lines</p>
             <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{lines.length}</p>
           </div>
 
-          <div className="rounded-[var(--radius-md)] border p-4 [border-color:var(--border-strong)]">
+          <div className="rounded-md border p-4 [border-color:var(--border-strong)]">
             <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Planned Expenses</p>
             <div className="mt-2 space-y-1">
               {Object.entries(summary).map(([currency, total]) => (
@@ -469,7 +469,7 @@ export function BudgetDetailView({
             </div>
           </div>
 
-          <div className="rounded-[var(--radius-md)] border p-4 [border-color:var(--border-strong)]">
+          <div className="rounded-md border p-4 [border-color:var(--border-strong)]">
             <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Scoped Lines</p>
             <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
               {lines.filter((line) => line.scope_member_id).length}
@@ -497,7 +497,7 @@ export function BudgetDetailView({
             )}
           </div>
 
-          <div className="overflow-x-auto rounded-[var(--radius-md)] border [border-color:var(--border-strong)]">
+          <div className="overflow-x-auto rounded-md border [border-color:var(--border-strong)]">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b [border-color:var(--border-strong)]">

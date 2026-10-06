@@ -105,7 +105,7 @@ export default function OverviewPage() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 border border-transparent hover:border-slate-600 hover:bg-slate-700/30 transition-colors"
+                  className="flex items-center gap-3 rounded-sm px-3 py-2 border border-transparent hover:border-slate-600 hover:bg-slate-700/30 transition-colors"
                 >
                   <Icon className="h-4 w-4 text-slate-400 shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -190,7 +190,7 @@ function CategoryPanel({
   const barTone = tone === 'emerald' ? 'bg-emerald-500' : 'bg-red-500'
 
   return (
-    <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+    <div className="rounded-sm border border-slate-700 bg-slate-900/40 p-4">
       <h3 className="text-sm font-semibold text-slate-200">{title}</h3>
       {items.length === 0 ? (
         <p className="text-sm text-slate-500 mt-4">{emptyLabel}</p>

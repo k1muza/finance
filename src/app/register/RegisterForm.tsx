@@ -121,7 +121,7 @@ export default function RegisterForm() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--surface-app)] p-4">
         <div className="w-full max-w-sm space-y-8 text-center">
-          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-[var(--radius-2xl)] border bg-[var(--accent-soft)] [border-color:var(--accent-border)]">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl border bg-[var(--accent-soft)] [border-color:var(--accent-border)]">
             <Landmark className="h-8 w-8 text-[var(--theme-accent-400)]" />
           </div>
           <Card>
@@ -132,7 +132,7 @@ export default function RegisterForm() {
               </p>
               <Link
                 href="/login"
-                className="inline-flex w-full items-center justify-center rounded-[var(--radius-sm)] border bg-[var(--button-secondary-bg)] px-4 py-2.5 text-sm font-medium text-[var(--text-primary)] transition-colors [border-color:var(--border-strong)] hover:bg-[var(--button-secondary-hover)]"
+                className="inline-flex w-full items-center justify-center rounded-sm border bg-[var(--button-secondary-bg)] px-4 py-2.5 text-sm font-medium text-[var(--text-primary)] transition-colors [border-color:var(--border-strong)] hover:bg-[var(--button-secondary-hover)]"
               >
                 Back to sign in
               </Link>
@@ -147,7 +147,7 @@ export default function RegisterForm() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--surface-app)] p-4">
         <div className="w-full max-w-sm space-y-8 text-center">
-          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-[var(--radius-2xl)] border bg-[var(--accent-soft)] [border-color:var(--accent-border)]">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl border bg-[var(--accent-soft)] [border-color:var(--accent-border)]">
             <Landmark className="h-8 w-8 text-[var(--theme-accent-400)]" />
           </div>
           <Card>
@@ -158,7 +158,7 @@ export default function RegisterForm() {
               </p>
               <Link
                 href="/login"
-                className="inline-flex w-full items-center justify-center rounded-[var(--radius-sm)] border bg-[var(--accent-solid)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-contrast)] shadow-[var(--shadow-button)] transition-colors [border-color:var(--button-primary-border)] hover:bg-[var(--accent-solid-hover)]"
+                className="inline-flex w-full items-center justify-center rounded-sm border bg-[var(--accent-solid)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-contrast)] shadow-[var(--shadow-button)] transition-colors [border-color:var(--button-primary-border)] hover:bg-[var(--accent-solid-hover)]"
               >
                 Sign in
               </Link>
@@ -175,7 +175,7 @@ export default function RegisterForm() {
     <div className="min-h-screen flex items-center justify-center bg-[var(--surface-app)] p-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-[var(--radius-2xl)] border bg-[var(--accent-soft)] [border-color:var(--accent-border)]">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl border bg-[var(--accent-soft)] [border-color:var(--accent-border)]">
             <Landmark className="h-8 w-8 text-[var(--theme-accent-400)]" />
           </div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">District Finance Dashboard</h1>
@@ -192,13 +192,13 @@ export default function RegisterForm() {
             </div>
 
             {error && (
-              <div className="rounded-[var(--radius-sm)] border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+              <div className="rounded-sm border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
                 {error}
               </div>
             )}
 
             {noDistrictsAvailable && (
-              <div className="rounded-[var(--radius-sm)] border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+              <div className="rounded-sm border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
                 No districts are available for self-registration yet. Contact an administrator to create the first district.
               </div>
             )}

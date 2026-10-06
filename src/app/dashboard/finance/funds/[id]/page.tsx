@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/ui/Card'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
@@ -371,7 +372,7 @@ export default function FundDetailPage() {
       {/* header */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-3">
-          <div className="bg-cyan-500/10 rounded-lg p-2.5 text-cyan-400 shrink-0 mt-0.5">
+          <div className="bg-cyan-500/10 rounded-sm p-2.5 text-cyan-400 shrink-0 mt-0.5">
             <Wallet className="h-5 w-5" />
           </div>
           <div className="flex-1 min-w-0">
@@ -391,7 +392,7 @@ export default function FundDetailPage() {
 
         <Link
           href={`${fundsHref}/${id}/leaderboard`}
-          className="inline-flex items-center gap-2 self-start rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-sm font-medium text-cyan-300 transition-colors hover:bg-cyan-500/15"
+          className="inline-flex items-center gap-2 self-start rounded-sm border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-sm font-medium text-cyan-300 transition-colors hover:bg-cyan-500/15"
         >
           <Trophy className="h-4 w-4" />
           Leaderboard
@@ -400,7 +401,7 @@ export default function FundDetailPage() {
 
       {/* balance summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className={`rounded-xl p-4 border col-span-2 lg:col-span-1 ${balance >= 0 ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+        <div className={`rounded-sm p-4 border col-span-2 lg:col-span-1 ${balance >= 0 ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
           <p className="text-xs text-slate-400 mb-1 flex items-center gap-1">
             <Scale className="h-3.5 w-3.5 text-cyan-400" /> Fund Balance
           </p>
@@ -409,25 +410,25 @@ export default function FundDetailPage() {
           </p>
           <p className="text-xs text-slate-500 mt-0.5">All time, posted only</p>
         </div>
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+        <Card className="p-4">
           <p className="text-xs text-slate-400 mb-1 flex items-center gap-1">
             <TrendingUp className="h-3.5 w-3.5 text-emerald-400" /> Period In
           </p>
           <p className="text-lg font-bold text-emerald-400">{formatCurrency(periodIn, currency)}</p>
           <p className="text-xs text-slate-500 mt-0.5">Posted in period</p>
-        </div>
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+        </Card>
+        <Card className="p-4">
           <p className="text-xs text-slate-400 mb-1 flex items-center gap-1">
             <TrendingDown className="h-3.5 w-3.5 text-red-400" /> Period Out
           </p>
           <p className="text-lg font-bold text-red-400">{formatCurrency(periodOut, currency)}</p>
           <p className="text-xs text-slate-500 mt-0.5">Posted in period</p>
-        </div>
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+        </Card>
+        <Card className="p-4">
           <p className="text-xs text-slate-400 mb-1">Transactions</p>
           <p className="text-lg font-bold text-slate-100">{transactions.length}</p>
           <p className="text-xs text-slate-500 mt-0.5">All statuses in period</p>
-        </div>
+        </Card>
       </div>
 
       {/* date range filter */}
@@ -438,7 +439,7 @@ export default function FundDetailPage() {
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+            className="bg-slate-800 border border-slate-700 rounded-sm px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
           />
         </div>
         <div>
@@ -447,13 +448,13 @@ export default function FundDetailPage() {
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+            className="bg-slate-800 border border-slate-700 rounded-sm px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
           />
         </div>
       </div>
 
       {/* transaction table */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+      <Card className="overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
           <p className="text-sm font-medium text-slate-300">Transactions</p>
           <p className="text-xs text-slate-500">{transactions.length} record{transactions.length !== 1 ? 's' : ''}</p>
@@ -591,10 +592,10 @@ export default function FundDetailPage() {
           />
           </>
         )}
-      </div>
+      </Card>
 
       {/* recognition tiers */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+      <Card className="overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Award className="h-4 w-4 text-amber-400" />
@@ -610,7 +611,7 @@ export default function FundDetailPage() {
                   setShowAddTier(true)
                   setTierCurrency(currencies[0]?.code ?? '')
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-600 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-sm bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-600 transition-colors"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add Tier
@@ -629,7 +630,7 @@ export default function FundDetailPage() {
                   value={tierName}
                   onChange={(e) => setTierName(e.target.value)}
                   placeholder="e.g. Gold"
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-800 border border-slate-600 rounded-sm px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
                 />
               </div>
               <div>
@@ -637,7 +638,7 @@ export default function FundDetailPage() {
                 <select
                   value={tierCurrency}
                   onChange={(e) => setTierCurrency(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-800 border border-slate-600 rounded-sm px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
                 >
                   {currencies.map((c) => (
                     <option key={c.code} value={c.code}>{c.code}</option>
@@ -653,7 +654,7 @@ export default function FundDetailPage() {
                   value={tierMinAmount}
                   onChange={(e) => setTierMinAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-800 border border-slate-600 rounded-sm px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
                 />
               </div>
               <div>
@@ -678,7 +679,7 @@ export default function FundDetailPage() {
               <button
                 type="submit"
                 disabled={tierSaving}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-500 disabled:opacity-50 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-sm bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-500 disabled:opacity-50 transition-colors"
               >
                 {tierSaving ? <Loader className="h-3.5 w-3.5 animate-spin" /> : null}
                 Save
@@ -686,7 +687,7 @@ export default function FundDetailPage() {
               <button
                 type="button"
                 onClick={() => { setShowAddTier(false); setTierError(null) }}
-                className="inline-flex items-center rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-600 transition-colors"
+                className="inline-flex items-center rounded-sm bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-600 transition-colors"
               >
                 Cancel
               </button>
@@ -729,7 +730,7 @@ export default function FundDetailPage() {
                                 type="text"
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
-                                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                                className="w-full bg-slate-800 border border-slate-600 rounded-sm px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
                               />
                             </div>
                             <div>
@@ -737,7 +738,7 @@ export default function FundDetailPage() {
                               <select
                                 value={editCurrency}
                                 onChange={(e) => setEditCurrency(e.target.value)}
-                                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                                className="w-full bg-slate-800 border border-slate-600 rounded-sm px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
                               >
                                 {currencies.map((c) => (
                                   <option key={c.code} value={c.code}>{c.code}</option>
@@ -752,7 +753,7 @@ export default function FundDetailPage() {
                                 step="0.01"
                                 value={editMinAmount}
                                 onChange={(e) => setEditMinAmount(e.target.value)}
-                                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                                className="w-full bg-slate-800 border border-slate-600 rounded-sm px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
                               />
                             </div>
                             <div>
@@ -775,7 +776,7 @@ export default function FundDetailPage() {
                             <button
                               type="submit"
                               disabled={editSaving}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-500 disabled:opacity-50 transition-colors"
+                              className="inline-flex items-center gap-1.5 rounded-sm bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-500 disabled:opacity-50 transition-colors"
                             >
                               {editSaving ? <Loader className="h-3.5 w-3.5 animate-spin" /> : null}
                               Save
@@ -783,7 +784,7 @@ export default function FundDetailPage() {
                             <button
                               type="button"
                               onClick={cancelEditTier}
-                              className="inline-flex items-center rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-600 transition-colors"
+                              className="inline-flex items-center rounded-sm bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-600 transition-colors"
                             >
                               Cancel
                             </button>
@@ -833,7 +834,7 @@ export default function FundDetailPage() {
             </table>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

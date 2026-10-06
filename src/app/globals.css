@@ -2,6 +2,13 @@
 
 @theme {
   --font-sans: ui-sans-serif, system-ui, sans-serif;
+  /* Radius scale — overrides Tailwind defaults so rounded-* utilities follow it.
+     Cards and controls use rounded-sm; modals and drawers use rounded-xl. */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
 }
 
 :root {
@@ -57,11 +64,6 @@
   --field-border-hover: rgb(82 82 91 / 0.96);
   --field-placeholder: var(--color-slate-500);
   --field-shadow: none;
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 0.875rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.25rem;
   --shadow-soft:
     0 1px 2px rgb(0 0 0 / 0.24),
     0 0 0 1px rgb(255 255 255 / 0.02);
@@ -145,11 +147,6 @@ html {
   --field-border-hover: rgb(212 212 216 / 0.98);
   --field-placeholder: #a1a1aa;
   --field-shadow: none;
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 0.875rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.25rem;
   --shadow-soft:
     0 1px 2px rgb(0 0 0 / 0.06),
     0 0 0 1px rgb(0 0 0 / 0.02);
