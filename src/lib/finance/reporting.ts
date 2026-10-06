@@ -4,6 +4,7 @@ import type {
   BudgetStatus,
   CashbookTransaction,
   Currency,
+  Member,
   MemberType,
 } from '@/types'
 import {
@@ -282,7 +283,11 @@ function amountsMatch(a: number, b: number) {
   return Math.abs(a - b) < 0.000001
 }
 
-export function buildFundLeaderboard(transactions: CashbookTransaction[]) {
+export function buildFundLeaderboard(
+  transactions: CashbookTransaction[],
+  members: Member[] = [],
+  defaultCurrencies: Currency[] = [],
+) {
   const groups = new Map<
     Currency,
     {
@@ -293,14 +298,7 @@ export function buildFundLeaderboard(transactions: CashbookTransaction[]) {
     }
   >()
 
-  for (const transaction of transactions) {
-    if (transaction.status !== 'posted') continue
-    if (!shouldIncludeInFundReporting(transaction)) continue
-
-    const amount = Number(transaction.total_amount)
-    const currency = transaction.currency
-    const participant = resolveFundLeaderboardParticipant(transaction)
-
+  const ensureGroup = (currency: Currency) => {
     if (!groups.has(currency)) {
       groups.set(currency, {
         transaction_count: 0,
@@ -309,8 +307,22 @@ export function buildFundLeaderboard(transactions: CashbookTransaction[]) {
         entries: new Map<string, FundLeaderboardEntry>(),
       })
     }
+    return groups.get(currency)!
+  }
 
-    const group = groups.get(currency)!
+  for (const currency of defaultCurrencies) {
+    if (currency.trim()) ensureGroup(currency)
+  }
+
+  for (const transaction of transactions) {
+    if (transaction.status !== 'posted') continue
+    if (!shouldIncludeInFundReporting(transaction)) continue
+
+    const amount = Number(transaction.total_amount)
+    const currency = transaction.currency
+    const participant = resolveFundLeaderboardParticipant(transaction)
+
+    const group = ensureGroup(currency)
     group.transaction_count += 1
 
     if (!group.entries.has(participant.key)) {
@@ -355,6 +367,37 @@ export function buildFundLeaderboard(transactions: CashbookTransaction[]) {
     entry.total_volume = entry.incoming_total + entry.outgoing_total
   }
 
+  const memberById = new Map(members.map((member) => [member.id, member]))
+  const activeIndividuals = members.filter((member) => member.is_active && member.type === 'individual')
+  const activeIndividualKeys = new Set(activeIndividuals.map((member) => `member:${member.id}`))
+
+  for (const group of groups.values()) {
+    for (const member of activeIndividuals) {
+      const participantKey = `member:${member.id}`
+      if (group.entries.has(participantKey)) continue
+
+      const assembly = member.parent_id ? memberById.get(member.parent_id) : null
+      const region = assembly?.parent_id ? memberById.get(assembly.parent_id) : null
+      group.entries.set(participantKey, {
+        participant_key: participantKey,
+        participant_name: member.name,
+        participant_kind: 'member',
+        participant_type_label: MEMBER_TYPE_LABELS.individual,
+        participant_context: assembly?.name ?? null,
+        participant_region: region?.name ?? null,
+        member_type: 'individual',
+        incoming_total: 0,
+        outgoing_total: 0,
+        net_total: 0,
+        total_volume: 0,
+        transaction_count: 0,
+        contribution_count: 0,
+        expense_count: 0,
+        last_transaction_date: null,
+      })
+    }
+  }
+
   return [...groups.entries()]
     .map(([currency, group]) => {
       const entries = [...group.entries.values()].sort(compareLeaderboardActivity)
@@ -367,7 +410,7 @@ export function buildFundLeaderboard(transactions: CashbookTransaction[]) {
         total_outgoing: group.total_outgoing,
         net_total: group.total_incoming - group.total_outgoing,
         incoming_leaders: [...entries]
-          .filter((entry) => entry.incoming_total > 0)
+          .filter((entry) => entry.incoming_total > 0 || activeIndividualKeys.has(entry.participant_key))
           .sort(compareLeaderboardIncoming),
         outgoing_leaders: [...entries]
           .filter((entry) => entry.outgoing_total > 0)

@@ -9,9 +9,11 @@ import { Modal } from '@/components/ui/Modal'
 import { UiSettingsButton } from '@/components/layout/UiSettingsButton'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { ShieldCheck, MapPin, ChevronDown, Check, Plus, User, LogOut, Landmark } from 'lucide-react'
+import { ShieldCheck, MapPin, ChevronDown, Check, Plus, User, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { districtPageFromPathname, districtPath } from '@/lib/district-routes'
 
 interface DistrictStat {
   id: string
@@ -26,7 +28,7 @@ function useDistrictStats() {
   const load = useCallback(async () => {
     const [{ data: txns }, { data: allDistricts }] = await Promise.all([
       supabase.from('cashbook_transactions').select('district_id').eq('status', 'posted'),
-      supabase.from('districts').select('id, name').order('name'),
+      supabase.from('districts').select('id, name').eq('is_active', true).order('name'),
     ])
 
     if (!allDistricts) return
@@ -53,10 +55,12 @@ function useDistrictStats() {
 }
 
 function AdminDistrictDropdown() {
-  const { districtId: activeDistrictId, setActiveDistrictId } = useAuth()
+  const { districtId: activeDistrictId, refreshMemberships } = useAuth()
   const { districts, reload } = useDistrictStats()
   const { create: createDistrict } = useDistricts()
   const toast = useToast()
+  const router = useRouter()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [newName, setNewName] = useState('')
@@ -70,6 +74,7 @@ function AdminDistrictDropdown() {
     setSaving(true)
     try {
       await createDistrict({ name: newName.trim() })
+      await refreshMemberships()
       await reload()
       toast.success('District created')
       setNewName('')
@@ -89,6 +94,13 @@ function AdminDistrictDropdown() {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
+  const handleDistrictSelect = (districtId: string) => {
+    // The district route applies its own district on arrival (DistrictRouteSync);
+    // setting the store early desyncs it from the current route.
+    setOpen(false)
+    router.push(districtPath(districtId, districtPageFromPathname(pathname)))
+  }
+
   return (
     <div ref={ref} className="relative">
       <button
@@ -98,12 +110,10 @@ function AdminDistrictDropdown() {
       >
         <MapPin className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
         <span className="font-medium max-w-[160px] truncate">
-          {selected ? selected.name : 'All districts'}
+          {selected ? selected.name : 'Select district'}
         </span>
-        {selected ? (
+        {selected && (
           <span className="text-xs text-cyan-500/70 font-normal">{selected.transaction_count}</span>
-        ) : (
-          <span className="text-xs text-cyan-500/70 font-normal">All</span>
         )}
         <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 transition-transform', open && 'rotate-180')} />
       </button>
@@ -111,29 +121,13 @@ function AdminDistrictDropdown() {
       {open && (
         <div className="absolute right-0 top-full mt-1.5 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden">
           <div className="max-h-64 overflow-y-auto">
-            <button
-              type="button"
-              onClick={() => { setActiveDistrictId(null); setOpen(false) }}
-              className={cn(
-                'flex items-center justify-between w-full px-3 py-2.5 text-sm transition-colors',
-                !activeDistrictId
-                  ? 'bg-cyan-500/10 text-cyan-300'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
-              )}
-            >
-              <span className="flex items-center gap-2 min-w-0">
-                <Landmark className={cn('h-3.5 w-3.5 shrink-0', !activeDistrictId ? 'text-cyan-400' : 'text-slate-500')} />
-                <span className="truncate">All districts</span>
-              </span>
-              {!activeDistrictId && <Check className="h-3.5 w-3.5 text-cyan-400" />}
-            </button>
             {districts.map((district) => {
               const isSelected = activeDistrictId === district.id
               return (
                 <button
                   key={district.id}
                   type="button"
-                  onClick={() => { setActiveDistrictId(district.id); setOpen(false) }}
+                  onClick={() => handleDistrictSelect(district.id)}
                   className={cn(
                     'flex items-center justify-between w-full px-3 py-2.5 text-sm transition-colors',
                     isSelected

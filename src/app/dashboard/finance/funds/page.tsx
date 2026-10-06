@@ -14,6 +14,7 @@ import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { FundsSection } from '@/components/settings/SettingsPanel'
 import { Wallet, TrendingUp, TrendingDown, ChevronRight, Lock } from 'lucide-react'
 import type { CashbookTransaction, Currency } from '@/types'
+import { districtPath } from '@/lib/district-routes'
 
 interface FundBalance {
   fundId: string
@@ -86,7 +87,7 @@ function FundBalanceCards({ districtId }: { districtId: string }) {
         return (
           <Link
             key={fund.id}
-            href={`/dashboard/finance/funds/${fund.id}`}
+            href={`${districtPath(districtId, 'funds')}/${fund.id}`}
             className="bg-slate-800 rounded-xl border border-slate-700 p-5 space-y-3 hover:border-cyan-500/40 hover:bg-slate-800/80 transition-all group"
           >
             <div className="flex items-start justify-between gap-2">

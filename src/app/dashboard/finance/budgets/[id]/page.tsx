@@ -15,6 +15,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
+import { districtPath } from '@/lib/district-routes'
 import {
   MEMBER_TYPE_LABELS,
   type Budget,
@@ -37,6 +38,7 @@ export default function BudgetDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const { districtId } = useAuth()
+  const budgetsHref = districtId ? districtPath(districtId, 'budgets') : '/dashboard/finance/budgets'
   const { can } = usePermissions()
   const toast = useToast()
 
@@ -178,7 +180,7 @@ export default function BudgetDetailPage() {
       await deleteDraft(confirmDeleteBudget.id)
       toast.success('Budget deleted')
       setConfirmDeleteBudget(null)
-      router.push('/dashboard/finance/budgets')
+      router.push(budgetsHref)
     } catch (error) {
       toast.error(String(error))
     } finally {
@@ -308,7 +310,7 @@ export default function BudgetDetailPage() {
     return (
       <div className="mx-auto max-w-5xl space-y-6 p-6">
         <Link
-          href="/dashboard/finance/budgets"
+          href={budgetsHref}
           className="inline-flex items-center gap-1 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -326,7 +328,7 @@ export default function BudgetDetailPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
       <Link
-        href="/dashboard/finance/budgets"
+        href={budgetsHref}
         className="inline-flex items-center gap-1 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
       >
         <ArrowLeft className="h-4 w-4" />

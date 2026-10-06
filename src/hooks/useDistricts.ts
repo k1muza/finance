@@ -31,6 +31,7 @@ export function useDistricts() {
       const { data: rows, error: err } = await supabase
         .from('districts')
         .select('*')
+        .eq('is_active', true)
         .order('name')
       if (err) {
         setError(err.message)

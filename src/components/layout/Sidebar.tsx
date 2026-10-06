@@ -23,17 +23,23 @@ import {
   Target,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { districtPath, type DistrictPage } from '@/lib/district-routes'
 
-const baseNav = [
-  { href: '/dashboard/overview', icon: BarChart3, label: 'Overview' },
-  { href: '/dashboard/finance/cashbook', icon: BookOpen, label: 'Cashbook' },
-  { href: '/dashboard/finance/transfers', icon: ArrowRightLeft, label: 'Transfers' },
-  { href: '/dashboard/finance/accounts', icon: Landmark, label: 'Accounts' },
-  { href: '/dashboard/finance/funds', icon: Wallet, label: 'Funds' },
-  { href: '/dashboard/finance/budgets', icon: Target, label: 'Budgets' },
-  { href: '/dashboard/finance/members', icon: Users, label: 'Members' },
-  { href: '/dashboard/finance/reports', icon: FileText, label: 'Reports' },
-  { href: '/dashboard/settings', icon: Settings2, label: 'Settings' },
+const baseNav: Array<{
+  page: DistrictPage
+  fallbackHref: string
+  icon: typeof BarChart3
+  label: string
+}> = [
+  { page: 'overview', fallbackHref: '/dashboard/overview', icon: BarChart3, label: 'Overview' },
+  { page: 'cashbook', fallbackHref: '/dashboard/finance/cashbook', icon: BookOpen, label: 'Cashbook' },
+  { page: 'transfers', fallbackHref: '/dashboard/finance/transfers', icon: ArrowRightLeft, label: 'Transfers' },
+  { page: 'accounts', fallbackHref: '/dashboard/finance/accounts', icon: Landmark, label: 'Accounts' },
+  { page: 'funds', fallbackHref: '/dashboard/finance/funds', icon: Wallet, label: 'Funds' },
+  { page: 'budgets', fallbackHref: '/dashboard/finance/budgets', icon: Target, label: 'Budgets' },
+  { page: 'members', fallbackHref: '/dashboard/finance/members', icon: Users, label: 'Members' },
+  { page: 'reports', fallbackHref: '/dashboard/finance/reports', icon: FileText, label: 'Reports' },
+  { page: 'settings', fallbackHref: '/dashboard/settings', icon: Settings2, label: 'Settings' },
 ]
 
 const adminNav: typeof baseNav = []
@@ -67,7 +73,7 @@ export function Sidebar() {
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(true)
-  const { isAdmin, user, logout } = useAuth()
+  const { districtId, isAdmin, user, logout } = useAuth()
 
   const handleMobileLogout = async () => {
     setMobileOpen(false)
@@ -86,11 +92,12 @@ export function Sidebar() {
 
   const desktopLinks = (
     <nav className="flex flex-col gap-1 mt-2">
-      {nav.map(({ href, icon: Icon, label }) => {
+      {nav.map(({ page, fallbackHref, icon: Icon, label }) => {
+        const href = districtId ? districtPath(districtId, page) : fallbackHref
         const active = pathname.startsWith(href)
         return (
           <Link
-            key={href}
+            key={page}
             href={href}
             title={collapsed ? label : undefined}
             className={cn(
@@ -111,11 +118,12 @@ export function Sidebar() {
 
   const mobileLinks = (
     <nav className="flex flex-col gap-1 mt-2">
-      {nav.map(({ href, icon: Icon, label }) => {
+      {nav.map(({ page, fallbackHref, icon: Icon, label }) => {
+        const href = districtId ? districtPath(districtId, page) : fallbackHref
         const active = pathname.startsWith(href)
         return (
           <Link
-            key={href}
+            key={page}
             href={href}
             onClick={() => setMobileOpen(false)}
             className={cn(

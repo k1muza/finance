@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, type ElementType } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { districtPath } from '@/lib/district-routes'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useFunds } from '@/hooks/useFunds'
 import { useMembers } from '@/hooks/useMembers'
@@ -1452,7 +1453,7 @@ export default function CashbookPage() {
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               {selectedFund && (
                 <Link
-                  href={`/dashboard/finance/funds/${selectedFund.id}`}
+                  href={`${districtPath(districtId, 'funds')}/${selectedFund.id}`}
                   className="inline-flex items-center gap-2 text-sm text-cyan-400 transition-colors hover:text-cyan-300"
                 >
                   Open selected fund

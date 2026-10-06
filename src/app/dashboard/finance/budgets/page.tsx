@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
+import { districtPath } from '@/lib/district-routes'
 import {
   BudgetFormModal,
   BudgetListView,
@@ -68,7 +69,7 @@ export default function BudgetsPage() {
 
       toast.success('Draft budget created')
       closeBudgetModal()
-      router.push(`/dashboard/finance/budgets/${createdBudget.id}`)
+      router.push(`${districtPath(districtId, 'budgets')}/${createdBudget.id}`)
     } catch (error) {
       toast.error(String(error))
     } finally {
@@ -115,7 +116,7 @@ export default function BudgetsPage() {
 
       <BudgetListView
         budgets={budgets}
-        getBudgetHref={(budget) => `/dashboard/finance/budgets/${budget.id}`}
+        getBudgetHref={(budget) => `${districtPath(districtId, 'budgets')}/${budget.id}`}
       />
 
       <BudgetFormModal

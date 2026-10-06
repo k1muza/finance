@@ -52,15 +52,16 @@ export async function proxy(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl
+  const isProtectedRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/district/')
 
   const allowOfflineDashboard =
-    pathname.startsWith('/dashboard') &&
+    isProtectedRoute &&
     !user &&
     hasSupabaseAuthCookie(request) &&
     isRetryableAuthFailure(authError)
 
   // Redirect unauthenticated users away from dashboard.
-  if (!user && pathname.startsWith('/dashboard') && !allowOfflineDashboard) {
+  if (!user && isProtectedRoute && !allowOfflineDashboard) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

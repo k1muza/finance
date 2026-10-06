@@ -7,6 +7,7 @@ import { CurrencyRow } from '@/types'
 
 export function useCurrencies() {
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const [data, setData] = useState<CurrencyRow[]>([])
   const [loading, setLoading] = useState(true)
   const [supabase] = useState(() => createClient())
@@ -14,7 +15,7 @@ export function useCurrencies() {
   useEffect(() => {
     if (authLoading) return
 
-    if (!user) {
+    if (!userId) {
       const timeout = setTimeout(() => {
         setData([])
         setLoading(false)
@@ -42,7 +43,7 @@ export function useCurrencies() {
       cancelled = true
       clearTimeout(timeout)
     }
-  }, [authLoading, user, supabase])
+  }, [authLoading, userId, supabase])
 
   return { data, loading }
 }

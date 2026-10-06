@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { formatCurrency } from '@/lib/utils/formatCurrency'
 import { cn } from '@/lib/utils/cn'
+import { districtPath } from '@/lib/district-routes'
 
 type QuickLink = {
   href: string
@@ -29,25 +30,25 @@ export default function OverviewPage() {
 
   const quickLinks: QuickLink[] = [
     {
-      href: '/dashboard/finance/cashbook',
+      href: districtId ? districtPath(districtId, 'cashbook') : '/dashboard/finance/cashbook',
       label: 'Cashbook',
       hint: 'Work through draft, approval, posting, and reversals',
       icon: BookOpen,
     },
     {
-      href: '/dashboard/finance/transfers',
+      href: districtId ? districtPath(districtId, 'transfers') : '/dashboard/finance/transfers',
       label: 'Transfers',
       hint: 'Move funds between district accounts without polluting fund totals',
       icon: ArrowRightLeft,
     },
     {
-      href: '/dashboard/finance/reports',
+      href: districtId ? districtPath(districtId, 'reports') : '/dashboard/finance/reports',
       label: 'Reports',
       hint: 'Review operational cashbook, fund, and budget reporting',
       icon: Landmark,
     },
     {
-      href: '/dashboard/settings',
+      href: districtId ? districtPath(districtId, 'settings') : '/dashboard/settings',
       label: 'Settings',
       hint: 'Manage districts, imports, and finance configuration',
       icon: Settings2,

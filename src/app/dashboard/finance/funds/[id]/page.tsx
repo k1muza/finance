@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { districtPath } from '@/lib/district-routes'
 import { useDistricts } from '@/hooks/useDistricts'
 import { useFunds } from '@/hooks/useFunds'
 import { useCurrencies } from '@/hooks/useCurrencies'
@@ -102,6 +103,7 @@ const firstOfMonth = () => { const d = new Date(); d.setDate(1); return toIsoDat
 export default function FundDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { districtId } = useAuth()
+  const fundsHref = districtId ? districtPath(districtId, 'funds') : '/dashboard/finance/funds'
   const { can } = usePermissions()
   const toast = useToast()
   const { data: districts } = useDistricts()
@@ -352,7 +354,7 @@ export default function FundDetailPage() {
 
   if (!fund && !fundsLoading) return (
     <div className="p-6 max-w-4xl mx-auto space-y-4">
-      <Link href="/dashboard/finance/funds" className="text-sm text-slate-400 hover:text-slate-200 flex items-center gap-1">
+      <Link href={fundsHref} className="text-sm text-slate-400 hover:text-slate-200 flex items-center gap-1">
         <ArrowLeft className="h-4 w-4" /> Back to funds
       </Link>
       <p className="text-slate-400">Fund not found.</p>
@@ -362,7 +364,7 @@ export default function FundDetailPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       {/* back link */}
-      <Link href="/dashboard/finance/funds" className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200 transition-colors">
+      <Link href={fundsHref} className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200 transition-colors">
         <ArrowLeft className="h-4 w-4" /> All funds
       </Link>
 
@@ -388,7 +390,7 @@ export default function FundDetailPage() {
         </div>
 
         <Link
-          href={`/dashboard/finance/funds/${id}/leaderboard`}
+          href={`${fundsHref}/${id}/leaderboard`}
           className="inline-flex items-center gap-2 self-start rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-sm font-medium text-cyan-300 transition-colors hover:bg-cyan-500/15"
         >
           <Trophy className="h-4 w-4" />

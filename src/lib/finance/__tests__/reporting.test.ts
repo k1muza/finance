@@ -433,6 +433,48 @@ describe('cashbook reporting helpers', () => {
     })
   })
 
+  it('includes active individual members with zero contributions', () => {
+    const district = makeMember({ id: 'district-member', type: 'district', name: 'Zone' })
+    const region = makeMember({ id: 'region-1', type: 'region', name: 'South Region', parent_id: district.id })
+    const assembly = makeMember({ id: 'assembly-1', type: 'assembly', name: 'Southgate', parent_id: region.id })
+    const contributor = makeMember({ id: 'individual-1', name: 'Contributor', parent_id: assembly.id })
+    const zeroContributor = makeMember({ id: 'individual-2', name: 'Zero Member', parent_id: assembly.id })
+    const inactiveMember = makeMember({ id: 'individual-3', name: 'Inactive Member', parent_id: assembly.id, is_active: false })
+
+    const rows = buildFundLeaderboard([
+      makeTransaction({
+        member_id: contributor.id,
+        member: contributor,
+        total_amount: 50,
+      }),
+    ], [district, region, assembly, contributor, zeroContributor, inactiveMember], ['USD'])
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0].incoming_leaders.map((entry) => ({
+      name: entry.participant_name,
+      amount: entry.incoming_total,
+      assembly: entry.participant_context,
+      region: entry.participant_region,
+    }))).toEqual([
+      { name: 'Contributor', amount: 50, assembly: null, region: null },
+      { name: 'Zero Member', amount: 0, assembly: 'Southgate', region: 'South Region' },
+    ])
+  })
+
+  it('creates a default-currency leaderboard when every member is at zero', () => {
+    const member = makeMember({ id: 'individual-1', name: 'Zero Member' })
+    const rows = buildFundLeaderboard([], [member], ['USD'])
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0].currency).toBe('USD')
+    expect(rows[0].incoming_leaders[0]).toMatchObject({
+      participant_key: 'member:individual-1',
+      participant_name: 'Zero Member',
+      incoming_total: 0,
+      contribution_count: 0,
+    })
+  })
+
   it('builds expense budget comparison rows using fund, period, currency, and member scope', () => {
     const assembly = makeMember({
       id: 'assembly-1',

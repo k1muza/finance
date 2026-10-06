@@ -8,8 +8,12 @@ import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { Button } from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { useAuth } from '@/contexts/AuthContext'
+import { districtPath } from '@/lib/district-routes'
+import { getAssemblyLabel } from '@/lib/finance/assembly-labels'
 import { useFunds } from '@/hooks/useFunds'
 import { useFundRecognitionTiers } from '@/hooks/useFundRecognitionTiers'
+import { useMembers } from '@/hooks/useMembers'
+import { useDistricts } from '@/hooks/useDistricts'
 import {
   buildFundLeaderboard,
   buildFundLeaderboardSnapshot,
@@ -36,9 +40,9 @@ type SnapshotPayload = {
   groups: FundLeaderboardSnapshotCurrencyGroup[]
 }
 
-type RegionRankingRow = {
-  region: string
-  participantCount: number
+type AssemblyRankingRow = {
+  assembly: string
+  memberCount: number
   totalIncoming: number
 }
 
@@ -47,8 +51,8 @@ type ReportSection = {
   contributors: FundLeaderboardEntry[]
   contributorCount: number
   averageGift: number
-  regionRows: RegionRankingRow[]
-  topRegion: RegionRankingRow | null
+  assemblyRows: AssemblyRankingRow[]
+  topAssembly: AssemblyRankingRow | null
 }
 
 function toIsoDate(date: Date) {
@@ -210,30 +214,30 @@ function getCompetitionRank<T>(
   return rank
 }
 
-function buildRegionRankings(group: FundLeaderboardCurrencyGroup) {
-  const regionMap = new Map<string, RegionRankingRow>()
+function buildAssemblyRankings(group: FundLeaderboardCurrencyGroup) {
+  const assemblyMap = new Map<string, AssemblyRankingRow>()
 
   for (const entry of group.incoming_leaders) {
-    const region = entry.participant_region?.trim() || 'Unassigned'
-    const existing = regionMap.get(region)
+    const assembly = getAssemblyLabel(entry.participant_context)
+    const existing = assemblyMap.get(assembly)
 
     if (existing) {
-      existing.participantCount += 1
+      existing.memberCount += 1
       existing.totalIncoming += entry.incoming_total
       continue
     }
 
-    regionMap.set(region, {
-      region,
-      participantCount: 1,
+    assemblyMap.set(assembly, {
+      assembly,
+      memberCount: 1,
       totalIncoming: entry.incoming_total,
     })
   }
 
-  return [...regionMap.values()].sort((a, b) => (
+  return [...assemblyMap.values()].sort((a, b) => (
     b.totalIncoming - a.totalIncoming
-    || b.participantCount - a.participantCount
-    || a.region.localeCompare(b.region)
+    || b.memberCount - a.memberCount
+    || a.assembly.localeCompare(b.assembly)
   ))
 }
 
@@ -344,7 +348,7 @@ function MovementBadge({
   )
 }
 
-function RegionRankingsSection({
+function AssemblyRankingsSection({
   section,
 }: {
   section: ReportSection
@@ -353,16 +357,16 @@ function RegionRankingsSection({
     <section className="print-break-avoid space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Region Rankings</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">District Rankings</p>
         </div>
         <div className="print-color-exact inline-flex rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-app)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
           {section.group.currency} currency view
         </div>
       </div>
 
-      {section.regionRows.length === 0 ? (
+      {section.assemblyRows.length === 0 ? (
         <div className="rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] px-4 py-8 text-center text-sm text-slate-500">
-          No regional contribution data is available for this currency.
+          No district contribution data is available for this currency.
         </div>
       ) : (
         <div className="overflow-hidden rounded-[5px] border border-[var(--border-strong)] bg-[var(--surface-panel)] shadow-[var(--shadow-card)]">
@@ -370,17 +374,17 @@ function RegionRankingsSection({
             <thead className="print-color-exact bg-[var(--surface-panel-muted)] text-[11px] uppercase tracking-[0.18em] text-slate-600">
               <tr>
                 <th className="px-4 py-3 font-semibold">Rank</th>
-                <th className="px-4 py-3 font-semibold">Region</th>
-                <th className="px-4 py-3 text-right font-semibold">Contributors</th>
+                <th className="px-4 py-3 font-semibold">District</th>
+                <th className="px-4 py-3 text-right font-semibold">Members</th>
                 <th className="px-4 py-3 text-right font-semibold">Total</th>
               </tr>
             </thead>
             <tbody className="text-sm text-slate-600">
-              {section.regionRows.map((row, index) => (
-                <tr key={row.region} className="border-t border-[var(--border-subtle)] odd:bg-[var(--surface-panel)] even:bg-[var(--surface-panel-muted)]">
+              {section.assemblyRows.map((row, index) => (
+                <tr key={row.assembly} className="border-t border-[var(--border-subtle)] odd:bg-[var(--surface-panel)] even:bg-[var(--surface-panel-muted)]">
                   <td className="px-4 py-3 font-medium text-slate-500">#{index + 1}</td>
-                  <td className="px-4 py-3 font-semibold text-[var(--text-primary)]" title={row.region}>{getInitials(row.region)}</td>
-                  <td className="px-4 py-3 text-right">{row.participantCount}</td>
+                  <td className="px-4 py-3 font-semibold text-[var(--text-primary)]" title={row.assembly}>{row.assembly}</td>
+                  <td className="px-4 py-3 text-right">{row.memberCount}</td>
                   <td className="px-4 py-3 text-right font-semibold text-[var(--text-primary)]">
                     {formatCurrency(row.totalIncoming, section.group.currency)}
                   </td>
@@ -428,7 +432,7 @@ function ContributorsSection({
               <tr>
                 <th className="px-4 py-3 font-semibold">Rank</th>
                 <th className="px-4 py-3 font-semibold">Name</th>
-                <th className="px-4 py-3 font-semibold">Region</th>
+                <th className="px-4 py-3 font-semibold">District</th>
                 {hasTiersForCurrency && <th className="px-4 py-3 font-semibold">Class</th>}
                 <th className="px-4 py-3 font-semibold">Move</th>
                 <th className="px-4 py-3 text-right font-semibold">Amount</th>
@@ -466,7 +470,7 @@ function ContributorsSection({
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-500" title={entry.participant_region || 'Unassigned'}>{getInitials(entry.participant_region || 'Unassigned')}</td>
+                    <td className="px-4 py-3 text-slate-500" title={entry.participant_context || 'Unassigned'}>{getAssemblyLabel(entry.participant_context)}</td>
                     {hasTiersForCurrency && (
                       <td className="px-4 py-3">
                         {recognitionTier ? <RecognitionTierBadge tier={recognitionTier} /> : <span className="text-slate-400 text-xs">—</span>}
@@ -492,7 +496,10 @@ function ContributorsSection({
 export default function FundLeaderboardPage() {
   const { id } = useParams<{ id: string }>()
   const { districtId } = useAuth()
+  const fundsHref = districtId ? districtPath(districtId, 'funds') : '/dashboard/finance/funds'
   const { data: funds, loading: fundsLoading } = useFunds({ district_id: districtId })
+  const { data: members, loading: membersLoading } = useMembers({ district_id: districtId })
+  const { data: districts, loading: districtsLoading } = useDistricts()
   const { data: recognitionTiers } = useFundRecognitionTiers(id)
   const [supabase] = useState(() => createClient())
   const [transactions, setTransactions] = useState<CashbookTransaction[]>([])
@@ -511,7 +518,11 @@ export default function FundLeaderboardPage() {
   }, [customFrom, customTo, preset])
 
   const fund = funds.find((item) => item.id === id)
-  const leaderboard = useMemo(() => buildFundLeaderboard(transactions), [transactions])
+  const districtCurrency = districts.find((district) => district.id === districtId)?.default_currency ?? 'USD'
+  const leaderboard = useMemo(
+    () => buildFundLeaderboard(transactions, members, [districtCurrency]),
+    [districtCurrency, members, transactions],
+  )
   const rangeLabel = activeRangeLabel(preset, customFrom, customTo)
   const snapshotStorageKey = districtId && id ? getSnapshotStorageKey(districtId, id, rangeLabel) : null
 
@@ -520,15 +531,15 @@ export default function FundLeaderboardPage() {
       const contributors = group.incoming_leaders
       const contributionCount = contributors.reduce((sum, entry) => sum + entry.contribution_count, 0)
       const averageGift = contributionCount > 0 ? group.total_incoming / contributionCount : 0
-      const regionRows = buildRegionRankings(group)
+      const assemblyRows = buildAssemblyRankings(group)
 
       return {
         group,
         contributors,
         contributorCount: contributors.length,
         averageGift,
-        regionRows,
-        topRegion: regionRows[0] ?? null,
+        assemblyRows,
+        topAssembly: assemblyRows[0]?.totalIncoming ? assemblyRows[0] : null,
       }
     })
   ), [leaderboard])
@@ -680,13 +691,13 @@ export default function FundLeaderboardPage() {
     )
   }
 
-  if (fundsLoading || loading) return <PageSpinner />
+  if (fundsLoading || membersLoading || districtsLoading || loading) return <PageSpinner />
 
   if (!fund) {
     return (
       <div className="mx-auto max-w-4xl space-y-4 p-6">
         <Link
-          href="/dashboard/finance/funds"
+          href={fundsHref}
           className="inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-slate-200"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -754,7 +765,7 @@ export default function FundLeaderboardPage() {
         <div className="space-y-8">
           <div className="print-hidden flex items-center justify-between gap-4">
             <Link
-              href={`/dashboard/finance/funds/${id}`}
+              href={`${fundsHref}/${id}`}
               className="inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-[var(--text-primary)]"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -783,7 +794,7 @@ export default function FundLeaderboardPage() {
                 <div>
                   <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-4xl">{fund.name}</h1>
                   <p className="mt-2 max-w-2xl text-sm text-slate-500">
-                    {fund.description || 'Structured contribution summary with region rankings and individual contributor totals.'}
+                    {fund.description || 'Structured contribution summary with rankings and individual contributor totals.'}
                   </p>
                   {snapshot && (
                     <p className="mt-3 text-xs font-medium text-slate-500">
@@ -847,14 +858,14 @@ export default function FundLeaderboardPage() {
                     tone="amber"
                   />
                   <SummaryCard
-                    label="Top Region"
-                    value={section.topRegion?.region ?? 'No region data'}
+                    label="Top District"
+                    value={section.topAssembly?.assembly ?? '-'}
                     tone="rose"
                   />
                 </div>
 
                 <ContributorsSection section={section} snapshot={snapshotByCurrency.get(section.group.currency) ?? null} recognitionTiers={recognitionTiers} />
-                <RegionRankingsSection section={section} />
+                <AssemblyRankingsSection section={section} />
               </section>
             ))
           )}
