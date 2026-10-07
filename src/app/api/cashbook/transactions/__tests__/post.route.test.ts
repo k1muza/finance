@@ -144,7 +144,7 @@ describe('cashbook post route', () => {
     })
     requireDistrictActionMock.mockResolvedValue({
       user: { id: 'user-1' },
-      role: 'treasurer',
+      role: 'accounting_officer',
       isSuperuser: false,
     })
 
@@ -199,7 +199,7 @@ describe('cashbook post route', () => {
     })
     requireDistrictActionMock.mockResolvedValue({
       user: { id: 'user-1' },
-      role: 'clerk',
+      role: 'assistant_accounting_officer',
       isSuperuser: false,
     })
 
@@ -215,7 +215,7 @@ describe('cashbook post route', () => {
       supabase,
       'token-123',
       'district-1',
-      'transactions.draft',
+      'transactions.post',
     )
     expect(buildPostedTransactionUpdateMock).toHaveBeenCalledWith(
       supabase,

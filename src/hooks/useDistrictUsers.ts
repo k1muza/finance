@@ -4,10 +4,15 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import type { DistrictRole } from '@/lib/auth/permissions'
+import type { RoleScope } from '@/lib/auth/district-users'
 
 export interface DistrictUser {
   user_id: string
   role: DistrictRole
+  /** Region, assembly or ministry a scoped role is tied to. */
+  scope_member_id: string | null
+  /** Department a departmental role is tied to. */
+  scope_department_id: string | null
   is_active: boolean
   created_at: string
   display_name: string | null
@@ -71,16 +76,19 @@ export function useDistrictUsers(districtId: string | null, enabled = true) {
     return () => clearTimeout(timeout)
   }, [authLoading, fetch])
 
-  const add = async (email: string, role: DistrictRole) => {
+  const add = async (email: string, role: DistrictRole, scope?: Partial<RoleScope>) => {
     if (!districtId) throw new Error('Select a district first')
     await request(`/api/districts/${encodeURIComponent(districtId)}/members`, {
       method: 'POST',
-      body: JSON.stringify({ email, role }),
+      body: JSON.stringify({ email, role, ...scope }),
     })
     await fetch()
   }
 
-  const update = async (targetUserId: string, patch: { role?: DistrictRole; is_active?: boolean }) => {
+  const update = async (
+    targetUserId: string,
+    patch: { role?: DistrictRole; is_active?: boolean } & Partial<RoleScope>,
+  ) => {
     if (!districtId) throw new Error('Select a district first')
     await request(
       `/api/districts/${encodeURIComponent(districtId)}/members/${encodeURIComponent(targetUserId)}`,

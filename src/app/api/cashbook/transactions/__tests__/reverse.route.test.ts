@@ -162,7 +162,7 @@ describe('cashbook reverse route', () => {
     hydrateTransactionPartiesMock.mockImplementation(async (_supabase, rows) => rows)
     requireDistrictActionMock.mockResolvedValue({
       user: { id: 'user-1' },
-      role: 'treasurer',
+      role: 'accounting_officer',
       isSuperuser: false,
     })
   })

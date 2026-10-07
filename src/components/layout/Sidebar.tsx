@@ -32,6 +32,8 @@ import {
   HandHeart,
   LayoutDashboard,
   CalendarRange,
+  Building2,
+  Coins,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { navItemClass } from '@/components/layout/nav-styles'
@@ -73,10 +75,11 @@ const mainNav: NavEntry[] = [
     label: 'Finance',
     icon: Banknote,
     items: [
-      { page: 'cashbook', fallbackHref: '/dashboard/finance/cashbook', icon: BookOpen, label: 'Cashbook' },
-      { page: 'transfers', fallbackHref: '/dashboard/finance/transfers', icon: ArrowRightLeft, label: 'Transfers' },
-      { page: 'budgets', fallbackHref: '/dashboard/finance/budgets', icon: Target, label: 'Budgets' },
-      { page: 'reports', fallbackHref: '/dashboard/finance/reports', icon: FileText, label: 'Reports' },
+      { page: 'cashbook', fallbackHref: '/dashboard/finance/cashbook', icon: BookOpen, label: 'Cashbook', requires: 'transactions.view' },
+      { page: 'collections', icon: Coins, label: 'Collections', requires: 'collections.view' },
+      { page: 'transfers', fallbackHref: '/dashboard/finance/transfers', icon: ArrowRightLeft, label: 'Transfers', requires: 'transfers.view' },
+      { page: 'budgets', fallbackHref: '/dashboard/finance/budgets', icon: Target, label: 'Budgets', requires: 'budgets.view' },
+      { page: 'reports', fallbackHref: '/dashboard/finance/reports', icon: FileText, label: 'Reports', requires: 'reports.view' },
     ],
   },
   {
@@ -84,8 +87,8 @@ const mainNav: NavEntry[] = [
     label: 'Ledger setup',
     icon: Library,
     items: [
-      { page: 'accounts', fallbackHref: '/dashboard/finance/accounts', icon: Landmark, label: 'Accounts' },
-      { page: 'funds', fallbackHref: '/dashboard/finance/funds', icon: Wallet, label: 'Funds' },
+      { page: 'accounts', fallbackHref: '/dashboard/finance/accounts', icon: Landmark, label: 'Accounts', requires: 'financials.view_private' },
+      { page: 'funds', fallbackHref: '/dashboard/finance/funds', icon: Wallet, label: 'Funds', requires: 'financials.view_private' },
     ],
   },
   {
@@ -104,7 +107,8 @@ const mainNav: NavEntry[] = [
     label: 'Coordination',
     icon: Handshake,
     items: [
-      { page: 'calendar', icon: CalendarDays, label: 'Calendar' },
+      { page: 'calendar', icon: CalendarDays, label: 'Calendar', requires: 'events.view' },
+      { page: 'departments', icon: Building2, label: 'Departments', requires: 'events.view' },
     ],
   },
 ]

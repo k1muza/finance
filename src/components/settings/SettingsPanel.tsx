@@ -52,6 +52,7 @@ interface FundFormState {
   nature: FundNature
   is_active: boolean
   requires_individual_member: boolean
+  is_public: boolean
 }
 
 interface AccountFormState {
@@ -74,6 +75,7 @@ const emptyFundForm: FundFormState = {
   nature: 'mixed',
   is_active: true,
   requires_individual_member: false,
+  is_public: false,
 }
 
 const emptyAccountForm: AccountFormState = {
@@ -815,6 +817,7 @@ export function FundsSection({ districtId }: { districtId: string }) {
         nature: newFund.nature,
         is_active: newFund.is_active,
         requires_individual_member: newFund.requires_individual_member,
+        is_public: newFund.is_public,
       })
       setNewFund(emptyFundForm)
       setAdding(false)
@@ -836,6 +839,7 @@ export function FundsSection({ districtId }: { districtId: string }) {
       nature: fund.nature ?? 'mixed',
       is_active: fund.is_active ?? true,
       requires_individual_member: fund.requires_individual_member ?? false,
+      is_public: fund.is_public ?? false,
     })
   }
 
@@ -855,6 +859,7 @@ export function FundsSection({ districtId }: { districtId: string }) {
         nature: draftFund.nature,
         is_active: draftFund.is_active,
         requires_individual_member: draftFund.requires_individual_member,
+        is_public: draftFund.is_public,
       })
       setEditingId(null)
       toast.success('Fund updated')
@@ -945,6 +950,15 @@ export function FundsSection({ districtId }: { districtId: string }) {
                     className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
                   />
                   <span className="text-sm text-slate-200">Receipts require individual member</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newFund.is_public}
+                    onChange={(e) => setNewFund((current) => ({ ...current, is_public: e.target.checked }))}
+                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
+                  />
+                  <span className="text-sm text-slate-200">Public — visible to all district roles</span>
                 </label>
               </div>
             </div>
@@ -1042,6 +1056,15 @@ export function FundsSection({ districtId }: { districtId: string }) {
                               />
                               Indiv. member on receipts
                             </label>
+                            <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={draftFund.is_public}
+                                onChange={(e) => setDraftFund((current) => ({ ...current, is_public: e.target.checked }))}
+                                className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
+                              />
+                              Public
+                            </label>
                           </div>
                         ) : (
                           <div className="flex flex-col gap-1">
@@ -1051,6 +1074,9 @@ export function FundsSection({ districtId }: { districtId: string }) {
                             {fund.nature !== 'mixed' && (
                               <Badge variant="default">{FUND_NATURE_LABELS[fund.nature]}</Badge>
                             )}
+                            <Badge variant={fund.is_public ? 'green' : 'default'}>
+                              {fund.is_public ? 'Public' : 'Private'}
+                            </Badge>
                           </div>
                         )}
                       </td>

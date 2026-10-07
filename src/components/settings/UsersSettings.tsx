@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { ShieldCheck, UserPlus } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -14,25 +14,42 @@ import { PageSpinner } from '@/components/ui/Spinner'
 import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useDepartments } from '@/hooks/useDepartments'
 import { useDistrictUsers, type DistrictUser } from '@/hooks/useDistrictUsers'
+import { useMembers } from '@/hooks/useMembers'
+import type { RoleScope } from '@/lib/auth/district-users'
 import {
   DISTRICT_ROLES,
   ROLE_DESCRIPTIONS,
   ROLE_LABELS,
+  roleScopeKind,
+  SCOPE_KIND_LABELS,
   type DistrictRole,
+  type RoleScopeKind,
 } from '@/lib/auth/permissions'
 
 const TITLE = 'Users & roles'
-const DESCRIPTION = 'Add people to this district and choose what they can do. Promote someone to District Admin to let them manage users.'
+const DESCRIPTION = 'Add people to this district and choose what they can do. District Pastors and Accounting Officers can manage users.'
 
 const ROLE_OPTIONS = DISTRICT_ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] }))
 
 type PendingChange =
-  | { kind: 'role'; user: DistrictUser; role: DistrictRole }
+  | { kind: 'role'; user: DistrictUser; role: DistrictRole; scope: RoleScope }
   | { kind: 'deactivate'; user: DistrictUser }
+
+/** The add-user form and the change-role form share one dialog. */
+type RoleDialog = { kind: 'add' } | { kind: 'edit'; user: DistrictUser }
 
 function displayName(user: DistrictUser) {
   return user.display_name || user.email || 'Unknown user'
+}
+
+function scopeFor(role: DistrictRole, scopeId: string): RoleScope {
+  const kind = roleScopeKind(role)
+  return {
+    scope_member_id: kind && kind !== 'department' ? scopeId || null : null,
+    scope_department_id: kind === 'department' ? scopeId || null : null,
+  }
 }
 
 /** Settings → Users & roles. Access is checked by SettingsSectionGate. */
@@ -42,23 +59,51 @@ export function UsersSettings() {
   const canManage = can('district.users.manage')
   const toast = useToast()
   const { data: users, loading, error, add, update } = useDistrictUsers(districtId, canManage)
+  const { data: units } = useMembers({ district_id: districtId })
+  const { data: departments } = useDepartments(districtId, { withRoster: false })
 
-  const [addOpen, setAddOpen] = useState(false)
+  const [dialog, setDialog] = useState<RoleDialog | null>(null)
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<DistrictRole>('viewer')
-  const [adding, setAdding] = useState(false)
+  const [role, setRole] = useState<DistrictRole>('district_secretary')
+  const [scopeId, setScopeId] = useState('')
+  const [saving, setSaving] = useState(false)
   const [pending, setPending] = useState<PendingChange | null>(null)
   const [savingUserId, setSavingUserId] = useState<string | null>(null)
 
-  const activeAdminCount = users.filter((u) => u.is_active && u.role === 'admin').length
+  const scopeOptions = useMemo(() => {
+    const byKind: Record<RoleScopeKind, { value: string; label: string }[]> = {
+      region: [],
+      assembly: [],
+      ministry: [],
+      department: departments.filter((d) => d.is_active).map((d) => ({ value: d.id, label: d.name })),
+    }
+    for (const unit of units) {
+      if (!unit.is_active) continue
+      const option = { value: unit.id, label: unit.name }
+      if (unit.type === 'region') byKind.region.push(option)
+      else if (unit.type === 'assembly') byKind.assembly.push(option)
+      else if (unit.type === 'department') byKind.ministry.push(option)
+    }
+    return byKind
+  }, [units, departments])
+
+  const scopeName = (u: DistrictUser) => {
+    if (u.scope_department_id) return departments.find((d) => d.id === u.scope_department_id)?.name ?? null
+    if (u.scope_member_id) return units.find((m) => m.id === u.scope_member_id)?.name ?? null
+    return null
+  }
+
+  const activePastorCount = users.filter((u) => u.is_active && u.role === 'district_pastor').length
   const sortedUsers = [...users].sort((a, b) => Number(b.is_active) - Number(a.is_active))
+  const scopeKind = roleScopeKind(role)
 
   const applyChange = async (change: PendingChange) => {
     setSavingUserId(change.user.user_id)
     try {
       if (change.kind === 'role') {
-        await update(change.user.user_id, { role: change.role })
+        await update(change.user.user_id, { role: change.role, ...change.scope })
         toast.success(`${displayName(change.user)} is now ${ROLE_LABELS[change.role]}`)
+        setDialog(null)
       } else {
         await update(change.user.user_id, { is_active: false })
         toast.success(`${displayName(change.user)} no longer has access`)
@@ -69,14 +114,6 @@ export function UsersSettings() {
     } finally {
       setSavingUserId(null)
     }
-  }
-
-  const requestRoleChange = (target: DistrictUser, nextRole: DistrictRole) => {
-    if (nextRole === target.role) return
-    const change: PendingChange = { kind: 'role', user: target, role: nextRole }
-    // Changing your own role can lock you out of this page, so confirm first.
-    if (target.user_id === currentUser?.id) setPending(change)
-    else void applyChange(change)
   }
 
   const reactivate = async (target: DistrictUser) => {
@@ -91,27 +128,54 @@ export function UsersSettings() {
     }
   }
 
-  const closeAdd = () => {
-    setAddOpen(false)
+  const openAdd = () => {
     setEmail('')
-    setRole('viewer')
+    setRole('district_secretary')
+    setScopeId('')
+    setDialog({ kind: 'add' })
   }
 
-  const handleAdd = async (event: FormEvent) => {
+  const openEdit = (target: DistrictUser) => {
+    setRole(target.role)
+    setScopeId(target.scope_department_id ?? target.scope_member_id ?? '')
+    setDialog({ kind: 'edit', user: target })
+  }
+
+  const changeRole = (next: DistrictRole) => {
+    // Keep the chosen unit only while the kind of unit stays the same.
+    if (roleScopeKind(next) !== roleScopeKind(role)) setScopeId('')
+    setRole(next)
+  }
+
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
+    if (scopeKind && !scopeId) {
+      toast.error(`Choose a ${SCOPE_KIND_LABELS[scopeKind].toLowerCase()} for ${ROLE_LABELS[role]}`)
+      return
+    }
+    const scope = scopeFor(role, scopeId)
+
+    if (dialog?.kind === 'edit') {
+      const change: PendingChange = { kind: 'role', user: dialog.user, role, scope }
+      // Changing your own role can lock you out of this page, so confirm first.
+      if (dialog.user.user_id === currentUser?.id) setPending(change)
+      else void applyChange(change)
+      return
+    }
+
     if (!email.trim()) {
       toast.error('Email is required')
       return
     }
-    setAdding(true)
+    setSaving(true)
     try {
-      await add(email, role)
+      await add(email, role, scope)
       toast.success(`Added ${email.trim()} as ${ROLE_LABELS[role]}`)
-      closeAdd()
+      setDialog(null)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err))
     } finally {
-      setAdding(false)
+      setSaving(false)
     }
   }
 
@@ -134,6 +198,11 @@ export function UsersSettings() {
     }
   })()
 
+  const editingUser = dialog?.kind === 'edit' ? dialog.user : null
+  const editingLastPastor = Boolean(
+    editingUser?.is_active && editingUser.role === 'district_pastor' && activePastorCount <= 1,
+  )
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -141,7 +210,7 @@ export function UsersSettings() {
         title={TITLE}
         description={DESCRIPTION}
         actions={(
-          <Button onClick={() => setAddOpen(true)}>
+          <Button onClick={openAdd}>
             <UserPlus className="h-4 w-4" />
             Add user
           </Button>
@@ -152,9 +221,9 @@ export function UsersSettings() {
         <CardHeader className="border-b [border-color:var(--border-subtle)]">
           <CardTitle>People with access</CardTitle>
           <CardDescription>
-            {activeAdminCount === 1
-              ? 'This district has one admin. Promote a second person so you are never locked out.'
-              : `${activeAdminCount} district admins.`}
+            {activePastorCount === 1
+              ? 'This district has one District Pastor. Assign a second so you are never locked out.'
+              : `${activePastorCount} District Pastors.`}
           </CardDescription>
         </CardHeader>
         {loading ? (
@@ -171,8 +240,9 @@ export function UsersSettings() {
           <ul className="divide-y [&>li]:[border-color:var(--border-subtle)]">
             {sortedUsers.map((u) => {
               const isSelf = u.user_id === currentUser?.id
-              const isLastAdmin = u.is_active && u.role === 'admin' && activeAdminCount <= 1
+              const isLastPastor = u.is_active && u.role === 'district_pastor' && activePastorCount <= 1
               const saving = savingUserId === u.user_id
+              const unit = scopeName(u)
               return (
                 <li
                   key={u.user_id}
@@ -190,25 +260,28 @@ export function UsersSettings() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {u.role === 'admin' && u.is_active && (
-                      <ShieldCheck className="h-4 w-4 shrink-0 text-[var(--accent-solid)]" aria-label="Admin" />
+                    {u.role === 'district_pastor' && u.is_active && (
+                      <ShieldCheck className="h-4 w-4 shrink-0 text-[var(--accent-solid)]" aria-label="District Pastor" />
                     )}
-                    <div className="w-48">
-                      <Select
-                        aria-label={`Role for ${displayName(u)}`}
-                        value={u.role}
-                        options={ROLE_OPTIONS}
-                        disabled={saving || !u.is_active || isLastAdmin}
-                        title={isLastAdmin ? 'Promote another admin before changing this role' : undefined}
-                        onChange={(e) => requestRoleChange(u, e.target.value as DistrictRole)}
-                      />
+                    <div className="w-56 text-right sm:text-left">
+                      <p className="text-sm text-[var(--text-primary)]">{ROLE_LABELS[u.role] ?? u.role}</p>
+                      {roleScopeKind(u.role) && (
+                        <p className="truncate text-xs text-[var(--text-tertiary)]">
+                          {unit ?? `No ${SCOPE_KIND_LABELS[roleScopeKind(u.role)!].toLowerCase()} set`}
+                        </p>
+                      )}
                     </div>
+                    {u.is_active && (
+                      <Button variant="secondary" size="sm" disabled={saving} onClick={() => openEdit(u)}>
+                        Change role
+                      </Button>
+                    )}
                     {u.is_active ? (
                       <Button
                         variant="ghost"
                         size="sm"
-                        disabled={saving || isLastAdmin}
-                        title={isLastAdmin ? 'Promote another admin before removing this one' : undefined}
+                        disabled={saving || isLastPastor}
+                        title={isLastPastor ? 'Assign another District Pastor before removing this one' : undefined}
                         onClick={() => setPending({ kind: 'deactivate', user: u })}
                       >
                         Remove access
@@ -229,6 +302,9 @@ export function UsersSettings() {
       <Card>
         <CardHeader>
           <CardTitle>What each role can do</CardTitle>
+          <CardDescription>
+            Members of the Finance Committee department can also view all financials and collections, whatever their role.
+          </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           <dl className="grid gap-3 sm:grid-cols-2">
@@ -242,37 +318,66 @@ export function UsersSettings() {
         </CardContent>
       </Card>
 
-      <Modal open={addOpen} onClose={closeAdd} title="Add user">
-        <form onSubmit={handleAdd} className="space-y-4">
-          <Input
-            id="add-user-email"
-            label="Email"
-            type="email"
-            autoComplete="off"
-            placeholder="name@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoFocus
-          />
-          <p className="-mt-2 text-xs text-[var(--text-tertiary)]">
-            They need to have signed up already.
-          </p>
+      <Modal
+        open={dialog !== null && pending === null}
+        onClose={() => setDialog(null)}
+        title={editingUser ? `Change role for ${displayName(editingUser)}` : 'Add user'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {!editingUser && (
+            <>
+              <Input
+                id="add-user-email"
+                label="Email"
+                type="email"
+                autoComplete="off"
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoFocus
+              />
+              <p className="-mt-2 text-xs text-[var(--text-tertiary)]">
+                They need to have signed up already.
+              </p>
+            </>
+          )}
           <div className="space-y-1">
             <Select
-              id="add-user-role"
+              id="user-role"
               label="Role"
               value={role}
               options={ROLE_OPTIONS}
-              onChange={(e) => setRole(e.target.value as DistrictRole)}
+              disabled={editingLastPastor}
+              title={editingLastPastor ? 'Assign another District Pastor before changing this role' : undefined}
+              onChange={(e) => changeRole(e.target.value as DistrictRole)}
             />
             <p className="text-xs text-[var(--text-tertiary)]">{ROLE_DESCRIPTIONS[role]}</p>
           </div>
+          {scopeKind && (
+            <div className="space-y-1">
+              <Select
+                id="user-scope"
+                label={SCOPE_KIND_LABELS[scopeKind]}
+                value={scopeId}
+                options={scopeOptions[scopeKind]}
+                placeholder={`Choose a ${SCOPE_KIND_LABELS[scopeKind].toLowerCase()}…`}
+                onChange={(e) => setScopeId(e.target.value)}
+              />
+              {scopeOptions[scopeKind].length === 0 && (
+                <p className="text-xs text-[var(--text-tertiary)]">
+                  {scopeKind === 'department'
+                    ? 'No departments yet — add them under Coordination → Departments.'
+                    : `No ${SCOPE_KIND_LABELS[scopeKind].toLowerCase()}s yet — add them under People.`}
+                </p>
+              )}
+            </div>
+          )}
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="ghost" onClick={closeAdd} disabled={adding}>
+            <Button type="button" variant="ghost" onClick={() => setDialog(null)} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit" loading={adding}>
-              Add user
+            <Button type="submit" loading={saving || (editingUser !== null && savingUserId === editingUser.user_id)}>
+              {editingUser ? 'Save role' : 'Add user'}
             </Button>
           </div>
         </form>

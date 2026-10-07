@@ -1,5 +1,5 @@
 // POST /api/districts
-// Creates a district, registers the creator as admin, and seeds a default fund.
+// Creates a district, registers the creator as District Pastor, and seeds a default fund.
 // Body: { name: string }
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -47,13 +47,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: distErr?.message ?? 'Failed to create district' }, { status: 500 })
   }
 
-  // 2. Register creator as district admin
+  // 2. Register creator as District Pastor
   const { error: memberErr } = await supabase
     .from('district_users')
     .insert({
       district_id: district.id,
       user_id: user.id,
-      role: 'admin',
+      role: 'district_pastor',
       is_active: true,
     })
 

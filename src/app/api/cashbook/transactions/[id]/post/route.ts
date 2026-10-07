@@ -50,7 +50,7 @@ export async function POST(
       supabase,
       token,
       txn.district_id,
-      canAutoPost ? 'transactions.draft' : 'transactions.post',
+      'transactions.post',
     )
 
     const postedValues = await buildPostedTransactionUpdate(

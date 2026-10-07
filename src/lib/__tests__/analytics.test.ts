@@ -33,6 +33,7 @@ function event(overrides: Partial<DistrictEvent>): DistrictEvent {
     end_date: '2026-10-11',
     start_time: null,
     end_time: null,
+    department_id: null,
     created_by: null,
     created_at: '',
     updated_at: '',

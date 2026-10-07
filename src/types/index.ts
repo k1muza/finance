@@ -86,6 +86,8 @@ export interface Fund {
   nature: FundNature
   is_active: boolean
   requires_individual_member: boolean
+  /** Public funds are visible to roles without private-financials access. */
+  is_public: boolean
   created_at: string
   updated_at: string
   district?: District | null
@@ -407,7 +409,83 @@ export interface DistrictEvent {
   /** HH:MM[:SS]; null means all day */
   start_time: string | null
   end_time: string | null
+  /** Department the event belongs to; departmental secretaries manage these. */
+  department_id: string | null
   created_by: string | null
   created_at: string
   updated_at: string
+}
+
+/** Function-based district department (Building, Properties, Finance, …). */
+export interface Department {
+  id: string
+  district_id: string
+  name: string
+  code: string | null
+  description: string | null
+  /** Members of this department can view all financials (the Finance Committee). */
+  grants_finance_view: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface DepartmentMember {
+  id: string
+  department_id: string
+  user_id: string
+  added_by: string | null
+  created_at: string
+}
+
+export type CollectionStatus = 'recorded' | 'submitted' | 'posted' | 'voided'
+
+/** A kind of collection (Tithes, Takadzoka, …); kept separate from funds. */
+export interface CollectionType {
+  id: string
+  district_id: string
+  name: string
+  code: string | null
+  /** Default fund when the collection is posted. */
+  suggested_fund_id: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+/** Money gathered by a region, assembly or ministry before it reaches the ledger. */
+export interface Collection {
+  id: string
+  district_id: string
+  /** Region, assembly or ministry (department-type member) it came from. */
+  scope_member_id: string
+  /** YYYY-MM-DD */
+  collected_on: string
+  reference: string | null
+  notes: string | null
+  currency: Currency
+  status: CollectionStatus
+  recorded_by: string | null
+  submitted_at: string | null
+  /** Accounting Officer / Assistant who confirmed the money reached the office. */
+  received_by: string | null
+  posted_at: string | null
+  voided_at: string | null
+  voided_by: string | null
+  created_at: string
+  updated_at: string
+  lines?: CollectionLine[]
+}
+
+export interface CollectionLine {
+  id: string
+  collection_id: string
+  collection_type_id: string
+  /** Individual contributor; null for a lump sum. */
+  member_id: string | null
+  contributor_name: string | null
+  amount: number
+  /** Set once the line is posted to a fund. */
+  cashbook_transaction_id: string | null
+  created_at: string
 }

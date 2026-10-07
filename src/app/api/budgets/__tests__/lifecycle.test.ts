@@ -146,7 +146,7 @@ describe('budget lifecycle routes', () => {
     createServerClientMock.mockReturnValue(supabase)
     requireDistrictActionMock.mockResolvedValue({
       user: { id: 'user-1' },
-      role: 'treasurer',
+      role: 'accounting_officer',
       isSuperuser: false,
     })
 
@@ -178,7 +178,7 @@ describe('budget lifecycle routes', () => {
     createServerClientMock.mockReturnValue(supabase)
     requireDistrictActionMock.mockResolvedValue({
       user: { id: 'user-1' },
-      role: 'treasurer',
+      role: 'accounting_officer',
       isSuperuser: false,
     })
 
@@ -206,7 +206,7 @@ describe('budget lifecycle routes', () => {
     createServerClientMock.mockReturnValue(supabase)
     requireDistrictActionMock.mockResolvedValue({
       user: { id: 'user-1' },
-      role: 'treasurer',
+      role: 'accounting_officer',
       isSuperuser: false,
     })
 
@@ -234,7 +234,7 @@ describe('budget lifecycle routes', () => {
     createServerClientMock.mockReturnValue(supabase)
     requireDistrictActionMock.mockResolvedValue({
       user: { id: 'user-1' },
-      role: 'treasurer',
+      role: 'accounting_officer',
       isSuperuser: false,
     })
 

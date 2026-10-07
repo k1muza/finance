@@ -333,22 +333,20 @@ Examples:
 - `district_id`
 - `user_id`
 - `role`
+- `scope_member_id`, nullable — region, assembly or ministry (`department`-type member) for scoped roles
+- `scope_department_id`, nullable — department for departmental roles
 - `is_active`
 - `joined_at`
 - `created_at`
 - `updated_at`
 
-**Suggested roles:**
-- `DISTRICT_ADMIN`
-- `DISTRICT_SECRETARY`
-- `TREASURER`
-- `AUDITOR`
-- `VIEWER`
+**Roles:** church offices — see §16.2.
 
 **Constraints:**
-- unique `(district_id, user_id)`
+- unique `(district_id, user_id)` — one role per person per district
 - one user may belong to multiple districts
 - roles are district-specific
+- scoped roles must carry a scope of the matching type in the same district; unscoped roles carry none (trigger `validate_district_user_scope`)
 
 ---
 
@@ -433,6 +431,7 @@ Examples:
 - `code`
 - `fund_nature`
 - `requires_individual_member`
+- `is_public` — public funds are visible to roles without private-financials access
 - `is_active`
 - `description`
 - `created_at`
@@ -720,6 +719,7 @@ Examples:
 - `location`, nullable
 - `start_date`, `end_date` (DATE)
 - `start_time`, `end_time` (TIME), nullable; null `start_time` means all day
+- `department_id`, nullable — event belongs to a department
 - `created_by`
 - `created_at`
 - `updated_at`
@@ -728,7 +728,50 @@ Examples:
 - `end_date >= start_date`
 - `end_time` requires `start_time`; on a single-day event `end_time >= start_time`
 - dates are stored without timezone so an event shows on the same day for every viewer
-- any active district member can read; `admin` and `secretary` can create, edit and delete (`events.manage`)
+- any active district member can read; District Pastor, District Secretary and District Coordinator can create, edit and delete any event (`events.manage`); a Departmental Secretary can manage events tagged to their own department
+
+---
+
+### 9.15 `departments` and `department_members`
+
+**Purpose:** Function-based district departments (Building, Functions, Properties, Finance). Coordination records, not financial ones; separate from ministries, which are `department`-type members.
+
+**`departments` fields:**
+- `id`, `district_id`, `name`, `code`, `description`
+- `grants_finance_view` — members of this department (the Finance Committee) can view all financials and collections; only the District Pastor can change it
+- `is_active`, `created_at`, `updated_at`
+
+**`department_members` fields:** `id`, `department_id`, `user_id`, `added_by`, `created_at`; unique `(department_id, user_id)`.
+
+**Rules:**
+- leaders are the Departmental Chairperson and Departmental Secretary roles (`district_users.scope_department_id`) and count as members
+- members can be any active district user, in addition to their district role
+- managed by `departments.manage` holders, or by the department's own chairperson
+
+---
+
+### 9.16 `collection_types`, `collections`, `collection_lines`
+
+**Purpose:** Money gathered by regions, assemblies and ministries, recorded by their secretaries and kept out of the ledger until it is handed over to the office. Collection types often share names with funds but are separate.
+
+**`collection_types` fields:** `id`, `district_id`, `name`, `code`, `suggested_fund_id` (default fund when posting), `is_active`.
+
+**`collections` fields:**
+- `id`, `district_id`
+- `scope_member_id` — region, assembly or ministry the money came from
+- `collected_on`, `reference`, `notes`, `currency`
+- `status`: `recorded` → `submitted` → `posted`, or `voided`
+- `recorded_by`, `submitted_at`, `received_by`, `posted_at`, `voided_at`, `voided_by`
+
+**`collection_lines` fields:** `id`, `collection_id`, `collection_type_id`, `member_id` (individual, nullable), `contributor_name` (free text or lump-sum description), `amount`, `cashbook_transaction_id` (set when posted).
+
+**Workflow:**
+- there is no draft stage: a scoped secretary posts a collection for their own unit (a region scope covers its assemblies) and it is final; header and lines are written together by `record_collection()`
+- collections and lines are never edited or deleted; a mistake is corrected by voiding the collection and posting it again
+- a `recorded` collection can be voided by its secretary or by finance; a `submitted` one only by finance, and only while no line is posted to a fund
+- the Accounting Officer or Assistant marks a collection `submitted` when the money reaches the office
+- posting creates one posted receipt per line in the fund chosen for its type, attaching the member so tithe reports by individual, assembly and region keep working; the line id is the receipt's `client_generated_id` so retries never duplicate
+- `posted` collections are immutable; corrections go through cashbook reversal
 
 ---
 
@@ -1066,40 +1109,45 @@ Can:
 
 ### 16.2 District-level roles
 
-#### `DISTRICT_ADMIN`
-Can manage users, setup, transactions, transfers, budgets, and reports for that district.
+The capability matrix lives in `src/lib/auth/permissions.ts` and is mirrored by SQL helper functions; keep both in sync.
 
-#### `DISTRICT_SECRETARY`
-Can manage most daily finance operations, subject to business choices.
+| Role | Scope | Key capabilities |
+|---|---|---|
+| District Pastor | district | settings, users, all financials and collections; **does not approve, post or submit collections** |
+| Accounting Officer | district | approve, post / reverse, budgets, users, submit and post collections |
+| Assistant Accounting Officer | district | post / reverse, budget drafts, submit and post collections |
+| District Coordinator | district | members, events, departments; public financials |
+| District Secretary | district | members, counterparties, events, departments; public financials |
+| Regional Pastor / Regional Coordinator | region | view regional collections; public financials |
+| Regional Secretary | region | record and view regional collections; public financials |
+| Assembly Coordinator | assembly | view assembly collections; public financials |
+| Assembly Secretary | assembly | record and view assembly collections; public financials |
+| Ministerial Chairperson | ministry | view ministry collections; public financials |
+| Ministerial Secretary | ministry | record and view ministry collections; public financials |
+| Departmental Chairperson | department | manage the department's members; public financials |
+| Departmental Secretary | department | manage the department's events; public financials |
 
-#### `TREASURER`
-Can post, reverse, approve, and manage finance records.
+**Finance Committee:** not a role. Members of a department with `grants_finance_view` get view-all rights (private financials, transfers, budgets, every collection, exports) on top of their role — never posting or submitting.
 
-#### `AUDITOR`
-Read-only access to district records and reports.
-
-#### `VIEWER`
-Limited read-only access.
+**Private vs public financials:** roles without `financials.view_private` see cashbook activity on public funds only (`funds.is_public`); transfers, budgets and opening balances are private. Enforced in RLS and in service-role API routes.
 
 ### 16.3 Permission examples
-- `district.manage`
-- `district_users.manage`
+- `district.settings.manage`
+- `district.users.manage`
 - `accounts.manage`
 - `funds.manage`
 - `members.manage`
 - `counterparties.manage`
-- `transactions.create`
-- `transactions.post`
-- `transactions.reverse`
-- `transfers.create`
-- `transfers.post`
-- `transfers.reverse`
-- `budgets.manage`
-- `events.manage`
+- `financials.view_private`, `financials.view_public`
+- `transactions.draft`, `transactions.approve`, `transactions.post`, `transactions.reverse`
+- `transfers.view`, `transfers.post`, `transfers.reverse`
+- `budgets.view`, `budgets.manage`
+- `collections.view`, `collections.record`, `collections.submit`, `collections.post`, `collections.types.manage`
+- `events.view`, `events.manage`, `departments.manage`
 - `reports.view`
 - `exports.generate`
 
-Permissions are district-scoped unless user is superuser.
+Permissions are district-scoped unless user is superuser. Collection rights of scoped roles are further limited to their own unit.
 
 ---
 

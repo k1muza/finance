@@ -172,7 +172,7 @@ describe('cashbook transaction create route', () => {
     })
     requireDistrictActionMock.mockResolvedValue({
       user: { id: 'user-1' },
-      role: 'clerk',
+      role: 'assistant_accounting_officer',
       isSuperuser: false,
     })
   })

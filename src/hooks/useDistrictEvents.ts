@@ -7,7 +7,7 @@ import { DistrictEvent } from '@/types'
 
 export type DistrictEventInput = Pick<
   DistrictEvent,
-  'title' | 'description' | 'location' | 'start_date' | 'end_date' | 'start_time' | 'end_time'
+  'title' | 'description' | 'location' | 'start_date' | 'end_date' | 'start_time' | 'end_time' | 'department_id'
 >
 
 /** Events in `districtId` that overlap the inclusive date range [from, to]. */

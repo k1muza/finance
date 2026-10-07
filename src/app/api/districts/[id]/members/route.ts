@@ -1,11 +1,13 @@
 // GET  /api/districts/[id]/members  — list active + inactive members
-// POST /api/districts/[id]/members  — add member by email
+// POST /api/districts/[id]/members  — add member by email (+ scope for scoped roles)
 
 import { NextRequest, NextResponse } from 'next/server'
 import type { User } from '@supabase/supabase-js'
 import { createServerClient } from '@/lib/supabase/server'
 import { requireDistrictAction } from '@/lib/auth/server'
 import { isDistrictRole } from '@/lib/auth/permissions'
+import { resolveRoleScope } from '@/lib/auth/district-users'
+import { loadUserDirectory } from '@/lib/auth/user-directory'
 import { ApiRouteError, toErrorResponse } from '@/lib/server/errors'
 
 type Params = { params: Promise<{ id: string }> }
@@ -34,35 +36,23 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     const { data: memberships, error } = await supabase
       .from('district_users')
-      .select('user_id, role, is_active, created_at, invited_by')
+      .select('user_id, role, scope_member_id, scope_department_id, is_active, created_at, invited_by')
       .eq('district_id', districtId)
       .order('created_at')
 
     if (error) throw new ApiRouteError('MEMBERS_FETCH_FAILED', error.message, 500)
 
-    const memberIds = (memberships ?? []).map((m) => m.user_id)
-
-    const { data: profiles } = await supabase
-      .from('user_profiles')
-      .select('id, display_name')
-      .in('id', memberIds)
-
-    const displayNames: Record<string, string | null> = {}
-    for (const p of profiles ?? []) displayNames[p.id] = p.display_name
-
-    const emails: Record<string, string> = {}
-    await Promise.all(memberIds.map(async (uid) => {
-      const { data } = await supabase.auth.admin.getUserById(uid)
-      if (data?.user?.email) emails[uid] = data.user.email
-    }))
+    const directory = await loadUserDirectory(supabase, (memberships ?? []).map((m) => m.user_id))
 
     const members = (memberships ?? []).map((m) => ({
       user_id: m.user_id,
       role: m.role,
+      scope_member_id: m.scope_member_id,
+      scope_department_id: m.scope_department_id,
       is_active: m.is_active,
       created_at: m.created_at,
-      display_name: displayNames[m.user_id] ?? null,
-      email: emails[m.user_id] ?? null,
+      display_name: directory[m.user_id]?.display_name ?? null,
+      email: directory[m.user_id]?.email ?? null,
     }))
 
     return NextResponse.json({ members })
@@ -79,7 +69,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   try {
     const actor = await requireDistrictAction(supabase, token, districtId, 'district.users.manage')
 
-    let body: { email?: string; role?: unknown }
+    let body: { email?: string; role?: unknown; scope_member_id?: unknown; scope_department_id?: unknown }
     try { body = await req.json() } catch {
       throw new ApiRouteError('INVALID_JSON', 'Invalid JSON body', 400)
     }
@@ -88,6 +78,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (!email) throw new ApiRouteError('EMAIL_REQUIRED', 'Email is required.', 400)
     if (!isDistrictRole(body.role)) throw new ApiRouteError('INVALID_ROLE', `Invalid role: ${String(body.role)}`, 400)
     const role = body.role
+    const scope = resolveRoleScope(role, body)
+    if ('error' in scope) throw new ApiRouteError('SCOPE_REQUIRED', scope.error, 400)
 
     const targetUser = await findUserByEmail(supabase, email)
     if (!targetUser) {
@@ -113,13 +105,15 @@ export async function POST(req: NextRequest, { params }: Params) {
       // Reactivate with the new role
       ? await supabase
         .from('district_users')
-        .update({ role, is_active: true, invited_by: actor.user.id })
+        .update({ role, ...scope, is_active: true, invited_by: actor.user.id })
         .eq('district_id', districtId)
         .eq('user_id', targetUser.id)
       : await supabase
         .from('district_users')
-        .insert({ district_id: districtId, user_id: targetUser.id, role, is_active: true, invited_by: actor.user.id })
+        .insert({ district_id: districtId, user_id: targetUser.id, role, ...scope, is_active: true, invited_by: actor.user.id })
 
+    // P0001: the scope trigger rejected the unit (wrong type or district).
+    if (error?.code === 'P0001') throw new ApiRouteError('INVALID_SCOPE', error.message, 422)
     if (error) throw new ApiRouteError('MEMBER_SAVE_FAILED', error.message, 500)
 
     // Ensure user_profiles row exists (it may not for legacy users)
@@ -137,6 +131,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       member: {
         user_id: targetUser.id,
         role,
+        ...scope,
         is_active: true,
         created_at: new Date().toISOString(),
         email: targetUser.email ?? null,

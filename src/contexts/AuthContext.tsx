@@ -15,7 +15,22 @@ const PROFILE_CACHE_KEY = 'finance_profile'
 export interface DistrictMembership {
   district: District
   role: DistrictRole
+  /** Region, assembly or ministry a scoped role is tied to. */
+  scopeMemberId?: string | null
+  /** Department a departmental role is tied to. */
+  scopeDepartmentId?: string | null
+  /** Member of a department with finance view rights (the Finance Committee). */
+  financeCommittee?: boolean
 }
+
+interface FinanceDepartmentRef {
+  district_id: string
+  grants_finance_view: boolean
+  is_active: boolean
+}
+
+const grantsFinanceView = (d: FinanceDepartmentRef | null | undefined) =>
+  Boolean(d?.grants_finance_view && d.is_active)
 
 interface UserProfile {
   is_superuser: boolean
@@ -89,10 +104,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchSession = async (userId: string) => {
     try {
       // Try new schema first (user_profiles + district_users)
-      const [{ data: profile, error: profileError }, { data: memberRows, error: memberError }] = await Promise.all([
+      const [
+        { data: profile, error: profileError },
+        { data: memberRows, error: memberError },
+        { data: departmentRows },
+      ] = await Promise.all([
         supabase.from('user_profiles').select('is_superuser').eq('id', userId).single(),
-        supabase.from('district_users').select('role, district:districts(*)').eq('user_id', userId).eq('is_active', true),
+        supabase
+          .from('district_users')
+          .select('role, scope_member_id, scope_department_id, scope_department:departments(district_id, grants_finance_view, is_active), district:districts(*)')
+          .eq('user_id', userId)
+          .eq('is_active', true),
+        supabase
+          .from('department_members')
+          .select('department:departments(district_id, grants_finance_view, is_active)')
+          .eq('user_id', userId),
       ])
+      const financeCommitteeDistricts = new Set(
+        (departmentRows ?? [])
+          .map((r) => r.department as unknown as FinanceDepartmentRef | null)
+          .filter(grantsFinanceView)
+          .map((d) => d!.district_id),
+      )
       // A failed query must not look like "no memberships" — that would clear the
       // active district. Throw so the cached session is used instead.
       // PGRST116 is .single() finding no row, which is a legitimate empty result.
@@ -109,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const ms: DistrictMembership[] = up.is_superuser
           ? (superuserDistricts ?? []).map((district) => ({
               district: district as District,
-              role: 'admin' as const,
+              role: 'district_pastor' as const,
             }))
           : (memberRows ?? [])
           .filter((r) => r.district != null && (r.district as unknown as District).is_active !== false)
@@ -120,9 +153,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (!role) return []
 
+            const district = r.district as unknown as District
             return [{
-              district: r.district as unknown as District,
+              district,
               role,
+              scopeMemberId: r.scope_member_id ?? null,
+              scopeDepartmentId: r.scope_department_id ?? null,
+              financeCommittee:
+                financeCommitteeDistricts.has(district.id)
+                || grantsFinanceView(r.scope_department as unknown as FinanceDepartmentRef | null),
             }]
           })
         const resolvedActiveDistrictId = resolveActiveDistrictId(
@@ -154,7 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const up: UserProfile = { is_superuser: legacyProfile.role === 'admin' }
         const legacyDistrict = legacyProfile.district as unknown as District | null
         const ms: DistrictMembership[] = legacyDistrict?.is_active !== false && legacyDistrict
-          ? [{ district: legacyDistrict, role: legacyProfile.role === 'admin' ? 'admin' : 'treasurer' }]
+          ? [{ district: legacyDistrict, role: legacyProfile.role === 'admin' ? 'district_pastor' : 'accounting_officer' }]
           : []
         const resolvedActiveDistrictId = resolveActiveDistrictId(
           ms,

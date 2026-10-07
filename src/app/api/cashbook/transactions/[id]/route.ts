@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireDistrictAction } from '@/lib/auth/server'
+import { canViewPrivateFinancials, requireDistrictAction } from '@/lib/auth/server'
 import {
   hydrateTransactionParties,
   validateDraftTransactionPayload,
@@ -21,7 +21,7 @@ export async function GET(
   try {
     const { data: txnMeta, error: txnMetaError } = await supabase
       .from('cashbook_transactions')
-      .select('id, district_id')
+      .select('id, district_id, fund:funds(is_public)')
       .eq('id', id)
       .maybeSingle()
 
@@ -29,7 +29,12 @@ export async function GET(
       throw new ApiRouteError('TRANSACTION_NOT_FOUND', 'Transaction not found.', 404)
     }
 
-    await requireDistrictAction(supabase, token, txnMeta.district_id, 'transactions.view')
+    const actor = await requireDistrictAction(supabase, token, txnMeta.district_id, 'transactions.view')
+    const fund = txnMeta.fund as unknown as { is_public: boolean } | null
+    if (!fund?.is_public && !canViewPrivateFinancials(actor)) {
+      // Private transactions are invisible, not forbidden, to public-only roles.
+      throw new ApiRouteError('TRANSACTION_NOT_FOUND', 'Transaction not found.', 404)
+    }
 
     const [txnResult, linesResult, auditResult] = await Promise.all([
       supabase

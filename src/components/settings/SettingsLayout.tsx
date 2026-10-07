@@ -137,7 +137,7 @@ export function SettingsSectionGate({ slug, children }: { slug: SettingsSectionS
       title="Not available for your role"
       description={section?.superuserOnly
         ? 'Only platform administrators can open this section.'
-        : 'Ask a District Admin if you need access to this section.'}
+        : 'Ask your District Pastor if you need access to this section.'}
     />
   )
 }

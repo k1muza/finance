@@ -1,18 +1,20 @@
 'use client'
 
 import { useMemo, useState, type FormEvent } from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, MapPin, Plus } from 'lucide-react'
+import { Building2, CalendarDays, ChevronLeft, ChevronRight, Clock, MapPin, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { Select } from '@/components/ui/Select'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/components/ui/Toast'
 import { SelectDistrictHint } from '@/components/layout/SelectDistrictHint'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useDistrictEvents, type DistrictEventInput } from '@/hooks/useDistrictEvents'
+import { useDepartments } from '@/hooks/useDepartments'
 import {
   WEEKDAY_LABELS,
   addMonths,
@@ -43,9 +45,11 @@ interface EventFormState {
   end_time: string
   location: string
   description: string
+  /** '' when the event isn't tied to a department */
+  department_id: string
 }
 
-function emptyForm(date: string): EventFormState {
+function emptyForm(date: string, departmentId = ''): EventFormState {
   return {
     title: '',
     allDay: true,
@@ -55,6 +59,7 @@ function emptyForm(date: string): EventFormState {
     end_time: '',
     location: '',
     description: '',
+    department_id: departmentId,
   }
 }
 
@@ -68,6 +73,7 @@ function formFromEvent(event: DistrictEvent): EventFormState {
     end_time: event.end_time ? formatTime(event.end_time) : '',
     location: event.location ?? '',
     description: event.description ?? '',
+    department_id: event.department_id ?? '',
   }
 }
 
@@ -93,6 +99,7 @@ function toInput(form: EventFormState): DistrictEventInput {
     end_date: form.end_date,
     start_time: form.allDay ? null : form.start_time,
     end_time: form.allDay || !form.end_time ? null : form.end_time,
+    department_id: form.department_id || null,
   }
 }
 
@@ -103,8 +110,18 @@ type Dialog =
 
 export function CalendarPage() {
   const { districtId } = useAuth()
-  const { can } = usePermissions()
-  const canManage = can('events.manage')
+  const { can, role, scopeDepartmentId } = usePermissions()
+  // Departmental secretaries manage only their own department's events.
+  const canManageAll = can('events.manage')
+  const ownDepartmentId = role === 'departmental_secretary' ? scopeDepartmentId : null
+  const canCreate = canManageAll || Boolean(ownDepartmentId)
+  const canManageEvent = (event: DistrictEvent) =>
+    canManageAll || (ownDepartmentId !== null && event.department_id === ownDepartmentId)
+  const { data: departments } = useDepartments(districtId, { withRoster: false })
+  const departmentName = (id: string | null) => departments.find((d) => d.id === id)?.name ?? null
+  const departmentOptions = departments
+    .filter((d) => d.is_active && (canManageAll || d.id === ownDepartmentId))
+    .map((d) => ({ value: d.id, label: d.name }))
   const toast = useToast()
 
   const today = todayIso()
@@ -136,8 +153,8 @@ export function CalendarPage() {
   }
 
   const openCreate = (date: string) => {
-    if (!canManage) return
-    setForm(emptyForm(date))
+    if (!canCreate) return
+    setForm(emptyForm(date, canManageAll ? '' : ownDepartmentId ?? ''))
     setEditing(true)
     setDialog({ kind: 'create', date })
   }
@@ -216,7 +233,7 @@ export function CalendarPage() {
       <PageHeader
         title={TITLE}
         description={DESCRIPTION}
-        actions={canManage ? (
+        actions={canCreate ? (
           <Button onClick={() => openCreate(isSameMonth(today, month) ? today : month)}>
             <Plus className="h-4 w-4" />
             New event
@@ -267,7 +284,7 @@ export function CalendarPage() {
                     index % 7 === 6 && 'border-r-0',
                     index >= 35 && 'border-b-0',
                     !inMonth && 'bg-[var(--surface-panel-muted)]',
-                    canManage && 'cursor-pointer hover:bg-[var(--button-ghost-hover)]'
+                    canCreate && 'cursor-pointer hover:bg-[var(--button-ghost-hover)]'
                   )}
                 >
                   <span
@@ -337,7 +354,7 @@ export function CalendarPage() {
                 </li>
               ))}
             </ul>
-            {canManage && (
+            {canCreate && (
               <div className="flex justify-end pt-2">
                 <Button size="sm" onClick={() => openCreate(dialog.date)}>
                   <Plus className="h-4 w-4" />
@@ -361,11 +378,17 @@ export function CalendarPage() {
                   {dialog.event.location}
                 </p>
               )}
+              {departmentName(dialog.event.department_id) && (
+                <p className="flex items-start gap-2 text-[var(--text-primary)]">
+                  <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
+                  {departmentName(dialog.event.department_id)}
+                </p>
+              )}
             </div>
             {dialog.event.description && (
               <p className="whitespace-pre-wrap text-sm text-[var(--text-secondary)]">{dialog.event.description}</p>
             )}
-            {canManage && (
+            {canManageEvent(dialog.event) && (
               <div className="flex justify-end gap-3 pt-2">
                 <Button variant="ghost" onClick={() => setConfirmDelete(true)}>Delete</Button>
                 <Button onClick={() => setEditing(true)}>Edit</Button>
@@ -434,6 +457,17 @@ export function CalendarPage() {
               value={form.location}
               onChange={(e) => setField('location', e.target.value)}
             />
+            {departmentOptions.length > 0 && (
+              <Select
+                id="event-department"
+                label={canManageAll ? 'Department (optional)' : 'Department'}
+                value={form.department_id}
+                options={departmentOptions}
+                placeholder={canManageAll ? 'Whole district' : undefined}
+                disabled={!canManageAll}
+                onChange={(e) => setField('department_id', e.target.value)}
+              />
+            )}
             <div className="flex flex-col gap-1">
               <label htmlFor="event-description" className="text-sm font-medium text-[var(--text-secondary)]">
                 Notes (optional)

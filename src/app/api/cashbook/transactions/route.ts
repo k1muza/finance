@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireDistrictAction } from '@/lib/auth/server'
+import { can } from '@/lib/auth/permissions'
+import { canViewPrivateFinancials, requireDistrictAction } from '@/lib/auth/server'
 import {
   buildPostedTransactionUpdate,
   hydrateTransactionParties,
@@ -31,12 +32,15 @@ export async function GET(req: NextRequest) {
       throw new ApiRouteError('DISTRICT_ID_REQUIRED', 'district_id is required.', 400)
     }
 
-    await requireDistrictAction(supabase, token, districtId, 'transactions.view')
+    const actor = await requireDistrictAction(supabase, token, districtId, 'transactions.view')
+    const publicOnly = !canViewPrivateFinancials(actor)
 
     let query = supabase
       .from('cashbook_transactions')
       .select(
-        '*, account:accounts(id,name,type,currency,status), fund:funds(id,name)',
+        publicOnly
+          ? '*, account:accounts(id,name,type,currency,status), fund:funds!inner(id,name,is_public)'
+          : '*, account:accounts(id,name,type,currency,status), fund:funds(id,name)',
         { count: 'exact' },
       )
       .eq('district_id', districtId)
@@ -44,6 +48,7 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
+    if (publicOnly) query = query.eq('fund.is_public', true)
     if (accountId) query = query.eq('account_id', accountId)
     if (status) query = query.eq('status', status)
     if (kind) query = query.eq('kind', kind)
@@ -190,7 +195,9 @@ export async function POST(req: NextRequest) {
 
     let txn = createdTxn
 
-    if (districtSettings.auto_post_cashbook_transactions) {
+    // Auto-post still needs posting rights; anyone else's draft waits for the Accounting Officer.
+    const canPost = can('transactions.post', actor.role, actor.isSuperuser, actor.financeCommittee)
+    if (districtSettings.auto_post_cashbook_transactions && canPost) {
       const postedValues = await buildPostedTransactionUpdate(
         supabase,
         {

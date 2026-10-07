@@ -73,6 +73,7 @@ export function useFunds(filter: FundFilter = {}) {
     nature?: FundNature
     is_active?: boolean
     requires_individual_member?: boolean
+    is_public?: boolean
   }) => {
     const { error: err } = await supabase.from('funds').insert({
       district_id: values.district_id,
@@ -83,6 +84,7 @@ export function useFunds(filter: FundFilter = {}) {
       nature: values.nature ?? 'mixed',
       is_active: values.is_active ?? true,
       requires_individual_member: values.requires_individual_member ?? false,
+      is_public: values.is_public ?? false,
     })
     if (err) throw new Error(err.message)
     await fetch()
@@ -98,6 +100,7 @@ export function useFunds(filter: FundFilter = {}) {
       nature: FundNature
       is_active: boolean
       requires_individual_member: boolean
+      is_public: boolean
     }>
   ) => {
     const payload: Record<string, unknown> = {}
@@ -108,6 +111,7 @@ export function useFunds(filter: FundFilter = {}) {
     if (values.nature !== undefined) payload.nature = values.nature
     if (values.is_active !== undefined) payload.is_active = values.is_active
     if (values.requires_individual_member !== undefined) payload.requires_individual_member = values.requires_individual_member
+    if (values.is_public !== undefined) payload.is_public = values.is_public
 
     const { error: err } = await supabase.from('funds').update(payload).eq('id', id)
     if (err) throw new Error(err.message)
